@@ -28,17 +28,24 @@ export default function ResourcesPage() {
   }, [branch, semester]);
 
   // Group resources by subject
-  const subjectsMap = resources.reduce((acc, resource) => {
-    if (!acc[resource.subject_name]) acc[resource.subject_name] = [];
-    acc[resource.subject_name].push(resource);
-    return acc;
-  }, {} as Record<string, ResourceItem[]>);
+  const subjectsMap = resources.reduce(
+    (acc, resource) => {
+      if (!acc[resource.subject_name]) acc[resource.subject_name] = [];
+      acc[resource.subject_name].push(resource);
+      return acc;
+    },
+    {} as Record<string, ResourceItem[]>,
+  );
 
   const subjectNames = Object.keys(subjectsMap);
 
   // Auto-select the first subject if none is selected and data is available
   useEffect(() => {
-    if (!loading && subjectNames.length > 0 && (!selectedSubject || !subjectNames.includes(selectedSubject))) {
+    if (
+      !loading &&
+      subjectNames.length > 0 &&
+      (!selectedSubject || !subjectNames.includes(selectedSubject))
+    ) {
       setSelectedSubject(subjectNames[0]);
     }
   }, [loading, subjectNames, selectedSubject]);
@@ -75,7 +82,9 @@ export default function ResourcesPage() {
           {/* Sidebar / Folder Explorer */}
           <div className="w-full md:w-64 shrink-0 border border-border rounded-lg bg-surface shadow-sm overflow-hidden">
             <div className="bg-muted/10 p-4 border-b border-border">
-              <h3 className="font-semibold text-sm uppercase tracking-wider text-muted">Folders</h3>
+              <h3 className="font-semibold text-sm uppercase tracking-wider text-muted">
+                Folders
+              </h3>
             </div>
             <div className="flex flex-col">
               {subjectNames.map((subjectName) => (
@@ -88,7 +97,9 @@ export default function ResourcesPage() {
                       : "text-foreground hover:bg-muted/5 hover:text-primary"
                   }`}
                 >
-                  <Folder className={`w-4 h-4 ${selectedSubject === subjectName ? "text-primary" : "text-muted"}`} />
+                  <Folder
+                    className={`w-4 h-4 ${selectedSubject === subjectName ? "text-primary" : "text-muted"}`}
+                  />
                   <span className="flex-1 truncate text-sm">{subjectName}</span>
                   <span className="text-xs bg-background border border-border px-1.5 py-0.5 rounded text-muted">
                     {subjectsMap[subjectName].length}
@@ -142,7 +153,10 @@ export default function ResourcesPage() {
                             </div>
                           </div>
                           <div className="flex-1 min-w-0 mt-1">
-                            <p className="text-sm font-semibold text-foreground line-clamp-2 leading-tight group-hover:text-primary transition-colors" title={item.title}>
+                            <p
+                              className="text-sm font-semibold text-foreground line-clamp-2 leading-tight group-hover:text-primary transition-colors"
+                              title={item.title}
+                            >
                               {item.title}
                             </p>
                           </div>
@@ -155,7 +169,9 @@ export default function ResourcesPage() {
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center p-12">
                 <Folder className="w-12 h-12 text-muted/30 mb-4" />
-                <p className="text-lg font-medium text-muted">Select a folder to view its contents</p>
+                <p className="text-lg font-medium text-muted">
+                  Select a folder to view its contents
+                </p>
               </div>
             )}
           </div>
