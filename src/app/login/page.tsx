@@ -26,8 +26,8 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push("/admin");
-      router.refresh();
+      // Force a hard navigation to guarantee the server-side middleware picks up the fresh cookie
+      window.location.href = "/admin"; 
     }
   };
 
