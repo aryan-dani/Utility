@@ -39,16 +39,21 @@ export async function proxy(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   if (request.nextUrl.pathname.startsWith("/admin")) {
-    const adminEmails = process.env.ADMIN_EMAILS ? process.env.ADMIN_EMAILS.split(",") : [];
-    
+    const adminEmails = process.env.ADMIN_EMAILS
+      ? process.env.ADMIN_EMAILS.split(",")
+      : [];
+
     // If not logged in, send to login
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
-    } 
+    }
     // If logged in, but not an admin, send them to the home page
-    else if (adminEmails.length > 0 && !adminEmails.includes(user.email ?? "")) {
+    else if (
+      adminEmails.length > 0 &&
+      !adminEmails.includes(user.email ?? "")
+    ) {
       const url = request.nextUrl.clone();
       url.pathname = "/";
       return NextResponse.redirect(url);

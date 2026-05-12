@@ -111,7 +111,7 @@ export default function AdminPage() {
               onChange={(e) => setBranch(e.target.value)}
               className="w-full bg-background border border-border rounded px-3 py-2 outline-none focus:border-primary"
             >
-              <option value="AI-DS">AI-DS</option>
+              <option value="AIDS">AIDS</option>
               <option value="CSE">CSE</option>
             </select>
           </div>

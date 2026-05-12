@@ -27,7 +27,7 @@ export default function LoginPage() {
       setLoading(false);
     } else {
       // Force a hard navigation to guarantee the server-side middleware picks up the fresh cookie
-      window.location.href = "/admin"; 
+      window.location.href = "/admin";
     }
   };
 

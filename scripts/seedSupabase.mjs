@@ -5,16 +5,20 @@ import path from "path";
 // Extract variables
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 // We need the service role key to bypass the Row Level Security (RLS) policies for inserting data
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY; 
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  console.error("❌ ERROR: Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.");
-  console.log("Please add SUPABASE_SERVICE_ROLE_KEY to your .env.local file from your Supabase Dashboard (Project Settings -> API).");
+  console.error(
+    "❌ ERROR: Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.",
+  );
+  console.log(
+    "Please add SUPABASE_SERVICE_ROLE_KEY to your .env.local file from your Supabase Dashboard (Project Settings -> API).",
+  );
   process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-const BUCKET_NAME = "course-content"; 
+const BUCKET_NAME = "course-content";
 
 // Helper to get or create subject
 async function ensureSubject(name, branch, semester) {
@@ -42,9 +46,9 @@ async function ensureSubject(name, branch, semester) {
 
 async function uploadAndSeed() {
   const contentDir = path.join(process.cwd(), "public", "Content");
-  
-  // Example: Branch is AI-DS, Semester is 4 based on your folder structure
-  const branch = "AI-DS"; 
+
+  // Example: Branch is AIDS, Semester is 4 based on your folder structure
+  const branch = "AIDS"; 
   const semester = 4;
 
   console.log("🚀 Starting automated sync to Supabase...");
@@ -55,35 +59,49 @@ async function uploadAndSeed() {
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
-      
+
       if (entry.isDirectory()) {
         // Simple heuristic: If the directory name is all caps (e.g., AIES, DAA, DET) or matches a subject, treat it as a subject
-        const isSubject = /^[A-Z]+$/.test(entry.name) ? entry.name : currentSubject;
+        const isSubject = /^[A-Z]+$/.test(entry.name)
+          ? entry.name
+          : currentSubject;
         await processDirectory(fullPath, isSubject);
       } else {
         // Skip hidden files, json files, etc
-        if (entry.name.startsWith(".") || entry.name.endsWith(".json")) continue;
-        
+        if (entry.name.startsWith(".") || entry.name.endsWith(".json"))
+          continue;
+
         if (!currentSubject) {
-          console.warn(`⚠️ Skipping ${entry.name} - could not determine subject from folder structure.`);
+          console.warn(
+            `⚠️ Skipping ${entry.name} - could not determine subject from folder structure.`,
+          );
           continue;
         }
 
-        console.log(`\n⏳ Processing: ${entry.name} for Subject: ${currentSubject}`);
+        console.log(
+          `\n⏳ Processing: ${entry.name} for Subject: ${currentSubject}`,
+        );
 
         // 1. Ensure Subject exists in DB
         const subjectId = await ensureSubject(currentSubject, branch, semester);
 
         // 2. Upload file to Supabase Storage
         const fileBuffer = fs.readFileSync(fullPath);
-        const storagePath = `${branch}/Sem_${semester}/${currentSubject}/${entry.name}`.replace(/\s/g, '_');
-        
+        const storagePath =
+          `${branch}/Sem_${semester}/${currentSubject}/${entry.name}`.replace(
+            /\s/g,
+            "_",
+          );
+
         const { error: uploadError } = await supabase.storage
           .from(BUCKET_NAME)
           .upload(storagePath, fileBuffer, { upsert: true });
 
         if (uploadError) {
-          console.error(`❌ Failed to upload ${entry.name}:`, uploadError.message);
+          console.error(
+            `❌ Failed to upload ${entry.name}:`,
+            uploadError.message,
+          );
           continue;
         }
 
@@ -95,21 +113,26 @@ async function uploadAndSeed() {
         const publicUrl = publicUrlData.publicUrl;
 
         // 4. Insert into resources table
-        const { error: dbError } = await supabase
-          .from("resources")
-          .upsert([{ 
+        const { error: dbError } = await supabase.from("resources").upsert(
+          [
+            {
               title: path.parse(entry.name).name, // File name without extension
               file_url: publicUrl,
-              subject_id: subjectId 
-          }], { onConflict: 'file_url' }); // Prevent duplicates if you run it twice
+              subject_id: subjectId,
+            },
+          ],
+          { onConflict: "file_url" },
+        ); // Prevent duplicates if you run it twice
 
         if (dbError) {
-           // If upsert fails because we don't have a unique constraint on file_url, just insert and let constraints handle or just insert blind
-           await supabase.from("resources").insert([{ 
-            title: path.parse(entry.name).name,
-            file_url: publicUrl,
-            subject_id: subjectId 
-          }]);
+          // If upsert fails because we don't have a unique constraint on file_url, just insert and let constraints handle or just insert blind
+          await supabase.from("resources").insert([
+            {
+              title: path.parse(entry.name).name,
+              file_url: publicUrl,
+              subject_id: subjectId,
+            },
+          ]);
         }
 
         console.log(`✅ Success: Uploaded and linked ${entry.name}`);
@@ -118,7 +141,9 @@ async function uploadAndSeed() {
   }
 
   await processDirectory(contentDir);
-  console.log("\n🎉 All done! Your files are safely in Supabase and the DB is seeded!");
+  console.log(
+    "\n🎉 All done! Your files are safely in Supabase and the DB is seeded!",
+  );
 }
 
 uploadAndSeed().catch(console.error);
