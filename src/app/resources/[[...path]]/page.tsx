@@ -55,52 +55,77 @@ export default function ResourcesPage() {
                 No resources uploaded for {branch} Semester {semester} yet.
               </p>
             </div>
-          )}
-
-          {/* Render Files */}
-          {resources.map((item) => {
-            const fileUpper = item.file_url.toUpperCase();
-            const isPdf = fileUpper.endsWith(".PDF");
-            const isPpt =
-              fileUpper.endsWith(".PPT") || fileUpper.endsWith(".PPTX");
-
-            return (
-              <a
-                key={item.id}
-                href={item.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <div className="bg-white p-3.5 rounded-lg flex items-center gap-3 group cursor-pointer border border-border hover:border-primary/50 hover:shadow-sm transition-all h-full">
-                  <div
-                    className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border transition-colors ${
-                      isPdf
-                        ? "bg-red-50 border-red-100 group-hover:bg-red-100"
-                        : isPpt
-                          ? "bg-orange-50 border-orange-100 group-hover:bg-orange-100"
-                          : "bg-emerald-50 border-emerald-100 group-hover:bg-emerald-100"
-                    }`}
-                  >
-                    {isPdf ? (
-                      <FileText className="w-4 h-4 text-red-600" />
-                    ) : isPpt ? (
-                      <FileSpreadsheet className="w-4 h-4 text-orange-600" />
-                    ) : (
-                      <HardDrive className="w-4 h-4 text-emerald-600" />
-                    )}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                      {item.title}
-                    </p>
-                    <p className="text-xs text-muted uppercase">
-                      {item.subject_name}
-                    </p>
-                  </div>
+          ) : (
+            Object.entries(
+              resources.reduce(
+                (acc, resource) => {
+                  if (!acc[resource.subject_name]) acc[resource.subject_name] = [];
+                  acc[resource.subject_name].push(resource);
+                  return acc;
+                },
+                {} as Record<string, ResourceItem[]>
+              )
+            ).map(([subjectName, subjectResources]) => (
+              <div key={subjectName} className="mb-10">
+                <div className="flex items-center gap-2 mb-4 border-b border-border pb-2">
+                  <Folder className="w-5 h-5 text-primary" />
+                  <h2 className="text-xl font-bold tracking-tight text-foreground">
+                    {subjectName}
+                  </h2>
+                  <span className="text-xs font-semibold bg-surface border border-border px-2 py-0.5 rounded text-muted ml-2">
+                    {subjectResources.length} files
+                  </span>
                 </div>
-              </a>
-            );
-          })}
+                
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {/* Render Files for this subject */}
+                  {subjectResources.map((item) => {
+                    const fileUpper = item.file_url.toUpperCase();
+                    const isPdf = fileUpper.endsWith(".PDF");
+                    const isPpt =
+                      fileUpper.endsWith(".PPT") || fileUpper.endsWith(".PPTX");
+
+                    return (
+                      <a
+                        key={item.id}
+                        href={item.file_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        <div className="bg-white p-3.5 rounded-lg flex items-center gap-3 group cursor-pointer border border-border hover:border-primary/50 hover:shadow-sm transition-all h-full">
+                          <div
+                            className={`w-8 h-8 rounded shrink-0 flex items-center justify-center border transition-colors ${
+                              isPdf
+                                ? "bg-red-50 border-red-100 group-hover:bg-red-100"
+                                : isPpt
+                                  ? "bg-orange-50 border-orange-100 group-hover:bg-orange-100"
+                                  : "bg-emerald-50 border-emerald-100 group-hover:bg-emerald-100"
+                            }`}
+                          >
+                            {isPdf ? (
+                              <FileText className="w-4 h-4 text-red-600" />
+                            ) : isPpt ? (
+                              <FileSpreadsheet className="w-4 h-4 text-orange-600" />
+                            ) : (
+                              <HardDrive className="w-4 h-4 text-emerald-600" />
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-foreground truncate group-hover:text-primary transition-colors" title={item.title}>
+                              {item.title}
+                            </p>
+                            <p className="text-xs text-muted uppercase">
+                              Click to view
+                            </p>
+                          </div>
+                        </div>
+                      </a>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
