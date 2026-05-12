@@ -51,10 +51,10 @@ export default function AdminPage() {
       // 1. Upload file to Supabase Storage
       const fileExt = file.name.split(".").pop();
       const fileName = `${Math.random()}.${fileExt}`;
-      const filePath = `${branch}/${semester}/${fileName}`;
+      const filePath = `${branch}/Sem_${semester}/${fileName}`;
 
       const { data: uploadData, error: uploadError } = await supabase.storage
-        .from("academic-resources")
+        .from("course-content")
         .upload(filePath, file);
 
       if (uploadError) throw uploadError;
@@ -62,7 +62,7 @@ export default function AdminPage() {
       // 2. Get Public URL
       const {
         data: { publicUrl },
-      } = supabase.storage.from("academic-resources").getPublicUrl(filePath);
+      } = supabase.storage.from("course-content").getPublicUrl(filePath);
 
       // 3. Insert record into database
       const { error: dbError } = await supabase.from("resources").insert({
@@ -111,7 +111,7 @@ export default function AdminPage() {
               onChange={(e) => setBranch(e.target.value)}
               className="w-full bg-background border border-border rounded px-3 py-2 outline-none focus:border-primary"
             >
-              <option value="AIDS">AIDS</option>
+              <option value="AI-DS">AI-DS</option>
               <option value="CSE">CSE</option>
             </select>
           </div>
