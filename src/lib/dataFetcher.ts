@@ -1,10 +1,12 @@
 import { createClient } from "./supabase";
 
-export interface TopicItem {
-  id?: string;
-  subject: string;
-  unit: string;
-  topics: string[];
+// ─── Interfaces ───────────────────────────────────────────────────────────────
+
+export interface SubjectItem {
+  id: string;
+  name: string;
+  branch: string;
+  semester: number;
 }
 
 export interface ResourceItem {
@@ -13,34 +15,77 @@ export interface ResourceItem {
   file_url: string;
   created_at: string;
   subject_name: string;
+  category: "ppt" | "notes" | "other";
 }
 
-import topicsData from "../../public/Content/topics.json";
+// ─── Internal types for Supabase query results ────────────────────────────────
 
-export function getTopics(): TopicItem[] {
-  return topicsData as TopicItem[];
+interface SubjectRow {
+  id: string;
+  name: string;
+  branch: string;
+  semester: number;
 }
 
-export async function getTopicsFromDB(
+interface ResourceRow {
+  id: string;
+  title: string;
+  file_url: string;
+  created_at: string;
+  subjects: Array<{
+    name: string;
+    branch: string;
+    semester: number;
+  }>;
+}
+
+// ─── Filter configuration ────────────────────────────────────────────────────
+
+/**
+ * Title patterns to exclude from the resource list.
+ * These are legacy/duplicate files identified during cleanup.
+ */
+const EXCLUDED_TITLE_PATTERNS: RegExp[] = [
+  /_notes_\d+$/i,       // e.g. "NOTES_1", "NOTES_2"
+];
+
+const EXCLUDED_TITLES: string[] = [
+  "aies unit-2 extra (2022)",
+  "aies unit_1 (2023)",
+];
+
+/**
+ * Subjects to exclude for a specific branch.
+ */
+const BRANCH_SUBJECT_EXCLUSIONS: Record<string, string[]> = {
+  AIDS: ["DBMS"],
+};
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
+export async function getSubjectsFromDB(
   branch: string,
   semester: number,
-): Promise<TopicItem[]> {
+): Promise<SubjectItem[]> {
   const supabase = createClient();
   const { data, error } = await supabase
     .from("subjects")
-    .select("*")
+    .select("id, name, branch, semester")
     .eq("branch", branch)
-    .eq("semester", semester);
+    .eq("semester", semester)
+    .order("name");
 
   if (error) {
-    console.error("Error fetching subjects:", error);
+    console.error("Error fetching subjects:", error.message);
     return [];
   }
 
-  // Assuming `topics` or similar might be structured differently,
-  // you might want a topics column array. Let's return raw for now and adapt topics logic if needed.
-  return (data || []).filter(
-    (item: any) => !(branch === "AIDS" && item.name?.toUpperCase() === "DBMS"),
+  const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
+    s.toUpperCase(),
+  );
+
+  return (data as SubjectRow[]).filter(
+    (item) => !excluded.includes(item.name.toUpperCase()),
   );
 }
 
@@ -50,7 +95,6 @@ export async function getResourcesFromDB(
 ): Promise<ResourceItem[]> {
   const supabase = createClient();
 
-  // Let's perform a join query to grab subjects AND their resources filtering by branch/sem
   const { data, error } = await supabase
     .from("resources")
     .select(
@@ -70,33 +114,49 @@ export async function getResourcesFromDB(
     .eq("subjects.semester", semester);
 
   if (error) {
-    console.error("Error fetching resources:", error);
+    console.error("Error fetching resources:", error.message);
     return [];
   }
 
-  return (data || [])
-    .map((item: any) => ({
+  const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
+    s.toUpperCase(),
+  );
+
+  const resources: ResourceItem[] = (data as ResourceRow[]).map((item) => {
+    const url = item.file_url;
+    let category: "ppt" | "notes" | "other" = "other";
+    if (url.includes("_PPT/")) category = "ppt";
+    else if (url.includes("_Notes/")) category = "notes";
+
+    return {
       id: item.id,
       title: item.title,
-      file_url: item.file_url,
+      file_url: url,
       created_at: item.created_at,
-      subject_name: item.subjects.name,
-    }))
-    .filter((item) => {
-      // Filter out files that don't exist in the bucket as per user request
-      const titleLower = item.title.toLowerCase();
-      if (
-        titleLower.includes("aies unit-2 extra (2022)") ||
-        titleLower.includes("aies unit_1 (2023)")
-      ) {
-        return false;
-      }
+      subject_name: item.subjects[0]?.name ?? "Unknown",
+      category,
+    };
+  });
 
-      // Remove DBMS from AIDS view
-      if (branch === "AIDS" && item.subject_name.toUpperCase() === "DBMS") {
-        return false;
-      }
+  // Deduplicate and filter
+  const seen = new Set<string>();
+  return resources.filter((item) => {
+    const titleLower = item.title.toLowerCase();
 
-      return true;
-    });
+    // Excluded title patterns
+    if (EXCLUDED_TITLE_PATTERNS.some((re) => re.test(titleLower))) return false;
+
+    // Excluded specific titles
+    if (EXCLUDED_TITLES.includes(titleLower)) return false;
+
+    // Branch-specific subject exclusions
+    if (excluded.includes(item.subject_name.toUpperCase())) return false;
+
+    // Deduplicate by subject + category + title
+    const key = `${item.subject_name}-${item.category}-${titleLower}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+
+    return true;
+  });
 }

@@ -3,9 +3,7 @@ import { createServerClient, type CookieOptions } from "@supabase/ssr";
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
-    request: {
-      headers: request.headers,
-    },
+    request: { headers: request.headers },
   });
 
   const supabase = createServerClient(
@@ -40,17 +38,14 @@ export async function proxy(request: NextRequest) {
 
   if (request.nextUrl.pathname.startsWith("/admin")) {
     const adminEmails = process.env.ADMIN_EMAILS
-      ? process.env.ADMIN_EMAILS.split(",")
+      ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim())
       : [];
 
-    // If not logged in, send to login
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
       return NextResponse.redirect(url);
-    }
-    // If logged in, but not an admin, send them to the home page
-    else if (
+    } else if (
       adminEmails.length > 0 &&
       !adminEmails.includes(user.email ?? "")
     ) {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase";
 
@@ -10,23 +10,21 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  const supabase = createClient();
+  // Stable client — created once per mount, not on every render
+  const supabase = useMemo(() => createClient(), []);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
 
     if (error) {
       setError(error.message);
       setLoading(false);
     } else {
-      // Force a hard navigation to guarantee the server-side middleware picks up the fresh cookie
+      // Hard navigation ensures the server-side middleware cookie is picked up
       window.location.href = "/admin";
     }
   };
@@ -40,7 +38,7 @@ export default function LoginPage() {
         <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
 
         {error && (
-          <div className="mb-4 text-sm text-red-500 bg-red-50 p-2 rounded">
+          <div className="mb-4 text-sm text-red-500 bg-red-50 p-2 rounded border border-red-100">
             {error}
           </div>
         )}
@@ -50,6 +48,7 @@ export default function LoginPage() {
           <input
             type="email"
             required
+            autoComplete="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             className="w-full bg-background border border-border rounded px-3 py-2 outline-none focus:border-primary"
@@ -61,6 +60,7 @@ export default function LoginPage() {
           <input
             type="password"
             required
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             className="w-full bg-background border border-border rounded px-3 py-2 outline-none focus:border-primary"
@@ -72,7 +72,7 @@ export default function LoginPage() {
           disabled={loading}
           className="w-full bg-primary text-white py-2 rounded hover:bg-primary-hover disabled:opacity-50 transition"
         >
-          {loading ? "Logging in..." : "Login"}
+          {loading ? "Logging in…" : "Login"}
         </button>
       </form>
     </div>
