@@ -7,7 +7,6 @@ import { Search, Home, BookOpen, FileText, CalendarCheck, Menu, X } from "lucide
 import { useAcademicStore, Branch, Semester } from "../store/academicStore";
 
 const NAV_LINKS = [
-  { href: "/", label: "Home", Icon: Home },
   { href: "/syllabus", label: "Syllabus", Icon: BookOpen },
   { href: "/resources", label: "Resources", Icon: FileText },
 ];
@@ -120,7 +119,7 @@ function NavbarInner() {
               placeholder="Search resources, topics… (Ctrl+K)"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-surface border border-border rounded-md outline-none text-sm font-medium w-64 focus:border-primary focus:ring-1 focus:ring-primary transition-all text-foreground placeholder:text-muted"
+              className="pl-9 pr-4 py-1.5 bg-surface border border-border rounded-md outline-none text-sm font-medium w-80 focus:border-primary focus:ring-1 focus:ring-primary transition-all text-foreground placeholder:text-muted"
             />
             {searchQuery && (
               <button
