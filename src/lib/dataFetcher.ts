@@ -48,11 +48,11 @@ const BRANCH_SUBJECT_EXCLUSIONS: Record<string, string[]> = {
 function getResourceCategory(title: string, url: string): ResourceCategory {
   const haystack = `${title} ${decodeURIComponent(url)}`.toLowerCase();
 
-  if (/\bpyq\b|previous[_\s-]*year|past[_\s-]*paper/.test(haystack)) {
+  if (/\bpyqs?\b|[_/-]pyqs?[_/-]|previous[_\s-]*year|past[_\s-]*paper/i.test(haystack)) {
     return "pyq";
   }
 
-  if (/\bqb\b|question[_\s-]*banks?|questions[_\s-]*bank/.test(haystack)) {
+  if (/\bqbs?\b|[_/-]qbs?[_/-]|question[_\s-]*banks?|questions[_\s-]*bank/i.test(haystack)) {
     return "question-bank";
   }
 
@@ -91,9 +91,9 @@ export async function getSubjectsFromDB(
     s.toUpperCase(),
   );
 
-  return (data as SubjectRow[]).filter(
-    (item) => !excluded.includes(item.name.toUpperCase()),
-  );
+  return (data as SubjectRow[])
+    .filter((item) => !excluded.includes(item.name.toUpperCase()))
+    .filter((item) => item.name.toUpperCase() !== "SYLLABUS");
 }
 
 export async function getResourcesFromDB(
@@ -130,18 +130,20 @@ export async function getResourcesFromDB(
     s.toUpperCase(),
   );
 
-  const resources: ResourceItem[] = (data as any[]).map((item) => {
-    const url = item.file_url;
+  const resources: ResourceItem[] = (data as any[])
+    .filter((item) => item.subjects?.name?.toUpperCase() !== "SYLLABUS")
+    .map((item) => {
+      const url = item.file_url;
 
-    return {
-      id: item.id,
-      title: item.title,
-      file_url: url,
-      created_at: item.created_at,
-      subject_name: item.subjects?.name ?? "Unknown",
-      category: getResourceCategory(item.title, url),
-    };
-  });
+      return {
+        id: item.id,
+        title: item.title,
+        file_url: url,
+        created_at: item.created_at,
+        subject_name: item.subjects?.name ?? "Unknown",
+        category: getResourceCategory(item.title, url),
+      };
+    });
 
   // Deduplicate and filter
   const seen = new Set<string>();
@@ -159,4 +161,24 @@ export async function getResourcesFromDB(
 
     return true;
   });
+}
+
+export async function getSyllabusFile(
+  branch: string,
+  semester: number,
+  supabaseClient?: SupabaseClient
+): Promise<string | null> {
+  const supabase = supabaseClient ?? createBrowserClient();
+
+  const { data, error } = await supabase
+    .from("resources")
+    .select(`file_url, subjects!inner(name, branch, semester)`)
+    .eq("subjects.branch", branch)
+    .eq("subjects.semester", semester)
+    .eq("subjects.name", "Syllabus")
+    .limit(1)
+    .single();
+
+  if (error || !data) return null;
+  return data.file_url;
 }

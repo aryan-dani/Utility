@@ -311,6 +311,11 @@ function ResourceCard({ item }: { item: ResourceItem }) {
               <HardDrive className="w-5 h-5 text-emerald-600" />
             )}
           </div>
+          {item.title.toLowerCase().includes("(solved)") && (
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-emerald-500/10 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              Solved
+            </span>
+          )}
         </div>
         <div className="flex-1 min-w-0 mt-1">
           <p

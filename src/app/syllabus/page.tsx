@@ -1,4 +1,4 @@
-import { getSubjectsFromDB } from "@/lib/dataFetcher";
+import { getSubjectsFromDB, getSyllabusFile } from "@/lib/dataFetcher";
 import { createClient } from "@/lib/supabaseServer";
 import SyllabusClient from "@/components/SyllabusClient";
 import { Branch, Semester } from "@/store/academicStore";
@@ -20,11 +20,19 @@ export default async function SyllabusPage({ searchParams }: PageProps) {
   const semester = Number(params.semester || "4") as Semester;
 
   const supabase = await createClient();
-  const subjects = await getSubjectsFromDB(branch, semester, supabase);
+  const [subjects, syllabusUrl] = await Promise.all([
+    getSubjectsFromDB(branch, semester, supabase),
+    getSyllabusFile(branch, semester, supabase),
+  ]);
 
   return (
     <Suspense fallback={<SyllabusLoading />}>
-      <SyllabusClient subjects={subjects} branch={branch} semester={semester} />
+      <SyllabusClient 
+        subjects={subjects} 
+        branch={branch} 
+        semester={semester} 
+        syllabusUrl={syllabusUrl} 
+      />
     </Suspense>
   );
 }

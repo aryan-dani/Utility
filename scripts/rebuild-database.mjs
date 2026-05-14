@@ -74,9 +74,35 @@ async function rebuild() {
       // Generate FULL public URL
       const fullUrl = getPublicUrl(BUCKET, file.path);
 
+      // Enhanced title generation: Include folder context for better clarity
+      let finalTitle = fileName.replace(/\.[^/.]+$/, "").replace(/_/g, " ").trim();
+      
+      // If the file is nested in "Solved", "Questions", or a Year-like folder, add it to title
+      if (parts.length >= 5) {
+        const folderContext = parts[parts.length - 2];
+        const subContext = parts[parts.length - 3];
+        
+        if (/^20\d{2}$/.test(folderContext)) {
+          finalTitle = `${finalTitle} (${folderContext})`;
+        } else if (/solved|questions|unsolved/i.test(folderContext)) {
+          // If it's something like AIES/2023/Solved/File.pdf
+          const yearMatch = subContext.match(/^20\d{2}$/);
+          if (yearMatch) {
+            finalTitle = `${finalTitle} (${folderContext} - ${yearMatch[0]})`;
+          } else {
+            finalTitle = `${finalTitle} (${folderContext})`;
+          }
+        }
+      } else if (parts.length === 4) {
+        const folderContext = parts[parts.length - 2];
+        if (/solved|questions|unsolved|^20\d{2}$/i.test(folderContext)) {
+          finalTitle = `${finalTitle} (${folderContext})`;
+        }
+      }
+
       resourcesToInsert.push({
         id: crypto.randomUUID(),
-        title: fileName.replace(/\.[^/.]+$/, "").replace(/_/g, " ").trim(),
+        title: finalTitle,
         file_url: fullUrl,
         subject_id: subjectId,
         created_at: file.updatedAt || new Date().toISOString()

@@ -3,15 +3,21 @@
 import { useMemo } from "react";
 import { SubjectItem } from "@/lib/dataFetcher";
 import { useAcademicStore } from "@/store/academicStore";
-import { BookMarked, Layers, Search } from "lucide-react";
+import { BookMarked, Layers, Search, FileText } from "lucide-react";
 
 interface SyllabusClientProps {
   subjects: SubjectItem[];
   branch: string;
   semester: number;
+  syllabusUrl?: string | null;
 }
 
-export default function SyllabusClient({ subjects, branch, semester }: SyllabusClientProps) {
+export default function SyllabusClient({ 
+  subjects, 
+  branch, 
+  semester, 
+  syllabusUrl 
+}: SyllabusClientProps) {
   const { searchQuery } = useAcademicStore();
 
   const filtered = useMemo(() => {
@@ -31,9 +37,23 @@ export default function SyllabusClient({ subjects, branch, semester }: SyllabusC
             {branch} — Semester {semester}
           </p>
         </div>
-        <div className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-surface border border-border text-foreground font-medium text-sm">
-          <Layers className="w-4 h-4 text-muted" />
-          <span>{filtered.length} Subject{filtered.length !== 1 ? "s" : ""}</span>
+        
+        <div className="flex flex-wrap items-center gap-3">
+          {syllabusUrl && (
+            <a
+              href={syllabusUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-4 py-2 rounded-md bg-primary text-white font-semibold text-sm hover:bg-primary-hover transition-colors shadow-sm"
+            >
+              <FileText className="w-4 h-4" />
+              Download Full Syllabus
+            </a>
+          )}
+          <div className="flex items-center gap-2 px-3 py-2 rounded-md bg-surface border border-border text-foreground font-medium text-sm">
+            <Layers className="w-4 h-4 text-muted" />
+            <span>{filtered.length} Subject{filtered.length !== 1 ? "s" : ""}</span>
+          </div>
         </div>
       </div>
 
