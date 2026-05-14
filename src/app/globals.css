@@ -1,39 +1,159 @@
-/* Removed @import for performance. Using next/font in layout.tsx */
-
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ── Monochrome Design Tokens ─────────────────────────────────────────────── */
+
 :root {
+  /* Light Mode */
   --background: #ffffff;
-  --foreground: #111827;
+  --background-subtle: #fafafa;
+  --foreground: #09090b;
+  --foreground-subtle: #3f3f46;
+
+  --card: #ffffff;
+  --card-hover: #f4f4f5;
+
+  --surface: #f4f4f5;
+  --surface-hover: #e4e4e7;
+
+  --border: #e4e4e7;
+  --border-strong: #d4d4d8;
+
+  --muted: #71717a;
+  --muted-hover: #52525b;
+
+  --primary: #18181b;
+  --primary-hover: #3f3f46;
+  --primary-foreground: #fafafa;
+
+  --ring: rgba(24, 24, 27, 0.12);
+
+  --radius: 0.5rem;
+  --radius-lg: 0.75rem;
+
+  color-scheme: light;
+}
+
+.dark {
+  /* Dark Mode */
+  --background: #09090b;
+  --background-subtle: #111113;
+  --foreground: #fafafa;
+  --foreground-subtle: #a1a1aa;
+
+  --card: #18181b;
+  --card-hover: #27272a;
+
+  --surface: #18181b;
+  --surface-hover: #27272a;
+
+  --border: #27272a;
+  --border-strong: #3f3f46;
+
+  --muted: #71717a;
+  --muted-hover: #a1a1aa;
+
+  --primary: #fafafa;
+  --primary-hover: #d4d4d8;
+  --primary-foreground: #09090b;
+
+  --ring: rgba(250, 250, 250, 0.1);
+
+  color-scheme: dark;
+}
+
+/* ── Base Styles ──────────────────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  transition: background-color 0.2s ease, color 0.2s ease;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
   background-color: var(--background);
   color: var(--foreground);
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter', 'Geist', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  line-height: 1.6;
 }
 
-/* Custom Scrollbar for professional look */
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #d1d5db; /* gray-300 */
-  border-radius: 3px;
+  background: var(--border-strong);
+  border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #9ca3af; /* gray-400 */
+  background: var(--muted);
 }
 
-/* Base utility overrides for links and buttons */
+/* ── Focus Ring ───────────────────────────────────────────────────────────── */
+
+:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* ── Selection ────────────────────────────────────────────────────────────── */
+
+::selection {
+  background: var(--surface-hover);
+  color: var(--foreground);
+}
+
+/* ── Transitions ──────────────────────────────────────────────────────────── */
+
 a, button {
-  @apply transition-colors duration-150;
+  transition: color 0.15s ease, background-color 0.15s ease,
+              border-color 0.15s ease, box-shadow 0.15s ease,
+              opacity 0.15s ease;
+}
+
+/* ── Typography ───────────────────────────────────────────────────────────── */
+
+h1, h2, h3, h4, h5, h6 {
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+/* ── Utilities ────────────────────────────────────────────────────────────── */
+
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.dark .glass {
+  background: rgba(24, 24, 27, 0.8);
+}
+
+/* Shimmer loading skeleton */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--surface) 25%,
+    var(--surface-hover) 50%,
+    var(--surface) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
 }

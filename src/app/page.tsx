@@ -1,77 +1,120 @@
-import Link from "next/link";
-import { CalendarCheck, BookOpen, FileText, ArrowRight } from "lucide-react";
-import { FadeIn, ScaleButton } from "@/components/Animations";
+import Link from 'next/link';
+import { CalendarCheck, BookOpen, FileText, ArrowRight, Sparkles } from 'lucide-react';
+import { FadeIn, ScaleButton } from '@/components/Animations';
+
+const FEATURES = [
+  {
+    href: '/planner',
+    label: 'Weekly Planner',
+    number: '01',
+    Icon: CalendarCheck,
+    description:
+      'Organize your week with a private, local-first task board. Syncs to the cloud when you sign in — no data lost across devices.',
+  },
+  {
+    href: '/syllabus',
+    label: 'Syllabus',
+    number: '02',
+    Icon: BookOpen,
+    description:
+      'Clear, structured breakdown of every subject, unit by unit. Download the full syllabus PDF instantly.',
+  },
+  {
+    href: '/resources',
+    label: 'Resources',
+    number: '03',
+    Icon: FileText,
+    description:
+      'All your notes, PPTs, question banks, and PYQs organized by subject and category — searchable in seconds.',
+  },
+];
 
 export default function Home() {
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-20 flex flex-col items-center justify-center text-center min-h-[80vh]">
-      <div className="w-full max-w-4xl relative mb-24 flex flex-col items-center">
+    <div className="flex-1 w-full flex flex-col">
+      {/* Hero */}
+      <section className="w-full max-w-7xl mx-auto px-6 pt-20 pb-28 flex flex-col items-center justify-center text-center">
         <FadeIn>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface text-muted text-sm font-medium mb-8 border border-border">
-            <span className="w-2 h-2 rounded-full bg-primary"></span>
-            Your Professional Utility Hub
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface text-muted text-xs font-medium mb-10 border border-border">
+            <Sparkles className="w-3 h-3" />
+            Academic Workspace
           </div>
-          
-          <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight mb-8 text-foreground">
-            Master Your <br/>
-            Semesters
-          </h1>
-          
-          <p className="text-lg md:text-xl text-muted mb-12 max-w-2xl mx-auto leading-relaxed">
-            A cleanly designed, structured academic workspace to effortlessly track syllabus progress, access course resources, and maintain a private weekly planner.
-          </p>
-          
-          <div className="flex flex-wrap gap-4 justify-center">
-            <Link href="/planner">
-              <ScaleButton className="px-8 py-3.5 bg-primary text-white rounded-md font-medium shadow-sm hover:shadow hover:bg-primary-hover transition-all flex items-center gap-2">
-                Open Utility <ArrowRight className="w-4 h-4" />
-              </ScaleButton>
-            </Link>
-            <Link href="/syllabus">
-              <ScaleButton className="px-8 py-3.5 bg-white border border-border text-foreground rounded-md font-medium hover:bg-surface transition-all shadow-sm">
-                View Syllabus
-              </ScaleButton>
-            </Link>
-          </div>
-        </FadeIn>
-      </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-        <FadeIn delay={0.1} y={10}>
-          <div className="bg-white border border-border p-8 rounded-lg text-left group hover:shadow-md transition-shadow h-full">
-            <div className="w-10 h-10 rounded bg-surface flex items-center justify-center mb-6 border border-border text-foreground">
-              <CalendarCheck className="w-5 h-5" />
-            </div>
-            <h2 className="text-xl font-semibold mb-3 text-foreground">1. Local Utility</h2>
-            <p className="text-muted text-sm leading-relaxed">
-              A beautiful, structured weekly board. It operates entirely locally on your browser. Add and manage tasks without needing a database.
-            </p>
+          <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.08] mb-6 text-foreground max-w-4xl mx-auto">
+            Everything for your
+            <br />
+            <span className="text-muted">semester. One place.</span>
+          </h1>
+
+          <p className="text-base md:text-lg text-muted mb-10 max-w-xl mx-auto leading-relaxed">
+            A structured, premium workspace for accessing syllabi, course materials, and managing your weekly schedule.
+          </p>
+
+          <div className="flex flex-wrap gap-3 justify-center">
+            <Link href="/planner">
+              <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-foreground text-background rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity shadow-card">
+                Open Planner <ArrowRight className="w-4 h-4" />
+              </ScaleButton>
+            </Link>
+            <Link href="/resources">
+              <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface border border-border text-foreground rounded-lg text-sm font-medium hover:bg-surface-hover transition-colors">
+                Browse Resources
+              </ScaleButton>
+            </Link>
           </div>
         </FadeIn>
-        
-        <FadeIn delay={0.15} y={10}>
-          <div className="bg-white border border-border p-8 rounded-lg text-left group hover:shadow-md transition-shadow h-full">
-            <div className="w-10 h-10 rounded bg-surface flex items-center justify-center mb-6 border border-border text-foreground">
-              <BookOpen className="w-5 h-5" />
+      </section>
+
+      {/* Divider */}
+      <div className="w-full border-t border-border" />
+
+      {/* Features */}
+      <section className="w-full max-w-7xl mx-auto px-6 py-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden border border-border shadow-card">
+          {FEATURES.map(({ href, label, number, Icon, description }, i) => (
+            <Link key={href} href={href} className="group block bg-background hover:bg-surface transition-colors duration-200">
+              <FadeIn delay={i * 0.07} y={8}>
+                <div className="p-8 h-full flex flex-col gap-6">
+                  <div className="flex items-start justify-between">
+                    <div className="w-10 h-10 rounded-lg bg-surface border border-border flex items-center justify-center group-hover:bg-surface-hover transition-colors">
+                      <Icon className="w-5 h-5 text-foreground" />
+                    </div>
+                    <span className="text-xs font-mono text-muted">{number}</span>
+                  </div>
+
+                  <div className="flex-1">
+                    <h2 className="text-base font-semibold text-foreground mb-2 group-hover:text-foreground transition-colors">
+                      {label}
+                    </h2>
+                    <p className="text-sm text-muted leading-relaxed">{description}</p>
+                  </div>
+
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted group-hover:text-foreground transition-colors">
+                    <span>Open {label}</span>
+                    <ArrowRight className="w-3 h-3 translate-x-0 group-hover:translate-x-1 transition-transform" />
+                  </div>
+                </div>
+              </FadeIn>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* Stats Strip */}
+      <div className="w-full border-t border-border">
+        <div className="max-w-7xl mx-auto px-6 py-8 grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          {[
+            { label: 'Subjects', value: '10+' },
+            { label: 'Resources', value: '50+' },
+            { label: 'Semesters', value: '8' },
+            { label: 'Branches', value: '2' },
+          ].map(({ label, value }) => (
+            <div key={label}>
+              <p className="text-2xl font-bold text-foreground tracking-tight">{value}</p>
+              <p className="text-xs text-muted mt-0.5">{label}</p>
             </div>
-            <h2 className="text-xl font-semibold mb-3 text-foreground">2. Syllabus</h2>
-            <p className="text-muted text-sm leading-relaxed">
-              Get a clear, structured breakdown of units and topics for every single subject instantly at a glance. Stay ahead of your coursework.
-            </p>
-          </div>
-        </FadeIn>
-        
-        <FadeIn delay={0.2} y={10}>
-          <div className="bg-white border border-border p-8 rounded-lg text-left group hover:shadow-md transition-shadow h-full">
-            <div className="w-10 h-10 rounded bg-surface flex items-center justify-center mb-6 border border-border text-foreground">
-              <FileText className="w-5 h-5" />
-            </div>
-            <h2 className="text-xl font-semibold mb-3 text-foreground">3. Resources</h2>
-            <p className="text-muted text-sm leading-relaxed">
-              Automatically tracks your local directories. Drop a PPT or PDF in the Content folder and it natively appears in the Vault.
-            </p>
-          </div>
-        </FadeIn>
+          ))}
+        </div>
       </div>
     </div>
   );

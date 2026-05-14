@@ -1,5 +1,5 @@
-import { NextResponse, type NextRequest } from "next/server";
-import { createServerClient, type CookieOptions } from "@supabase/ssr";
+import { NextResponse, type NextRequest } from 'next/server';
+import { createServerClient, type CookieOptions } from '@supabase/ssr';
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
@@ -22,35 +22,50 @@ export async function proxy(request: NextRequest) {
           supabaseResponse.cookies.set({ name, value, ...options });
         },
         remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: "", ...options });
+          request.cookies.set({ name, value: '', ...options });
           supabaseResponse = NextResponse.next({
             request: { headers: request.headers },
           });
-          supabaseResponse.cookies.set({ name, value: "", ...options });
+          supabaseResponse.cookies.set({ name, value: '', ...options });
         },
       },
     },
   );
 
+  // Refresh the session if expired (important for security)
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (request.nextUrl.pathname.startsWith("/admin")) {
+  // Protect /admin routes
+  if (request.nextUrl.pathname.startsWith('/admin')) {
     const adminEmails = process.env.ADMIN_EMAILS
-      ? process.env.ADMIN_EMAILS.split(",").map((e) => e.trim())
+      ? process.env.ADMIN_EMAILS.split(',').map((e) => e.trim())
       : [];
 
     if (!user) {
       const url = request.nextUrl.clone();
-      url.pathname = "/login";
+      url.pathname = '/login';
+      url.searchParams.set('redirectTo', request.nextUrl.pathname);
       return NextResponse.redirect(url);
-    } else if (
-      adminEmails.length > 0 &&
-      !adminEmails.includes(user.email ?? "")
-    ) {
+    }
+
+    if (adminEmails.length > 0 && !adminEmails.includes(user.email ?? '')) {
       const url = request.nextUrl.clone();
-      url.pathname = "/";
+      url.pathname = '/';
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Redirect already-logged-in users away from login page
+  if (request.nextUrl.pathname === '/login' && user) {
+    const adminEmails = process.env.ADMIN_EMAILS
+      ? process.env.ADMIN_EMAILS.split(',').map((e) => e.trim())
+      : [];
+
+    if (adminEmails.includes(user.email ?? '')) {
+      const url = request.nextUrl.clone();
+      url.pathname = '/admin';
       return NextResponse.redirect(url);
     }
   }
@@ -59,5 +74,5 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/admin/:path*"],
+  matcher: ['/admin/:path*', '/login'],
 };

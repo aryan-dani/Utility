@@ -1,150 +1,267 @@
-"use client";
+'use client';
 
-import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef, useCallback, Suspense } from "react";
-import { Search, Home, BookOpen, FileText, CalendarCheck, Menu, X } from "lucide-react";
-import { useAcademicStore, Branch, Semester } from "../store/academicStore";
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import { useState, useEffect, useRef, useCallback, Suspense } from 'react';
+import { useTheme } from 'next-themes';
+import {
+  Search,
+  BookOpen,
+  FileText,
+  CalendarCheck,
+  Menu,
+  X,
+  Sun,
+  Moon,
+  Monitor,
+  ChevronDown,
+  LogOut,
+  ShieldCheck,
+} from 'lucide-react';
+import { useAcademicStore, Branch, Semester } from '../store/academicStore';
+import { createClient } from '@/lib/supabase';
 
 const NAV_LINKS = [
-  { href: "/syllabus", label: "Syllabus", Icon: BookOpen },
-  { href: "/resources", label: "Resources", Icon: FileText },
+  { href: '/syllabus', label: 'Syllabus', Icon: BookOpen },
+  { href: '/resources', label: 'Resources', Icon: FileText },
+  { href: '/planner', label: 'Planner', Icon: CalendarCheck },
 ];
+
+function ThemeToggle() {
+  const { theme, setTheme } = useTheme();
+  const [mounted, setMounted] = useState(false);
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => setMounted(true), []);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) {
+        setOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  if (!mounted) return <div className="w-8 h-8" />;
+
+  const Icon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-8 h-8 flex items-center justify-center rounded-md text-muted hover:text-foreground hover:bg-surface transition-colors"
+        title="Toggle theme"
+        aria-label="Toggle theme"
+      >
+        <Icon className="w-4 h-4" />
+      </button>
+
+      {open && (
+        <div className="absolute right-0 top-10 w-36 bg-card border border-border rounded-lg shadow-popover overflow-hidden z-50 animate-slide-down">
+          {(
+            [
+              { value: 'light', label: 'Light', Icon: Sun },
+              { value: 'dark', label: 'Dark', Icon: Moon },
+              { value: 'system', label: 'System', Icon: Monitor },
+            ] as const
+          ).map(({ value, label, Icon: OptionIcon }) => (
+            <button
+              key={value}
+              onClick={() => {
+                setTheme(value);
+                setOpen(false);
+              }}
+              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
+                theme === value
+                  ? 'bg-surface text-foreground font-medium'
+                  : 'text-muted hover:bg-surface hover:text-foreground'
+              }`}
+            >
+              <OptionIcon className="w-3.5 h-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 function NavbarInner() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { searchQuery, setBranch, setSemester, setSearchQuery } =
-    useAcademicStore();
-  
+  const { searchQuery, setBranch, setSemester, setSearchQuery } = useAcademicStore();
+
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [user, setUser] = useState<{ email: string | undefined } | null>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+  const userMenuRef = useRef<HTMLDivElement>(null);
+  const supabase = useRef(createClient());
 
-  // Get values from URL or fallback to defaults
-  const branch = (searchParams.get("branch") as Branch) || "AIDS";
-  const semester = Number(searchParams.get("semester") || "4") as Semester;
+  const branch = (searchParams.get('branch') as Branch) || 'AIDS';
+  const semester = Number(searchParams.get('semester') || '4') as Semester;
 
-  // Sync store with URL on mount or change
   useEffect(() => {
     setBranch(branch);
     setSemester(semester);
   }, [branch, semester, setBranch, setSemester]);
 
-  const updateUrl = useCallback((newBranch: string, newSem: number) => {
-    const params = new URLSearchParams(searchParams.toString());
-    params.set("branch", newBranch);
-    params.set("semester", newSem.toString());
-    router.push(`${pathname}?${params.toString()}`);
-  }, [pathname, router, searchParams]);
+  // Check auth session
+  useEffect(() => {
+    supabase.current.auth.getUser().then(({ data }) => {
+      setUser(data.user ? { email: data.user.email } : null);
+    });
+    const { data: listener } = supabase.current.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ? { email: session.user.email } : null);
+    });
+    return () => listener.subscription.unsubscribe();
+  }, []);
 
-  // Close mobile menu on route change
+  // Close user menu on outside click
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+        setUserMenuOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  const updateUrl = useCallback(
+    (newBranch: string, newSem: number) => {
+      const params = new URLSearchParams(searchParams.toString());
+      params.set('branch', newBranch);
+      params.set('semester', newSem.toString());
+      router.push(`${pathname}?${params.toString()}`);
+    },
+    [pathname, router, searchParams],
+  );
+
   useEffect(() => {
     setMobileOpen(false);
   }, [pathname]);
 
-  // Handle keyboard shortcut Ctrl+K / Cmd+K to focus search
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
         searchRef.current?.focus();
         searchRef.current?.select();
       }
     };
-    window.addEventListener("keydown", handler);
-    return () => window.removeEventListener("keydown", handler);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
   }, []);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    if (value && pathname !== "/resources" && pathname !== "/syllabus") {
+    if (value && pathname !== '/resources' && pathname !== '/syllabus') {
       const params = new URLSearchParams(searchParams.toString());
       router.push(`/resources?${params.toString()}`);
     }
   };
 
+  const handleLogout = async () => {
+    await supabase.current.auth.signOut();
+    setUserMenuOpen(false);
+    window.location.href = '/';
+  };
+
   const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
+
+  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map((e) => e.trim()) ?? [];
+  const isAdmin = user && adminEmails.includes(user.email ?? '');
+
+  const showSelectors = pathname === '/resources' || pathname === '/syllabus' || pathname.startsWith('/resources');
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-16 flex items-center">
-      <div className="w-full max-w-7xl mx-auto px-6 flex justify-between items-center">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border h-16 flex items-center">
+      <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 flex justify-between items-center gap-4">
         {/* Logo */}
         <Link
           href="/"
-          className="text-xl font-bold tracking-tight text-foreground flex items-center gap-2 shrink-0"
+          className="text-base font-bold tracking-tight text-foreground flex items-center gap-2 shrink-0"
         >
-          <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
-            <BookOpen className="w-4 h-4 text-white" />
+          <div className="w-7 h-7 rounded bg-foreground flex items-center justify-center">
+            <BookOpen className="w-3.5 h-3.5 text-background" />
           </div>
           <span>Utility</span>
         </Link>
 
         {/* Desktop Controls */}
-        <div className="hidden md:flex gap-2 items-center">
-          {/* Branch & Semester Selectors */}
-          <div className="flex items-center gap-2 mr-2">
-            <select
-              title="Select Branch"
-              className="bg-surface border border-border rounded-md px-2 py-1.5 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary text-foreground"
-              value={branch}
-              onChange={(e) => updateUrl(e.target.value, semester)}
-            >
-              <option value="AIDS">AIDS</option>
-              <option value="CSE">CSE</option>
-            </select>
-            <select
-              title="Select Semester"
-              className="bg-surface border border-border rounded-md px-2 py-1.5 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary text-foreground"
-              value={semester}
-              onChange={(e) => updateUrl(branch, Number(e.target.value))}
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                <option key={sem} value={sem}>
-                  Sem {sem}
-                </option>
-              ))}
-            </select>
-          </div>
+        <div className="hidden md:flex gap-1 items-center flex-1 justify-end">
+          {/* Selectors — only show on relevant pages */}
+          {showSelectors && (
+            <div className="flex items-center gap-2 mr-2">
+              <select
+                title="Select Branch"
+                className="bg-surface border border-border rounded-md px-2.5 py-1.5 text-sm font-medium outline-none focus:ring-1 focus:ring-primary text-foreground cursor-pointer"
+                value={branch}
+                onChange={(e) => updateUrl(e.target.value, semester)}
+              >
+                <option value="AIDS">AIDS</option>
+                <option value="CSE">CSE</option>
+              </select>
+              <select
+                title="Select Semester"
+                className="bg-surface border border-border rounded-md px-2.5 py-1.5 text-sm font-medium outline-none focus:ring-1 focus:ring-primary text-foreground cursor-pointer"
+                value={semester}
+                onChange={(e) => updateUrl(branch, Number(e.target.value))}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                  <option key={sem} value={sem}>
+                    Sem {sem}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Search Bar */}
-          <div className="relative group">
+          <div className="relative">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <Search className="w-4 h-4 text-muted" />
+              <Search className="w-3.5 h-3.5 text-muted" />
             </div>
             <input
               ref={searchRef}
               type="text"
-              placeholder="Search resources, topics… (Ctrl+K)"
+              placeholder="Search… (⌘K)"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-9 pr-4 py-1.5 bg-surface border border-border rounded-md outline-none text-sm font-medium w-80 focus:border-primary focus:ring-1 focus:ring-primary transition-all text-foreground placeholder:text-muted"
+              className="pl-8 pr-8 py-1.5 bg-surface border border-border rounded-md outline-none text-sm w-56 focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted transition-all focus:w-72"
             />
             {searchQuery && (
               <button
-                onClick={() => setSearchQuery("")}
+                onClick={() => setSearchQuery('')}
                 className="absolute inset-y-0 right-2.5 flex items-center text-muted hover:text-foreground"
               >
-                <X className="w-3.5 h-3.5" />
+                <X className="w-3 h-3" />
               </button>
             )}
           </div>
 
-          <div className="h-5 w-px bg-border mx-2" />
+          <div className="w-px h-5 bg-border mx-1" />
 
           {/* Nav Links */}
           {NAV_LINKS.map(({ href, label, Icon }) => {
             const params = new URLSearchParams(searchParams.toString());
-            const finalHref = href === "/" ? "/" : `${href}?${params.toString()}`;
+            const finalHref = `${href}?${params.toString()}`;
             return (
               <Link
                 key={href}
                 href={finalHref}
                 className={`px-3 py-1.5 flex items-center gap-2 rounded-md text-sm font-medium transition-colors ${
                   isActive(href)
-                    ? "bg-surface text-foreground font-semibold"
-                    : "text-muted hover:text-foreground hover:bg-surface"
+                    ? 'bg-surface text-foreground'
+                    : 'text-muted hover:text-foreground hover:bg-surface'
                 }`}
               >
                 <Icon className="w-4 h-4" />
@@ -153,58 +270,77 @@ function NavbarInner() {
             );
           })}
 
-          <Link
-            href="/planner"
-            className={`ml-2 px-4 py-1.5 flex items-center gap-2 rounded-md text-sm font-medium transition-colors ${
-              isActive("/planner")
-                ? "bg-primary/90 text-white"
-                : "bg-primary text-white hover:bg-primary-hover"
-            }`}
-          >
-            <CalendarCheck className="w-4 h-4" />
-            <span>My Utility</span>
-          </Link>
+          <div className="w-px h-5 bg-border mx-1" />
+
+          {/* Theme Toggle */}
+          <ThemeToggle />
+
+          {/* User Menu / Login */}
+          {user ? (
+            <div ref={userMenuRef} className="relative">
+              <button
+                onClick={() => setUserMenuOpen((o) => !o)}
+                className="flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm font-medium text-muted hover:text-foreground hover:bg-surface transition-colors"
+              >
+                <div className="w-6 h-6 rounded-full bg-surface border border-border flex items-center justify-center text-xs font-bold text-foreground uppercase">
+                  {user.email?.[0] ?? '?'}
+                </div>
+                <ChevronDown className="w-3 h-3" />
+              </button>
+
+              {userMenuOpen && (
+                <div className="absolute right-0 top-10 w-52 bg-card border border-border rounded-lg shadow-popover overflow-hidden z-50 animate-slide-down">
+                  <div className="px-3 py-2.5 border-b border-border">
+                    <p className="text-xs text-muted">Signed in as</p>
+                    <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
+                  </div>
+                  {isAdmin && (
+                    <Link
+                      href="/admin"
+                      onClick={() => setUserMenuOpen(false)}
+                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-muted hover:bg-surface hover:text-foreground transition-colors"
+                    >
+                      <ShieldCheck className="w-4 h-4" />
+                      Admin Dashboard
+                    </Link>
+                  )}
+                  <button
+                    onClick={handleLogout}
+                    className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-muted hover:bg-surface hover:text-foreground transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Sign out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link
+              href="/login"
+              className="px-3 py-1.5 text-sm font-medium text-muted hover:text-foreground hover:bg-surface rounded-md transition-colors"
+            >
+              Sign in
+            </Link>
+          )}
         </div>
 
-        {/* Mobile hamburger */}
-        <button
-          className="md:hidden p-2 rounded-md text-muted hover:text-foreground hover:bg-surface transition-colors"
-          onClick={() => setMobileOpen((o) => !o)}
-          aria-label="Toggle menu"
-        >
-          {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-        </button>
+        {/* Mobile: Theme + Hamburger */}
+        <div className="md:hidden flex items-center gap-2">
+          <ThemeToggle />
+          <button
+            className="p-1.5 rounded-md text-muted hover:text-foreground hover:bg-surface transition-colors"
+            onClick={() => setMobileOpen((o) => !o)}
+            aria-label="Toggle menu"
+          >
+            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+          </button>
+        </div>
       </div>
 
       {/* Mobile Drawer */}
       {mobileOpen && (
-        <div className="md:hidden absolute top-16 left-0 right-0 bg-background border-b border-border shadow-lg z-40 px-6 py-4 flex flex-col gap-3">
-          {/* Selectors */}
-          <div className="flex gap-2">
-            <select
-              title="Select Branch"
-              className="flex-1 bg-surface border border-border rounded-md px-2 py-2 text-sm font-medium outline-none focus:border-primary text-foreground"
-              value={branch}
-              onChange={(e) => updateUrl(e.target.value, semester)}
-            >
-              <option value="AIDS">AIDS</option>
-              <option value="CSE">CSE</option>
-            </select>
-            <select
-              title="Select Semester"
-              className="flex-1 bg-surface border border-border rounded-md px-2 py-2 text-sm font-medium outline-none focus:border-primary text-foreground"
-              value={semester}
-              onChange={(e) => updateUrl(branch, Number(e.target.value))}
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                <option key={sem} value={sem}>
-                  Sem {sem}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Mobile Search */}
+        <div className="md:hidden absolute top-16 left-0 right-0 bg-background border-b border-border shadow-popover z-40 px-4 py-4 flex flex-col gap-3 animate-slide-down">
+          {/* Search */}
           <div className="relative">
             <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
               <Search className="w-4 h-4 text-muted" />
@@ -214,31 +350,50 @@ function NavbarInner() {
               placeholder="Search resources, topics…"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="w-full pl-9 pr-4 py-2 bg-surface border border-border rounded-md outline-none text-sm font-medium focus:border-primary text-foreground placeholder:text-muted"
+              className="w-full pl-9 pr-4 py-2.5 bg-surface border border-border rounded-md outline-none text-sm focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted"
             />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery("")}
-                className="absolute inset-y-0 right-2.5 flex items-center text-muted hover:text-foreground"
-              >
-                <X className="w-3.5 h-3.5" />
-              </button>
-            )}
           </div>
 
-          {/* Mobile Nav Links */}
+          {/* Selectors */}
+          {showSelectors && (
+            <div className="flex gap-2">
+              <select
+                title="Select Branch"
+                className="flex-1 bg-surface border border-border rounded-md px-2.5 py-2 text-sm font-medium outline-none text-foreground"
+                value={branch}
+                onChange={(e) => updateUrl(e.target.value, semester)}
+              >
+                <option value="AIDS">AIDS</option>
+                <option value="CSE">CSE</option>
+              </select>
+              <select
+                title="Select Semester"
+                className="flex-1 bg-surface border border-border rounded-md px-2.5 py-2 text-sm font-medium outline-none text-foreground"
+                value={semester}
+                onChange={(e) => updateUrl(branch, Number(e.target.value))}
+              >
+                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                  <option key={sem} value={sem}>
+                    Sem {sem}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* Nav Links */}
           <div className="border-t border-border pt-3 flex flex-col gap-1">
             {NAV_LINKS.map(({ href, label, Icon }) => {
               const params = new URLSearchParams(searchParams.toString());
-              const finalHref = href === "/" ? "/" : `${href}?${params.toString()}`;
+              const finalHref = `${href}?${params.toString()}`;
               return (
                 <Link
                   key={href}
                   href={finalHref}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                     isActive(href)
-                      ? "bg-surface text-foreground font-semibold"
-                      : "text-muted hover:text-foreground hover:bg-surface"
+                      ? 'bg-surface text-foreground'
+                      : 'text-muted hover:text-foreground hover:bg-surface'
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -246,17 +401,38 @@ function NavbarInner() {
                 </Link>
               );
             })}
-            <Link
-              href="/planner"
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                isActive("/planner")
-                  ? "bg-primary/90 text-white"
-                  : "bg-primary text-white hover:bg-primary-hover"
-              }`}
-            >
-              <CalendarCheck className="w-4 h-4" />
-              My Utility
-            </Link>
+          </div>
+
+          {/* User section */}
+          <div className="border-t border-border pt-3">
+            {user ? (
+              <div className="flex flex-col gap-1">
+                <p className="px-3 py-1 text-xs text-muted">{user.email}</p>
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-muted hover:text-foreground hover:bg-surface"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    Admin Dashboard
+                  </Link>
+                )}
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-muted hover:text-foreground hover:bg-surface w-full text-left"
+                >
+                  <LogOut className="w-4 h-4" />
+                  Sign out
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium text-muted hover:text-foreground hover:bg-surface"
+              >
+                Sign in
+              </Link>
+            )}
           </div>
         </div>
       )}
@@ -266,7 +442,7 @@ function NavbarInner() {
 
 export default function Navbar() {
   return (
-    <Suspense fallback={<div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-16 flex items-center" />}>
+    <Suspense fallback={<div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border h-16" />}>
       <NavbarInner />
     </Suspense>
   );

@@ -1,17 +1,31 @@
-"use client";
+'use client';
 
-import { useState, useMemo } from "react";
-import { useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase";
+import { useState, useMemo, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { createClient } from '@/lib/supabase';
+import Link from 'next/link';
+import { ArrowLeft, Loader2, Eye, EyeOff, BookOpen } from 'lucide-react';
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-  // Stable client — created once per mount, not on every render
+  const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
+
+  const redirectTo = searchParams.get('redirectTo') || '/admin';
+
+  // If already logged in, redirect
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data.user) {
+        window.location.href = redirectTo;
+      }
+    });
+  }, [supabase, redirectTo]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,57 +38,105 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      // Hard navigation ensures the server-side middleware cookie is picked up
-      window.location.href = "/admin";
+      window.location.href = redirectTo;
     }
   };
 
   return (
-    <div className="flex h-[80vh] items-center justify-center">
-      <form
-        onSubmit={handleLogin}
-        className="w-full max-w-sm p-6 bg-surface border border-border rounded-lg shadow-sm"
-      >
-        <h1 className="text-2xl font-bold mb-6 text-center">Admin Login</h1>
-
-        {error && (
-          <div className="mb-4 text-sm text-red-500 bg-red-50 p-2 rounded border border-red-100">
-            {error}
-          </div>
-        )}
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium mb-1">Email</label>
-          <input
-            type="email"
-            required
-            autoComplete="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full bg-background border border-border rounded px-3 py-2 outline-none focus:border-primary"
-          />
-        </div>
-
-        <div className="mb-6">
-          <label className="block text-sm font-medium mb-1">Password</label>
-          <input
-            type="password"
-            required
-            autoComplete="current-password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full bg-background border border-border rounded px-3 py-2 outline-none focus:border-primary"
-          />
-        </div>
-
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-primary text-white py-2 rounded hover:bg-primary-hover disabled:opacity-50 transition"
+    <div className="flex min-h-[85vh] items-center justify-center px-4">
+      <div className="w-full max-w-sm">
+        {/* Back link */}
+        <Link
+          href="/"
+          className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground mb-8 transition-colors"
         >
-          {loading ? "Logging in…" : "Login"}
-        </button>
-      </form>
+          <ArrowLeft className="w-3.5 h-3.5" />
+          Back to home
+        </Link>
+
+        {/* Card */}
+        <div className="bg-card border border-border rounded-xl p-8 shadow-card">
+          {/* Logo */}
+          <div className="flex items-center gap-2.5 mb-8">
+            <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
+              <BookOpen className="w-4 h-4 text-background" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-foreground">Utility</p>
+              <p className="text-xs text-muted">Admin access</p>
+            </div>
+          </div>
+
+          <h1 className="text-xl font-bold text-foreground mb-1">Sign in</h1>
+          <p className="text-sm text-muted mb-6">Enter your credentials to access the dashboard.</p>
+
+          {error && (
+            <div className="mb-5 text-sm text-foreground bg-surface border border-border-strong p-3 rounded-lg">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">
+                Email address
+              </label>
+              <input
+                type="email"
+                required
+                autoComplete="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground placeholder:text-muted transition-all"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-medium text-foreground mb-1.5">
+                Password
+              </label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground placeholder:text-muted transition-all"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 inset-y-0 flex items-center text-muted hover:text-foreground"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-foreground text-background py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2 mt-2"
+            >
+              {loading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  Signing in…
+                </>
+              ) : (
+                'Sign in'
+              )}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center text-xs text-muted mt-6">
+          Access is restricted to authorized personnel.
+        </p>
+      </div>
     </div>
   );
 }
