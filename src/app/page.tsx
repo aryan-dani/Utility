@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CalendarCheck, BookOpen, FileText, ArrowRight, Sparkles } from 'lucide-react';
+import { CalendarCheck, BookOpen, FileText, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
 import { FadeIn, ScaleButton } from '@/components/Animations';
 
 const FEATURES = [
@@ -9,23 +9,39 @@ const FEATURES = [
     number: '01',
     Icon: CalendarCheck,
     description:
-      'Organize your week with a private, local-first task board. Syncs to the cloud when you sign in — no data lost across devices.',
+      'Organize your week with a private, local-first task board. Syncs to the cloud.',
+  },
+  {
+    href: '/ask',
+    label: 'Ask AI',
+    number: '02',
+    Icon: Sparkles,
+    description:
+      'Get instant explanations, flashcards, and study help powered by Llama 3.3.',
   },
   {
     href: '/syllabus',
     label: 'Syllabus',
-    number: '02',
+    number: '03',
     Icon: BookOpen,
     description:
-      'Clear, structured breakdown of every subject, unit by unit. Download the full syllabus PDF instantly.',
+      'Clear breakdown of every subject, unit by unit. Download full PDFs instantly.',
   },
   {
     href: '/resources',
     label: 'Resources',
-    number: '03',
+    number: '04',
     Icon: FileText,
     description:
-      'All your notes, PPTs, question banks, and PYQs organized by subject and category — searchable in seconds.',
+      'All your notes, PPTs, question banks, and PYQs organized by subject.',
+  },
+  {
+    href: '/gpa',
+    label: 'GPA Calc',
+    number: '05',
+    Icon: ShieldCheck,
+    description:
+      'Calculate your SGPA and CGPA with auto-populated subjects from the database.',
   },
 ];
 
@@ -69,12 +85,12 @@ export default function Home() {
       <div className="w-full border-t border-border" />
 
       {/* Features */}
-      <section className="w-full max-w-7xl mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden border border-border shadow-card">
+      <section className="w-full max-w-[90rem] mx-auto px-6 py-20">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-px bg-border rounded-xl overflow-hidden border border-border shadow-card">
           {FEATURES.map(({ href, label, number, Icon, description }, i) => (
             <Link key={href} href={href} className="group block bg-background hover:bg-surface transition-colors duration-200">
               <FadeIn delay={i * 0.07} y={8}>
-                <div className="p-8 h-full flex flex-col gap-6">
+                <div className="p-6 h-full flex flex-col gap-6">
                   <div className="flex items-start justify-between">
                     <div className="w-10 h-10 rounded-lg bg-surface border border-border flex items-center justify-center group-hover:bg-surface-hover transition-colors">
                       <Icon className="w-5 h-5 text-foreground" />

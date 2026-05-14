@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, X, Check, Trash2, Download, Upload, Cloud, CloudOff, LogIn } from 'lucide-react';
+import { Plus, X, Check, Trash2, Download, Upload, Cloud, CloudOff, LogIn, Timer } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 
@@ -257,6 +257,15 @@ export default function PlannerClient() {
             Import
           </button>
           <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={importData} />
+
+          {/* Timer */}
+          <Link
+            href="/timer"
+            className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground bg-surface hover:bg-surface-hover border border-border rounded-md px-3 py-1.5 transition-all shadow-sm"
+          >
+            <Timer className="w-3.5 h-3.5" />
+            Focus Timer
+          </Link>
 
           {/* Clear */}
           <button

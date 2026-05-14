@@ -17,6 +17,7 @@ import {
   ChevronDown,
   LogOut,
   ShieldCheck,
+  Sparkles,
 } from 'lucide-react';
 import { useAcademicStore, Branch, Semester } from '../store/academicStore';
 import { createClient } from '@/lib/supabase';
@@ -24,6 +25,8 @@ import { createClient } from '@/lib/supabase';
 const NAV_LINKS = [
   { href: '/syllabus', label: 'Syllabus', Icon: BookOpen },
   { href: '/resources', label: 'Resources', Icon: FileText },
+  { href: '/ask', label: 'Ask AI', Icon: Sparkles },
+  { href: '/gpa', label: 'GPA', Icon: ShieldCheck },
   { href: '/planner', label: 'Planner', Icon: CalendarCheck },
 ];
 

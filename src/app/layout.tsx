@@ -60,7 +60,10 @@ export default function RootLayout({
                 <div>
                   <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3">Tools</p>
                   <div className="flex flex-col gap-2">
+                    <Link href="/ask" className="text-sm text-muted hover:text-foreground">Ask AI</Link>
                     <Link href="/planner" className="text-sm text-muted hover:text-foreground">Weekly Planner</Link>
+                    <Link href="/gpa" className="text-sm text-muted hover:text-foreground">GPA Calculator</Link>
+                    <Link href="/timer" className="text-sm text-muted hover:text-foreground">Focus Timer</Link>
                     <Link href="/syllabus" className="text-sm text-muted hover:text-foreground">Syllabus</Link>
                     <Link href="/resources" className="text-sm text-muted hover:text-foreground">Resources</Link>
                   </div>
