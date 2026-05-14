@@ -1,0 +1,68 @@
+{
+  "tables": [
+    {
+      "name": "subjects",
+      "type": "BASE TABLE",
+      "rowCount": 0,
+      "primaryKeys": [],
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "string",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "name",
+          "data_type": "string",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "branch",
+          "data_type": "string",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "semester",
+          "data_type": "integer",
+          "is_nullable": "NO"
+        }
+      ]
+    },
+    {
+      "name": "resources",
+      "type": "BASE TABLE",
+      "rowCount": 0,
+      "primaryKeys": [],
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "string",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "title",
+          "data_type": "string",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "file_url",
+          "data_type": "string",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "subject_id",
+          "data_type": "string",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "created_at",
+          "data_type": "string",
+          "is_nullable": "YES"
+        }
+      ]
+    }
+  ],
+  "relationships": [],
+  "_cachedAt": 1778772043101,
+  "_generatedAt": "2026-05-14T15:20:43.101Z"
+}

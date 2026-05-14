@@ -122,18 +122,20 @@ export async function getResourcesFromDB(
     s.toUpperCase(),
   );
 
-  const resources: ResourceItem[] = (data as ResourceRow[]).map((item) => {
+  const resources: ResourceItem[] = (data as any[]).map((item) => {
     const url = item.file_url;
     let category: "ppt" | "notes" | "other" = "other";
-    if (url.includes("_PPT/")) category = "ppt";
-    else if (url.includes("_Notes/")) category = "notes";
+    const lowerUrl = url.toLowerCase();
+    
+    if (lowerUrl.includes("_ppt/")) category = "ppt";
+    else if (lowerUrl.includes("_notes/")) category = "notes";
 
     return {
       id: item.id,
       title: item.title,
       file_url: url,
       created_at: item.created_at,
-      subject_name: item.subjects[0]?.name ?? "Unknown",
+      subject_name: item.subjects?.name ?? "Unknown",
       category,
     };
   });
@@ -144,6 +146,7 @@ export async function getResourcesFromDB(
     const titleLower = item.title.toLowerCase();
 
     // Excluded title patterns
+    if (!item.title.trim()) return false;
     if (EXCLUDED_TITLE_PATTERNS.some((re) => re.test(titleLower))) return false;
 
     // Excluded specific titles
