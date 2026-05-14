@@ -1,4 +1,5 @@
-import { createClient } from "./supabase";
+import { createClient as createBrowserClient } from "./supabase";
+import { SupabaseClient } from "@supabase/supabase-js";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -27,26 +28,10 @@ interface SubjectRow {
   semester: number;
 }
 
-interface ResourceRow {
-  id: string;
-  title: string;
-  file_url: string;
-  created_at: string;
-  subjects: Array<{
-    name: string;
-    branch: string;
-    semester: number;
-  }>;
-}
-
 // ─── Filter configuration ────────────────────────────────────────────────────
 
-/**
- * Title patterns to exclude from the resource list.
- * These are legacy/duplicate files identified during cleanup.
- */
 const EXCLUDED_TITLE_PATTERNS: RegExp[] = [
-  /_notes_\d+$/i,       // e.g. "NOTES_1", "NOTES_2"
+  /_notes_\d+$/i,
 ];
 
 const EXCLUDED_TITLES: string[] = [
@@ -54,9 +39,6 @@ const EXCLUDED_TITLES: string[] = [
   "aies unit_1 (2023)",
 ];
 
-/**
- * Subjects to exclude for a specific branch.
- */
 const BRANCH_SUBJECT_EXCLUSIONS: Record<string, string[]> = {
   AIDS: ["DBMS"],
 };
@@ -66,8 +48,9 @@ const BRANCH_SUBJECT_EXCLUSIONS: Record<string, string[]> = {
 export async function getSubjectsFromDB(
   branch: string,
   semester: number,
+  supabaseClient?: SupabaseClient
 ): Promise<SubjectItem[]> {
-  const supabase = createClient();
+  const supabase = supabaseClient ?? createBrowserClient();
   const { data, error } = await supabase
     .from("subjects")
     .select("id, name, branch, semester")
@@ -92,8 +75,9 @@ export async function getSubjectsFromDB(
 export async function getResourcesFromDB(
   branch: string,
   semester: number,
+  supabaseClient?: SupabaseClient
 ): Promise<ResourceItem[]> {
-  const supabase = createClient();
+  const supabase = supabaseClient ?? createBrowserClient();
 
   const { data, error } = await supabase
     .from("resources")
@@ -145,17 +129,11 @@ export async function getResourcesFromDB(
   return resources.filter((item) => {
     const titleLower = item.title.toLowerCase();
 
-    // Excluded title patterns
     if (!item.title.trim()) return false;
     if (EXCLUDED_TITLE_PATTERNS.some((re) => re.test(titleLower))) return false;
-
-    // Excluded specific titles
     if (EXCLUDED_TITLES.includes(titleLower)) return false;
-
-    // Branch-specific subject exclusions
     if (excluded.includes(item.subject_name.toUpperCase())) return false;
 
-    // Deduplicate by subject + category + title
     const key = `${item.subject_name}-${item.category}-${titleLower}`;
     if (seen.has(key)) return false;
     seen.add(key);

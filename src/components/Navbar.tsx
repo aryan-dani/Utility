@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { useState, useEffect, useRef } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Search, Home, BookOpen, FileText, CalendarCheck, Menu, X } from "lucide-react";
 import { useAcademicStore, Branch, Semester } from "../store/academicStore";
 
@@ -15,10 +15,29 @@ const NAV_LINKS = [
 export default function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { branch, semester, searchQuery, setBranch, setSemester, setSearchQuery } =
+  const searchParams = useSearchParams();
+  const { searchQuery, setBranch, setSemester, setSearchQuery } =
     useAcademicStore();
+  
   const [mobileOpen, setMobileOpen] = useState(false);
   const searchRef = useRef<HTMLInputElement>(null);
+
+  // Get values from URL or fallback to defaults
+  const branch = (searchParams.get("branch") as Branch) || "AIDS";
+  const semester = Number(searchParams.get("semester") || "4") as Semester;
+
+  // Sync store with URL on mount or change
+  useEffect(() => {
+    setBranch(branch);
+    setSemester(semester);
+  }, [branch, semester, setBranch, setSemester]);
+
+  const updateUrl = useCallback((newBranch: string, newSem: number) => {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("branch", newBranch);
+    params.set("semester", newSem.toString());
+    router.push(`${pathname}?${params.toString()}`);
+  }, [pathname, router, searchParams]);
 
   // Close mobile menu on route change
   useEffect(() => {
@@ -38,12 +57,11 @@ export default function Navbar() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
-  // Navigate to a search-aware page when query is entered from a non-searchable route
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    // If on home or planner, navigate to resources to show results
     if (value && pathname !== "/resources" && pathname !== "/syllabus") {
-      router.push("/resources");
+      const params = new URLSearchParams(searchParams.toString());
+      router.push(`/resources?${params.toString()}`);
     }
   };
 
@@ -72,7 +90,7 @@ export default function Navbar() {
               title="Select Branch"
               className="bg-surface border border-border rounded-md px-2 py-1.5 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary text-foreground"
               value={branch}
-              onChange={(e) => setBranch(e.target.value as Branch)}
+              onChange={(e) => updateUrl(e.target.value, semester)}
             >
               <option value="AIDS">AIDS</option>
               <option value="CSE">CSE</option>
@@ -81,7 +99,7 @@ export default function Navbar() {
               title="Select Semester"
               className="bg-surface border border-border rounded-md px-2 py-1.5 text-sm font-medium outline-none focus:border-primary focus:ring-1 focus:ring-primary text-foreground"
               value={semester}
-              onChange={(e) => setSemester(Number(e.target.value) as Semester)}
+              onChange={(e) => updateUrl(branch, Number(e.target.value))}
             >
               {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
                 <option key={sem} value={sem}>
@@ -117,20 +135,24 @@ export default function Navbar() {
           <div className="h-5 w-px bg-border mx-2" />
 
           {/* Nav Links */}
-          {NAV_LINKS.map(({ href, label, Icon }) => (
-            <Link
-              key={href}
-              href={href}
-              className={`px-3 py-1.5 flex items-center gap-2 rounded-md text-sm font-medium transition-colors ${
-                isActive(href)
-                  ? "bg-surface text-foreground font-semibold"
-                  : "text-muted hover:text-foreground hover:bg-surface"
-              }`}
-            >
-              <Icon className="w-4 h-4" />
-              <span>{label}</span>
-            </Link>
-          ))}
+          {NAV_LINKS.map(({ href, label, Icon }) => {
+            const params = new URLSearchParams(searchParams.toString());
+            const finalHref = href === "/" ? "/" : `${href}?${params.toString()}`;
+            return (
+              <Link
+                key={href}
+                href={finalHref}
+                className={`px-3 py-1.5 flex items-center gap-2 rounded-md text-sm font-medium transition-colors ${
+                  isActive(href)
+                    ? "bg-surface text-foreground font-semibold"
+                    : "text-muted hover:text-foreground hover:bg-surface"
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                <span>{label}</span>
+              </Link>
+            );
+          })}
 
           <Link
             href="/planner"
@@ -164,7 +186,7 @@ export default function Navbar() {
               title="Select Branch"
               className="flex-1 bg-surface border border-border rounded-md px-2 py-2 text-sm font-medium outline-none focus:border-primary text-foreground"
               value={branch}
-              onChange={(e) => setBranch(e.target.value as Branch)}
+              onChange={(e) => updateUrl(e.target.value, semester)}
             >
               <option value="AIDS">AIDS</option>
               <option value="CSE">CSE</option>
@@ -173,7 +195,7 @@ export default function Navbar() {
               title="Select Semester"
               className="flex-1 bg-surface border border-border rounded-md px-2 py-2 text-sm font-medium outline-none focus:border-primary text-foreground"
               value={semester}
-              onChange={(e) => setSemester(Number(e.target.value) as Semester)}
+              onChange={(e) => updateUrl(branch, Number(e.target.value))}
             >
               {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
                 <option key={sem} value={sem}>
@@ -207,20 +229,24 @@ export default function Navbar() {
 
           {/* Mobile Nav Links */}
           <div className="border-t border-border pt-3 flex flex-col gap-1">
-            {NAV_LINKS.map(({ href, label, Icon }) => (
-              <Link
-                key={href}
-                href={href}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
-                  isActive(href)
-                    ? "bg-surface text-foreground font-semibold"
-                    : "text-muted hover:text-foreground hover:bg-surface"
-                }`}
-              >
-                <Icon className="w-4 h-4" />
-                {label}
-              </Link>
-            ))}
+            {NAV_LINKS.map(({ href, label, Icon }) => {
+              const params = new URLSearchParams(searchParams.toString());
+              const finalHref = href === "/" ? "/" : `${href}?${params.toString()}`;
+              return (
+                <Link
+                  key={href}
+                  href={finalHref}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
+                    isActive(href)
+                      ? "bg-surface text-foreground font-semibold"
+                      : "text-muted hover:text-foreground hover:bg-surface"
+                  }`}
+                >
+                  <Icon className="w-4 h-4" />
+                  {label}
+                </Link>
+              );
+            })}
             <Link
               href="/planner"
               className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+/* Removed @import for performance. Using next/font in layout.tsx */
 
 @tailwind base;
 @tailwind components;
