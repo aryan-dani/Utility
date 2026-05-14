@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { Suspense } from 'react';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 
@@ -18,7 +19,9 @@ export default function RootLayout({
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
       <body className={`${inter.className} antialiased min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden selection:bg-primary/10 selection:text-primary`}>
-        <Navbar />
+        <Suspense fallback={<div className="h-16 border-b border-border bg-background" />}>
+          <Navbar />
+        </Suspense>
         <main className="flex-1 w-full flex flex-col pt-20 pb-12">
           {children}
         </main>
