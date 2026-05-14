@@ -16,8 +16,10 @@ export interface ResourceItem {
   file_url: string;
   created_at: string;
   subject_name: string;
-  category: "ppt" | "notes" | "other";
+  category: ResourceCategory;
 }
+
+export type ResourceCategory = "notes" | "question-bank" | "ppt" | "pyq" | "other";
 
 // ─── Internal types for Supabase query results ────────────────────────────────
 
@@ -42,6 +44,28 @@ const EXCLUDED_TITLES: string[] = [
 const BRANCH_SUBJECT_EXCLUSIONS: Record<string, string[]> = {
   AIDS: ["DBMS"],
 };
+
+function getResourceCategory(title: string, url: string): ResourceCategory {
+  const haystack = `${title} ${decodeURIComponent(url)}`.toLowerCase();
+
+  if (/\bpyq\b|previous[_\s-]*year|past[_\s-]*paper/.test(haystack)) {
+    return "pyq";
+  }
+
+  if (/\bqb\b|question[_\s-]*banks?|questions[_\s-]*bank/.test(haystack)) {
+    return "question-bank";
+  }
+
+  if (/_ppt\//.test(haystack) || /\bpptx?\b|presentation|slides?/.test(haystack)) {
+    return "ppt";
+  }
+
+  if (/_notes\//.test(haystack) || /\bnotes?\b|handwritten/.test(haystack)) {
+    return "notes";
+  }
+
+  return "other";
+}
 
 // ─── Public API ───────────────────────────────────────────────────────────────
 
@@ -108,11 +132,6 @@ export async function getResourcesFromDB(
 
   const resources: ResourceItem[] = (data as any[]).map((item) => {
     const url = item.file_url;
-    let category: "ppt" | "notes" | "other" = "other";
-    const lowerUrl = url.toLowerCase();
-    
-    if (lowerUrl.includes("_ppt/")) category = "ppt";
-    else if (lowerUrl.includes("_notes/")) category = "notes";
 
     return {
       id: item.id,
@@ -120,7 +139,7 @@ export async function getResourcesFromDB(
       file_url: url,
       created_at: item.created_at,
       subject_name: item.subjects?.name ?? "Unknown",
-      category,
+      category: getResourceCategory(item.title, url),
     };
   });
 
