@@ -23,7 +23,9 @@ export default function RootLayout({
           <Navbar />
         </Suspense>
         <main className="flex-1 w-full flex flex-col pt-20 pb-12">
-          {children}
+          <Suspense fallback={<div className="flex-1 flex items-center justify-center"><div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin" /></div>}>
+            {children}
+          </Suspense>
         </main>
       </body>
     </html>

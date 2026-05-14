@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { Search, Home, BookOpen, FileText, CalendarCheck, Menu, X } from "lucide-react";
 import { useAcademicStore, Branch, Semester } from "../store/academicStore";
 
@@ -12,7 +12,7 @@ const NAV_LINKS = [
   { href: "/resources", label: "Resources", Icon: FileText },
 ];
 
-export default function Navbar() {
+function NavbarInner() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -262,5 +262,13 @@ export default function Navbar() {
         </div>
       )}
     </nav>
+  );
+}
+
+export default function Navbar() {
+  return (
+    <Suspense fallback={<div className="fixed top-0 left-0 right-0 z-50 bg-background border-b border-border h-16 flex items-center" />}>
+      <NavbarInner />
+    </Suspense>
   );
 }
