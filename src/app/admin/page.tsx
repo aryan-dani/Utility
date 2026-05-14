@@ -48,9 +48,12 @@ export default function AdminPage() {
         .select("*")
         .eq("branch", branch)
         .eq("semester", parseInt(semester));
-      setSubjects(data || []);
-      if (data && data.length > 0) {
-        setSelectedSubject(data[0].id);
+      const filteredData = (data || []).filter(
+        (sub) => !(branch === "AIDS" && sub.name.toUpperCase() === "DBMS"),
+      );
+      setSubjects(filteredData);
+      if (filteredData && filteredData.length > 0) {
+        setSelectedSubject(filteredData[0].id);
       } else {
         setSelectedSubject("");
       }

@@ -39,7 +39,9 @@ export async function getTopicsFromDB(
 
   // Assuming `topics` or similar might be structured differently,
   // you might want a topics column array. Let's return raw for now and adapt topics logic if needed.
-  return data || [];
+  return (data || []).filter(
+    (item: any) => !(branch === "AIDS" && item.name?.toUpperCase() === "DBMS"),
+  );
 }
 
 export async function getResourcesFromDB(
@@ -72,11 +74,29 @@ export async function getResourcesFromDB(
     return [];
   }
 
-  return (data || []).map((item: any) => ({
-    id: item.id,
-    title: item.title,
-    file_url: item.file_url,
-    created_at: item.created_at,
-    subject_name: item.subjects.name,
-  }));
+  return (data || [])
+    .map((item: any) => ({
+      id: item.id,
+      title: item.title,
+      file_url: item.file_url,
+      created_at: item.created_at,
+      subject_name: item.subjects.name,
+    }))
+    .filter((item) => {
+      // Filter out files that don't exist in the bucket as per user request
+      const titleLower = item.title.toLowerCase();
+      if (
+        titleLower.includes("aies unit-2 extra (2022)") ||
+        titleLower.includes("aies unit_1 (2023)")
+      ) {
+        return false;
+      }
+
+      // Remove DBMS from AIDS view
+      if (branch === "AIDS" && item.subject_name.toUpperCase() === "DBMS") {
+        return false;
+      }
+
+      return true;
+    });
 }
