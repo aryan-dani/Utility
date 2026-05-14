@@ -17,7 +17,7 @@ export default function Navbar() {
           <div className="w-8 h-8 rounded bg-primary flex items-center justify-center">
             <BookOpen className="w-4 h-4 text-white" />
           </div>
-          <span>AcademicPlanner</span>
+          <span>Utility</span>
         </Link>
 
         <div className="flex gap-2 items-center">
@@ -86,7 +86,7 @@ export default function Navbar() {
             className="ml-2 px-4 py-1.5 flex items-center gap-2 rounded-md text-sm font-medium bg-primary text-white hover:bg-primary-hover transition-colors"
           >
             <CalendarCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">My Planner</span>
+            <span className="hidden sm:inline">My Utility</span>
           </Link>
         </div>
       </div>

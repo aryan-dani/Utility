@@ -15,7 +15,7 @@ export default function Home() {
       >
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface text-muted text-sm font-medium mb-8 border border-border">
           <span className="w-2 h-2 rounded-full bg-primary"></span>
-          Your Professional Academic Hub
+          Your Professional Utility Hub
         </div>
         
         <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-tight mb-8 text-foreground">
@@ -34,7 +34,7 @@ export default function Home() {
               whileTap={{ scale: 0.98 }}
               className="px-8 py-3.5 bg-primary text-white rounded-md font-medium shadow-sm hover:shadow hover:bg-primary-hover transition-all flex items-center gap-2"
             >
-              Open Planner <ArrowRight className="w-4 h-4" />
+              Open Utility <ArrowRight className="w-4 h-4" />
             </motion.button>
           </Link>
           <Link href="/syllabus">
@@ -59,7 +59,7 @@ export default function Home() {
           <div className="w-10 h-10 rounded bg-surface flex items-center justify-center mb-6 border border-border text-foreground">
             <CalendarCheck className="w-5 h-5" />
           </div>
-          <h2 className="text-xl font-semibold mb-3 text-foreground">1. Local Planner</h2>
+          <h2 className="text-xl font-semibold mb-3 text-foreground">1. Local Utility</h2>
           <p className="text-muted text-sm leading-relaxed">
             A beautiful, structured weekly board. It operates entirely locally on your browser. Add and manage tasks without needing a database.
           </p>

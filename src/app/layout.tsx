@@ -3,8 +3,8 @@ import './globals.css';
 import Navbar from '@/components/Navbar';
 
 export const metadata: Metadata = {
-  title: 'Academic Planner',
-  description: 'A premium, modern academic planner.',
+  title: 'Utility',
+  description: 'A premium, modern utility application.',
 };
 
 export default function RootLayout({
