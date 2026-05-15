@@ -1,6 +1,39 @@
 {
   "tables": [
     {
+      "name": "resource_content",
+      "type": "BASE TABLE",
+      "rowCount": 0,
+      "primaryKeys": [],
+      "columns": [
+        {
+          "column_name": "id",
+          "data_type": "string",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "resource_id",
+          "data_type": "string",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "content",
+          "data_type": "string",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "pages",
+          "data_type": "integer",
+          "is_nullable": "YES"
+        },
+        {
+          "column_name": "last_indexed",
+          "data_type": "string",
+          "is_nullable": "YES"
+        }
+      ]
+    },
+    {
       "name": "subjects",
       "type": "BASE TABLE",
       "rowCount": 0,
@@ -85,6 +118,6 @@
     }
   ],
   "relationships": [],
-  "_cachedAt": 1778866753629,
-  "_generatedAt": "2026-05-15T17:39:13.629Z"
+  "_cachedAt": 1778871198186,
+  "_generatedAt": "2026-05-15T18:53:18.186Z"
 }

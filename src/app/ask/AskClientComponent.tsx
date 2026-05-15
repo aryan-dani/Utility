@@ -33,89 +33,45 @@ function CopyButton({ text }: { text: string }) {
   );
 }
 
-/* Simple markdown-ish renderer — handles bold, code, code blocks, lists */
+import ReactMarkdown from 'react-markdown';
+
+/* Professional markdown renderer using react-markdown */
 function MessageContent({ content }: { content: string }) {
-  const blocks = content.split(/(```[\s\S]*?```)/g);
-
   return (
-    <div className="text-sm leading-relaxed space-y-2">
-      {blocks.map((block, i) => {
-        // Fenced code block
-        if (block.startsWith('```') && block.endsWith('```')) {
-          const lines = block.slice(3, -3).split('\n');
-          const lang = lines[0]?.trim() || '';
-          const code = (lang ? lines.slice(1) : lines).join('\n').trim();
-          return (
-            <div key={i} className="relative group">
-              {lang && (
-                <div className="flex items-center justify-between px-3 py-1.5 bg-surface-hover border border-border rounded-t-lg text-[10px] font-mono text-muted uppercase tracking-wider">
-                  {lang}
-                  <CopyButton text={code} />
-                </div>
-              )}
-              <pre className={`bg-surface border border-border ${lang ? 'rounded-b-lg border-t-0' : 'rounded-lg'} p-3 overflow-x-auto`}>
-                <code className="text-xs font-mono text-foreground whitespace-pre">{code}</code>
-              </pre>
-            </div>
-          );
-        }
-
-        // Inline markdown
-        return (
-          <div key={i}>
-            {block.split('\n').map((line, j) => {
-              // Headings
-              if (/^#{1,3}\s/.test(line)) {
-                const level = line.match(/^(#{1,3})/)?.[1].length || 1;
-                const text = line.replace(/^#{1,3}\s/, '');
-                const Tag = level === 1 ? 'h3' : level === 2 ? 'h4' : 'h5';
-                return <Tag key={j} className="font-semibold text-foreground mt-3 mb-1">{text}</Tag>;
-              }
-
-              // Bullet points
-              if (/^[-*]\s/.test(line.trim())) {
-                const text = line.trim().replace(/^[-*]\s/, '');
-                return (
-                  <div key={j} className="flex gap-2 pl-1">
-                    <span className="text-muted mt-1 shrink-0">•</span>
-                    <span dangerouslySetInnerHTML={{ __html: inlineMarkdown(text) }} />
-                  </div>
-                );
-              }
-
-              // Numbered lists
-              if (/^\d+\.\s/.test(line.trim())) {
-                const match = line.trim().match(/^(\d+)\.\s(.*)/);
-                if (match) {
-                  return (
-                    <div key={j} className="flex gap-2 pl-1">
-                      <span className="text-muted font-mono text-xs mt-0.5 shrink-0 w-4 text-right">{match[1]}.</span>
-                      <span dangerouslySetInnerHTML={{ __html: inlineMarkdown(match[2]) }} />
-                    </div>
-                  );
-                }
-              }
-
-              // Empty line
-              if (!line.trim()) return <div key={j} className="h-2" />;
-
-              // Normal paragraph
+    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-surface prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-code:text-primary prose-code:bg-primary/5 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+      <ReactMarkdown
+        components={{
+          pre: ({ children }) => <div className="relative group my-4">{children}</div>,
+          code: ({ inline, className, children, ...props }: any) => {
+            const match = /language-(\w+)/.exec(className || '');
+            const lang = match ? match[1] : '';
+            const code = String(children).replace(/\n$/, '');
+            
+            if (!inline && match) {
               return (
-                <p key={j} dangerouslySetInnerHTML={{ __html: inlineMarkdown(line) }} />
+                <div className="rounded-lg overflow-hidden border border-border">
+                  <div className="flex items-center justify-between px-3 py-1.5 bg-surface-hover border-b border-border text-[10px] font-mono text-muted uppercase tracking-wider">
+                    {lang}
+                    <CopyButton text={code} />
+                  </div>
+                  <pre className="p-3 bg-surface overflow-x-auto m-0">
+                    <code className="text-xs font-mono text-foreground whitespace-pre">{code}</code>
+                  </pre>
+                </div>
               );
-            })}
-          </div>
-        );
-      })}
+            }
+            return (
+              <code className={className} {...props}>
+                {children}
+              </code>
+            );
+          },
+        }}
+      >
+        {content}
+      </ReactMarkdown>
     </div>
   );
-}
-
-function inlineMarkdown(text: string): string {
-  return text
-    .replace(/\*\*(.+?)\*\*/g, '<strong class="font-semibold text-foreground">$1</strong>')
-    .replace(/`(.+?)`/g, '<code class="px-1 py-0.5 bg-surface border border-border rounded text-xs font-mono">$1</code>')
-    .replace(/\*(.+?)\*/g, '<em>$1</em>');
 }
 
 function getMessageContent(m: any): string {

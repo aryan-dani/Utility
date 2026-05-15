@@ -15,8 +15,13 @@ import {
   LayoutGrid,
   List,
   PenTool,
+  Brain,
 } from 'lucide-react';
 import ResourceViewer from './ResourceViewer';
+import SummaryModal from './SummaryModal';
+import ResourceCard from './resources/ResourceCard';
+import ResourceSection from './resources/ResourceSection';
+import SubjectCard from './resources/SubjectCard';
 
 interface ResourcesClientProps {
   initialResources: ResourceItem[];
@@ -40,7 +45,10 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<ResourceFilter>('all');
   const [viewerResource, setViewerResource] = useState<ResourceItem | null>(null);
+  const [summarizingResource, setSummarizingResource] = useState<ResourceItem | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [contentResults, setContentResults] = useState<any[]>([]);
+  const [isSearchingContent, setIsSearchingContent] = useState(false);
 
   const subjectsMap = useMemo(
     () =>
@@ -62,6 +70,29 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
       setSelectedSubject(subjectNames[0]);
     }
   }, [subjectNames, selectedSubject]);
+
+  // Content Search Effect
+  useEffect(() => {
+    if (!searchQuery.trim() || searchQuery.length < 3) {
+      setContentResults([]);
+      return;
+    }
+
+    const timer = setTimeout(async () => {
+      try {
+        setIsSearchingContent(true);
+        const res = await fetch(`/api/search?q=${encodeURIComponent(searchQuery)}`);
+        const data = await res.json();
+        setContentResults(data.results || []);
+      } catch (err) {
+        console.error('Content search error:', err);
+      } finally {
+        setIsSearchingContent(false);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const searchedResources = useMemo(() => {
     const all = selectedSubject ? (subjectsMap[selectedSubject] ?? []) : [];
@@ -144,6 +175,7 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
                   key={name}
                   name={name}
                   resources={subjectsMap[name]}
+                  filters={RESOURCE_FILTERS}
                   onClick={() => {
                     setSelectedSubject(name);
                     setViewMode('list');
@@ -237,41 +269,85 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
                       </div>
                     ) : (
                       <div className="space-y-10">
+                        {/* Intelligent Content Search Results */}
+                        {contentResults.length > 0 && (
+                          <div className="space-y-4 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <h3 className="text-sm font-bold uppercase tracking-wider text-primary flex items-center gap-2.5 border-b border-primary/20 pb-2">
+                              <div className="w-7 h-7 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                                <Brain className="w-4 h-4 text-primary" />
+                              </div>
+                              Content Matches
+                              <span className="ml-auto text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded-full border border-primary/20">
+                                {contentResults.length} Snippets
+                              </span>
+                            </h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {contentResults.map((result, idx) => (
+                                <button
+                                  key={`${result.resource_id}-${idx}`}
+                                  onClick={() => {
+                                    // Map result back to a ResourceItem for the viewer
+                                    const resource = initialResources.find(r => r.id === result.resource_id);
+                                    if (resource) setViewerResource(resource);
+                                  }}
+                                  className="group text-left bg-primary/5 border border-primary/10 rounded-xl p-4 hover:border-primary/30 hover:bg-primary/[0.08] transition-all shadow-sm"
+                                >
+                                  <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[10px] font-bold text-primary uppercase tracking-wider">{result.subject_name}</span>
+                                    <ExternalLink className="w-3 h-3 text-primary/50" />
+                                  </div>
+                                  <h4 className="text-sm font-bold text-foreground mb-2 line-clamp-1 group-hover:text-primary transition-colors">{result.title}</h4>
+                                  <p 
+                                    className="text-xs text-muted leading-relaxed line-clamp-3 italic"
+                                    dangerouslySetInnerHTML={{ __html: `"...${result.snippet}..."` }}
+                                  />
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
                         <ResourceSection
                           title="Question Banks"
                           icon={<BookOpenCheck className="w-4 h-4" />}
                           items={filteredResources.filter((r) => r.category === 'question-bank')}
                           onOpenResource={setViewerResource}
+                          onSummarize={setSummarizingResource}
                         />
                         <ResourceSection
                           title="Class Presentations"
                           icon={<FileSpreadsheet className="w-4 h-4" />}
                           items={filteredResources.filter((r) => r.category === 'ppt')}
                           onOpenResource={setViewerResource}
+                          onSummarize={setSummarizingResource}
                         />
                         <ResourceSection
                           title="Previous Year Questions"
                           icon={<FileText className="w-4 h-4" />}
                           items={filteredResources.filter((r) => r.category === 'pyq')}
                           onOpenResource={setViewerResource}
+                          onSummarize={setSummarizingResource}
                         />
                         <ResourceSection
                           title="Handwritten Notes"
                           icon={<FileText className="w-4 h-4" />}
                           items={filteredResources.filter((r) => r.category === 'notes')}
                           onOpenResource={setViewerResource}
+                          onSummarize={setSummarizingResource}
                         />
                         <ResourceSection
                           title="Writeups"
                           icon={<PenTool className="w-4 h-4" />}
                           items={filteredResources.filter((r) => r.category === 'writeup')}
                           onOpenResource={setViewerResource}
+                          onSummarize={setSummarizingResource}
                         />
                         <ResourceSection
                           title="Other Resources"
                           icon={<HardDrive className="w-4 h-4" />}
                           items={filteredResources.filter((r) => r.category === 'other')}
                           onOpenResource={setViewerResource}
+                          onSummarize={setSummarizingResource}
                         />
                       </div>
                     )}
@@ -293,163 +369,13 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
           onClose={() => setViewerResource(null)}
         />
       )}
+      {summarizingResource && (
+        <SummaryModal
+          resourceId={summarizingResource.id}
+          resourceTitle={summarizingResource.title}
+          onClose={() => setSummarizingResource(null)}
+        />
+      )}
     </div>
-  );
-}
-
-function SubjectCard({ 
-  name, 
-  resources, 
-  onClick 
-}: { 
-  name: string; 
-  resources: ResourceItem[]; 
-  onClick: () => void 
-}) {
-  const counts = useMemo(() => {
-    return resources.reduce((acc, r) => {
-      acc[r.category] = (acc[r.category] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-  }, [resources]);
-
-  return (
-    <button
-      onClick={onClick}
-      className="group flex flex-col text-left bg-card border border-border rounded-2xl p-6 hover:border-border-strong hover:shadow-card transition-all"
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className="w-12 h-12 rounded-xl bg-surface border border-border flex items-center justify-center group-hover:bg-primary/5 transition-colors">
-          <Folder className="w-6 h-6 text-primary" />
-        </div>
-        <span className="text-xs font-bold text-muted bg-surface px-2.5 py-1 rounded-full border border-border">
-          {resources.length} Files
-        </span>
-      </div>
-      
-      <h3 className="text-lg font-bold text-foreground mb-4 group-hover:text-primary transition-colors line-clamp-1">
-        {name}
-      </h3>
-
-      <div className="grid grid-cols-2 gap-2 mt-auto">
-        {RESOURCE_FILTERS.filter(f => f.value !== 'all').map(filter => {
-          const count = counts[filter.value] || 0;
-          if (count === 0) return null;
-          return (
-            <div key={filter.value} className="flex items-center gap-2 text-[11px] text-muted font-medium">
-              <filter.Icon className="w-3 h-3" />
-              <span>{count} {filter.label}</span>
-            </div>
-          );
-        })}
-      </div>
-    </button>
-  );
-}
-
-function ResourceSection({
-  title,
-  icon,
-  items,
-  onOpenResource,
-}: {
-  title: string;
-  icon: React.ReactNode;
-  items: ResourceItem[];
-  onOpenResource: (item: ResourceItem) => void;
-}) {
-  if (items.length === 0) return null;
-  return (
-    <div className="space-y-4">
-      <h3 className="text-sm font-bold uppercase tracking-wider text-muted flex items-center gap-2.5 border-b border-border pb-2">
-        <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center">
-          {icon}
-        </div>
-        {title}
-        <span className="ml-auto text-[10px] bg-surface px-2 py-0.5 rounded-full border border-border">
-          {items.length}
-        </span>
-      </h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        {items.map((item) => (
-          <ResourceCard key={item.id} item={item} onOpenResource={onOpenResource} />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function getFileExtension(url: string) {
-  try {
-    const pathname = new URL(url).pathname;
-    return pathname.split('.').pop()?.toLowerCase() ?? '';
-  } catch {
-    return url.split('?')[0].split('#')[0].split('.').pop()?.toLowerCase() ?? '';
-  }
-}
-
-function ResourceCard({
-  item,
-  onOpenResource,
-}: {
-  item: ResourceItem;
-  onOpenResource: (item: ResourceItem) => void;
-}) {
-  const extension = getFileExtension(item.file_url);
-  const isPdf = extension === 'pdf';
-  const isPpt = extension === 'ppt' || extension === 'pptx';
-  const opensInViewer = isPdf || isPpt;
-  const isSolved = item.title.toLowerCase().includes('(solved)');
-  const cardContent = (
-    <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 hover:bg-surface hover:border-border-strong transition-all shadow-card h-full text-left">
-      <div className="flex items-start justify-between gap-2">
-        <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center flex-shrink-0 group-hover:bg-surface-hover transition-colors">
-          {isPdf ? (
-            <FileText className="w-4 h-4 text-foreground" />
-          ) : isPpt ? (
-            <FileSpreadsheet className="w-4 h-4 text-foreground" />
-          ) : (
-            <HardDrive className="w-4 h-4 text-foreground" />
-          )}
-        </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {isSolved && (
-            <span className="text-[10px] font-semibold uppercase tracking-wide bg-surface border border-border text-muted px-1.5 py-0.5 rounded-full">
-              Solved
-            </span>
-          )}
-          <ExternalLink className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-        </div>
-      </div>
-
-      <p
-        className="text-sm font-medium text-foreground line-clamp-2 leading-tight"
-        title={item.title}
-      >
-        {item.title}
-      </p>
-
-      <p className="text-[10px] uppercase font-medium text-muted tracking-wider mt-auto">
-        {isPdf ? 'PDF' : isPpt ? 'Presentation' : 'File'}
-      </p>
-    </div>
-  );
-
-  if (opensInViewer) {
-    return (
-      <button
-        type="button"
-        onClick={() => onOpenResource(item)}
-        className="group block h-full w-full"
-      >
-        {cardContent}
-      </button>
-    );
-  }
-
-  return (
-    <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="group block">
-      {cardContent}
-    </a>
   );
 }

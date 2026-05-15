@@ -10,6 +10,7 @@ import { getTableSchema } from "./lib/introspection.mjs";
 import { listBuckets, listAllFiles, buildFileTree } from "./lib/storage.mjs";
 import { extractFromStorage, summarize } from "./lib/pdf.mjs";
 import syncProject from "./tools/sync.mjs";
+import indexContent from "./tools/index-content.mjs";
 
 const helpText = `
 Supabase Autonomous Runtime Layer CLI
@@ -27,6 +28,7 @@ Commands:
   pdf <bucket> <path> Extract text and metadata from a PDF
   search <term>     Search all PDFs in 'course-content' for a term
   sync              Synchronize storage buckets with database
+  index             Index PDF contents into the database
   
 Examples:
   node runtime/index.mjs sql "SELECT COUNT(*) FROM subjects"
@@ -106,6 +108,11 @@ async function main() {
 
       case "sync": {
         await syncProject();
+        break;
+      }
+      
+      case "index": {
+        await indexContent();
         break;
       }
 

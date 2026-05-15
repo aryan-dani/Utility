@@ -4,9 +4,8 @@
  * Uses pdf-parse to extract content from PDF buffers.
  */
 
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
-const pdf = require("pdf-parse");
+import * as pdfParse from "pdf-parse";
+const { PDFParse } = pdfParse;
 import { downloadFile } from "./storage.mjs";
 
 /**
@@ -15,16 +14,22 @@ import { downloadFile } from "./storage.mjs";
  * @returns {Promise<object>} - { text, pages, metadata }
  */
 export async function extractText(buffer) {
+  const parser = new PDFParse({ data: buffer });
   try {
-    const data = await pdf(buffer);
+    const info = await parser.getInfo();
+    const textResult = await parser.getText();
+    
     return {
-      text: data.text,
-      pages: data.numpages,
-      metadata: data.info,
-      version: data.version
+      text: textResult.text,
+      pages: info.total,
+      metadata: info.info,
+      version: info.metadata?.get?.('PDFFormatVersion')
     };
   } catch (error) {
+    console.error("PDF Parse Error Details:", error);
     throw new Error(`PDF Extraction failed: ${error.message}`);
+  } finally {
+    await parser.destroy();
   }
 }
 
