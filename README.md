@@ -2,17 +2,17 @@
 
 A premium, minimalist academic workspace designed for university students. Built with Next.js 15, Supabase, and advanced AI integration to transform how students interact with their study materials.
 
-## ✨ Core Features
+## Core Features
 
-- **🧠 Document Intelligence (RAG)**: The AI assistant has direct access to your uploaded PDFs, PPTs, and DOCs. Ask specific questions about your curriculum and get answers grounded in your actual course materials.
-- **⚡ Parallel Indexing Engine**: A high-performance Node.js runtime that parses and indexes entire semesters of content into a searchable vector-like database in seconds.
-- **📚 Modern Resource Vault**: A modular, categorized interface for Class Presentations, Handwritten Notes, and Question Banks with instant AI-generated summaries for every document.
-- **📅 Weekly Planner**: A local-first, cloud-synced task board to keep your week organized.
-- **📊 GPA Calculator**: Precision calculation for SGPA and CGPA with auto-populated subjects.
-- **⏱ Focus Timer**: A beautiful Pomodoro timer with session tracking to keep you in the zone.
-- **🌑 Premium Design**: A sleek, high-contrast monochrome design system with glassmorphism and smooth animations.
+- **Document Intelligence (RAG)**: The AI assistant has direct access to your uploaded PDFs, PPTs, and DOCs. Ask specific questions about your curriculum and get answers grounded in your actual course materials.
+- **Parallel Indexing Engine**: A high-performance Node.js runtime that parses and indexes entire semesters of content into a searchable vector-like database in seconds.
+- **Modern Resource Vault**: A modular, categorized interface for Class Presentations, Handwritten Notes, and Question Banks with instant AI-generated summaries for every document.
+- **Weekly Planner**: A local-first, cloud-synced task board to keep your week organized.
+- **GPA Calculator**: Precision calculation for SGPA and CGPA with auto-populated subjects and Sem IV Strategy Simulator.
+- **Focus Timer**: A beautiful Pomodoro timer with session tracking to keep you in the zone.
+- **Premium Design**: A sleek, high-contrast monochrome design system with glassmorphism and smooth animations.
 
-## 🛠 Tech Stack
+## Tech Stack
 
 - **Framework**: Next.js 15 (App Router)
 - **Styling**: Vanilla CSS + Tailwind CSS (Typography + Custom Design System)
@@ -21,7 +21,7 @@ A premium, minimalist academic workspace designed for university students. Built
 - **Icons**: Lucide React
 - **Animations**: Framer Motion
 
-## 🚀 Deployment & Setup
+## Deployment & Setup
 
 ### 1. Environment Variables
 Create a `.env.local` file in the root directory:
@@ -49,8 +49,8 @@ npm install
 npm run dev
 ```
 
-## 🔐 License
+## License
 
 Proprietary License - All Rights Reserved. See [LICENSE](LICENSE) for details.
 
-Made with ❤️ by [Aryan Dani](https://www.aryandani.com).
+Made with love by [Aryan Dani](https://www.aryandani.com).
