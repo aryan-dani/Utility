@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { createClient } from '@/lib/supabase';
-import { Trash, Edit2, Check, X, File as FileIcon, LogOut, ShieldCheck, ArrowLeft, Loader2 } from 'lucide-react';
+import { Trash, Edit2, Check, X, File as FileIcon, LogOut, ShieldCheck, ArrowLeft, Loader2, ChevronDown, Plus, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 
 interface Subject {
@@ -177,29 +177,34 @@ export default function AdminClient() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-8 min-h-[80vh]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4 pb-6 border-b border-border">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-6 pb-8 border-b border-border">
         <div>
-          <div className="flex items-center gap-2 mb-1">
-            <Link href="/" className="text-muted hover:text-foreground transition-colors">
+          <div className="flex items-center gap-2 mb-2">
+            <Link 
+              href="/" 
+              className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-muted hover:text-foreground transition-all hover:bg-surface-hover"
+            >
               <ArrowLeft className="w-4 h-4" />
             </Link>
-            <div className="flex items-center gap-1.5 text-sm text-muted">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Admin</span>
+            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
+              <ShieldCheck className="w-3 h-3" />
+              <span>Admin Access</span>
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
-          {userEmail && <p className="text-xs text-muted mt-0.5">{userEmail}</p>}
+          <h1 className="text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
+          {userEmail && <p className="text-sm text-muted mt-1 font-medium">{userEmail}</p>}
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-4">
           {/* Tab switcher */}
-          <div className="flex border border-border rounded-lg overflow-hidden bg-surface text-sm">
+          <div className="flex p-1 bg-surface border border-border rounded-xl text-sm shadow-sm">
             {(['upload', 'manage'] as const).map((t) => (
               <button
                 key={t}
-                className={`px-4 py-2 font-medium capitalize transition-colors ${
-                  tab === t ? 'bg-foreground text-background' : 'text-muted hover:text-foreground'
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
+                  tab === t 
+                    ? 'bg-foreground text-background shadow-md scale-[1.02]' 
+                    : 'text-muted hover:text-foreground hover:bg-surface-hover'
                 }`}
                 onClick={() => {
                   setTab(t);
@@ -207,6 +212,7 @@ export default function AdminClient() {
                   setEditingId(null);
                 }}
               >
+                {t === 'upload' ? <Plus className="w-4 h-4" /> : <LayoutDashboard className="w-4 h-4" />}
                 {t === 'upload' ? 'Upload' : 'Manage'}
               </button>
             ))}
@@ -214,40 +220,50 @@ export default function AdminClient() {
 
           <button
             onClick={handleLogout}
-            className="flex items-center gap-1.5 px-3 py-2 text-sm text-muted hover:text-foreground border border-border rounded-lg hover:bg-surface transition-colors"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-muted hover:text-red-500 border border-border rounded-xl hover:bg-red-500/5 transition-all"
           >
             <LogOut className="w-4 h-4" />
-            Sign out
+            <span>Sign out</span>
           </button>
         </div>
       </div>
 
       {/* Filters */}
-      <div className="grid grid-cols-2 gap-4 mb-6 bg-surface p-4 rounded-xl border border-border">
-        <div>
-          <label className="block text-xs font-medium text-foreground mb-1.5">Branch</label>
-          <select
-            value={branch}
-            onChange={(e) => setBranch(e.target.value)}
-            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary text-foreground"
-          >
-            <option value="AIDS">AIDS</option>
-            <option value="CSE">CSE</option>
-          </select>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 bg-surface-hover/50 p-5 rounded-2xl border border-border shadow-sm">
+        <div className="relative">
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">Branch</label>
+          <div className="relative group">
+            <select
+              value={branch}
+              onChange={(e) => setBranch(e.target.value)}
+              className="appearance-none w-full bg-background border border-border rounded-xl pl-4 pr-10 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all group-hover:border-border-strong"
+            >
+              <option value="AIDS">AIDS</option>
+              <option value="CSE">CSE</option>
+            </select>
+            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
+              <ChevronDown className="w-4 h-4" />
+            </div>
+          </div>
         </div>
-        <div>
-          <label className="block text-xs font-medium text-foreground mb-1.5">Semester</label>
-          <select
-            value={semester}
-            onChange={(e) => setSemester(e.target.value)}
-            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm outline-none focus:ring-1 focus:ring-primary text-foreground"
-          >
-            {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-              <option key={sem} value={sem}>
-                Semester {sem}
-              </option>
-            ))}
-          </select>
+        <div className="relative">
+          <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">Semester</label>
+          <div className="relative group">
+            <select
+              value={semester}
+              onChange={(e) => setSemester(e.target.value)}
+              className="appearance-none w-full bg-background border border-border rounded-xl pl-4 pr-10 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all group-hover:border-border-strong"
+            >
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                <option key={sem} value={sem}>
+                  Semester {sem}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
+              <ChevronDown className="w-4 h-4" />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -289,24 +305,29 @@ export default function AdminClient() {
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-foreground mb-1.5">Subject</label>
-            <select
-              value={selectedSubject}
-              onChange={(e) => setSelectedSubject(e.target.value)}
-              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary text-foreground"
-              required
-              disabled={subjects.length === 0}
-            >
-              {subjects.length === 0 ? (
-                <option value="">No subjects found</option>
-              ) : (
-                subjects.map((sub) => (
-                  <option key={sub.id} value={sub.id}>
-                    {sub.name}
-                  </option>
-                ))
-              )}
-            </select>
+            <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">Subject</label>
+            <div className="relative group">
+              <select
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="appearance-none w-full bg-background border border-border rounded-xl pl-4 pr-10 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all group-hover:border-border-strong disabled:opacity-50"
+                required
+                disabled={subjects.length === 0}
+              >
+                {subjects.length === 0 ? (
+                  <option value="">No subjects found</option>
+                ) : (
+                  subjects.map((sub) => (
+                    <option key={sub.id} value={sub.id}>
+                      {sub.name}
+                    </option>
+                  ))
+                )}
+              </select>
+              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
+                <ChevronDown className="w-4 h-4" />
+              </div>
+            </div>
           </div>
           <button
             type="submit"
@@ -344,82 +365,101 @@ export default function AdminClient() {
                 return (
                   <div
                     key={resource.id}
-                    className="p-4 flex items-center justify-between hover:bg-surface transition-colors"
+                    className="p-5 flex items-center justify-between hover:bg-surface/50 transition-all border-b border-border/50 last:border-0"
                   >
-                    <div className="flex-1 mr-4 min-w-0">
+                    <div className="flex-1 mr-6 min-w-0">
                       {isEditing ? (
-                        <div className="flex flex-col gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-surface p-3 rounded-xl border border-border">
                           <input
                             type="text"
                             value={editTitle}
                             onChange={(e) => setEditTitle(e.target.value)}
-                            className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary text-foreground"
+                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                            placeholder="Resource Title"
                           />
-                          <select
-                            value={editSubjectId}
-                            onChange={(e) => setEditSubjectId(e.target.value)}
-                            className="w-full bg-background border border-border rounded-lg px-2.5 py-1.5 text-sm outline-none focus:ring-1 focus:ring-primary text-foreground"
-                          >
-                            {subjects.map((sub) => (
-                              <option key={sub.id} value={sub.id}>
-                                {sub.name}
-                              </option>
-                            ))}
-                          </select>
+                          <div className="relative group">
+                            <select
+                              value={editSubjectId}
+                              onChange={(e) => setEditSubjectId(e.target.value)}
+                              className="appearance-none w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                            >
+                              {subjects.map((sub) => (
+                                <option key={sub.id} value={sub.id}>
+                                  {sub.name}
+                                </option>
+                              ))}
+                            </select>
+                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
+                              <ChevronDown className="w-3.5 h-3.5" />
+                            </div>
+                          </div>
                         </div>
                       ) : (
-                        <div className="flex flex-col">
-                          <span className="font-medium text-foreground text-sm flex items-center gap-2 truncate">
-                            <FileIcon className="w-3.5 h-3.5 text-muted flex-shrink-0" />
-                            {resource.title}
-                          </span>
-                          <span className="text-xs text-muted mt-0.5">{subject?.name || 'Unknown'}</span>
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center shrink-0 shadow-sm">
+                            <FileIcon className="w-5 h-5 text-muted" />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="font-bold text-foreground text-sm tracking-tight truncate">
+                              {resource.title}
+                            </h3>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-1.5 py-0.5 rounded">
+                                {subject?.name || 'Uncategorized'}
+                              </span>
+                              <span className="text-[10px] text-muted font-mono uppercase tracking-tighter">
+                                ID: {resource.id.slice(0, 8)}
+                              </span>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
 
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-2">
                       {isEditing ? (
-                        <>
+                        <div className="flex items-center gap-1.5">
                           <button
                             onClick={() => saveEdit(resource.id)}
-                            className="p-1.5 text-foreground hover:bg-surface rounded-lg transition-colors"
-                            title="Save"
+                            className="w-9 h-9 flex items-center justify-center bg-foreground text-background rounded-xl hover:opacity-90 transition-all shadow-sm"
+                            title="Save Changes"
                           >
                             <Check className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => setEditingId(null)}
-                            className="p-1.5 text-muted hover:bg-surface rounded-lg transition-colors"
+                            className="w-9 h-9 flex items-center justify-center bg-surface border border-border text-muted hover:text-foreground rounded-xl transition-all"
                             title="Cancel"
                           >
                             <X className="w-4 h-4" />
                           </button>
-                        </>
+                        </div>
                       ) : (
                         <>
                           <a
                             href={resource.file_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="p-1.5 text-muted hover:text-foreground hover:bg-surface rounded-lg transition-colors text-xs font-semibold"
+                            className="px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase bg-surface border border-border rounded-lg text-muted hover:text-foreground hover:bg-surface-hover transition-all"
                           >
-                            VIEW
+                            View File
                           </a>
-                          <button
-                            onClick={() => startEdit(resource)}
-                            className="p-1.5 text-muted hover:text-foreground hover:bg-surface rounded-lg transition-colors"
-                            title="Edit"
-                          >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(resource.id, resource.file_url)}
-                            className="p-1.5 text-muted hover:text-foreground hover:bg-surface rounded-lg transition-colors"
-                            title="Delete"
-                          >
-                            <Trash className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center gap-1 ml-2 border-l border-border pl-2">
+                            <button
+                              onClick={() => startEdit(resource)}
+                              className="p-2 text-muted hover:text-foreground hover:bg-surface rounded-lg transition-all"
+                              title="Edit Resource"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(resource.id, resource.file_url)}
+                              className="p-2 text-muted hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all"
+                              title="Delete Resource"
+                            >
+                              <Trash className="w-4 h-4" />
+                            </button>
+                          </div>
                         </>
                       )}
                     </div>

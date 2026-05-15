@@ -236,18 +236,10 @@ export default function AskClient() {
         {messages.length === 0 ? (
           /* Empty state */
           <div className="h-full flex flex-col items-center justify-center text-center px-4">
-            <div className="w-12 h-12 rounded-2xl bg-surface border border-border flex items-center justify-center mb-5">
-              <Brain className="w-6 h-6 text-foreground" />
+            <div className="w-16 h-16 rounded-3xl bg-surface border border-border flex items-center justify-center mb-6 shadow-sm">
+              <Brain className="w-8 h-8 text-foreground" />
             </div>
-            <h1 className="text-xl font-bold text-foreground mb-2">Ask anything about your courses</h1>
-            <p className="text-sm text-muted mb-8 max-w-md">
-              Get explanations, create flashcards, summarize topics, or write code — powered by AI.
-              {subjects.length > 0 && (
-                <span className="block mt-1 text-xs">
-                  Context: {branch} Sem {semester} — {subjects.join(', ')}
-                </span>
-              )}
-            </p>
+            <h1 className="text-2xl font-bold text-foreground mb-10 tracking-tight">Academic Assistant</h1>
 
             {/* Suggested prompts */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
@@ -349,29 +341,31 @@ export default function AskClient() {
           </span>
         </div>
 
-        <form id="chat-form" onSubmit={handleSubmit} className="relative">
-          <textarea
-            ref={inputRef}
-            value={input || ''}
-            onChange={handleInputChange}
-            onKeyDown={handleKeyDown}
-            onInput={handleTextareaInput}
-            placeholder="Ask a question..."
-            rows={1}
-            className="w-full bg-surface border border-border rounded-xl pl-4 pr-12 py-3 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground placeholder:text-muted resize-none overflow-hidden transition-all"
-            disabled={isLoading}
-          />
-          <button
-            type="submit"
-            disabled={isLoading || !(input || '').trim()}
-            className="absolute right-2 bottom-2 w-8 h-8 rounded-lg bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-80 transition-opacity"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
-          </button>
+        <form id="chat-form" onSubmit={handleSubmit} className="relative group">
+          <div className="flex items-end gap-2 bg-surface border border-border rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all shadow-sm group-hover:border-border-strong">
+            <textarea
+              ref={inputRef}
+              value={input || ''}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
+              onInput={handleTextareaInput}
+              placeholder="Type your question..."
+              rows={1}
+              className="flex-1 bg-transparent border-0 rounded-xl pl-3 pr-2 py-2.5 text-sm outline-none text-foreground placeholder:text-muted resize-none overflow-hidden"
+              disabled={isLoading}
+            />
+            <button
+              type="submit"
+              disabled={isLoading || !(input || '').trim()}
+              className="flex-shrink-0 w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition-all shadow-sm mb-0.5 mr-0.5"
+            >
+              {isLoading ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4" />
+              )}
+            </button>
+          </div>
         </form>
 
         <p className="text-[10px] text-muted mt-2 text-center">
