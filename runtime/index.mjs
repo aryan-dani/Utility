@@ -9,6 +9,7 @@ import { executeSQL, formatTable } from "./lib/sql.mjs";
 import { getTableSchema } from "./lib/introspection.mjs";
 import { listBuckets, listAllFiles, buildFileTree } from "./lib/storage.mjs";
 import { extractFromStorage, summarize } from "./lib/pdf.mjs";
+import syncProject from "./tools/sync.mjs";
 
 const helpText = `
 Supabase Autonomous Runtime Layer CLI
@@ -25,6 +26,7 @@ Commands:
   files <bucket>    List all files in a bucket (recursive tree)
   pdf <bucket> <path> Extract text and metadata from a PDF
   search <term>     Search all PDFs in 'course-content' for a term
+  sync              Synchronize storage buckets with database
   
 Examples:
   node runtime/index.mjs sql "SELECT COUNT(*) FROM subjects"
@@ -99,6 +101,11 @@ async function main() {
         if (!args[0]) throw new Error("Search term required.");
         const { default: searchPdfs } = await import("./tools/search-pdfs.mjs");
         // Handled by the tool's own logic
+        break;
+      }
+
+      case "sync": {
+        await syncProject();
         break;
       }
 

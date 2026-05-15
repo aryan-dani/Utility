@@ -19,7 +19,7 @@ export interface ResourceItem {
   category: ResourceCategory;
 }
 
-export type ResourceCategory = "notes" | "question-bank" | "ppt" | "pyq" | "other";
+export type ResourceCategory = "notes" | "question-bank" | "ppt" | "pyq" | "other" | "writeup";
 
 // ─── Internal types for Supabase query results ────────────────────────────────
 
@@ -45,7 +45,7 @@ const BRANCH_SUBJECT_EXCLUSIONS: Record<string, string[]> = {
   AIDS: ["DBMS"],
 };
 
-function getResourceCategory(title: string, url: string): ResourceCategory {
+export function getResourceCategory(title: string, url: string): ResourceCategory {
   const haystack = `${title} ${decodeURIComponent(url)}`.toLowerCase();
 
   if (/\bpyqs?\b|[_/-]pyqs?[_/-]|previous[_\s-]*year|past[_\s-]*paper/i.test(haystack)) {
@@ -62,6 +62,10 @@ function getResourceCategory(title: string, url: string): ResourceCategory {
 
   if (/_notes\//.test(haystack) || /\bnotes?\b|handwritten/.test(haystack)) {
     return "notes";
+  }
+
+  if (/_writeups?\//.test(haystack) || /\bwriteups?\b/.test(haystack)) {
+    return "writeup";
   }
 
   return "other";

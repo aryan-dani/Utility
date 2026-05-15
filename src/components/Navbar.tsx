@@ -18,7 +18,10 @@ import {
   LogOut,
   ShieldCheck,
   Brain,
+  GraduationCap,
+  Calendar,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useAcademicStore, Branch, Semester } from '../store/academicStore';
 import { createClient } from '@/lib/supabase';
 
@@ -29,6 +32,89 @@ const NAV_LINKS = [
   { href: '/gpa', label: 'GPA', Icon: ShieldCheck },
   { href: '/planner', label: 'Planner', Icon: CalendarCheck },
 ];
+
+const BRANCH_OPTIONS = [
+  { value: 'AIDS', label: 'AIDS' },
+  { value: 'CSE', label: 'CSE' },
+];
+
+const SEMESTER_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8].map((sem) => ({
+  value: sem,
+  label: `Sem ${sem}`,
+}));
+
+function CustomSelect<T extends string | number>({
+  value,
+  options,
+  onChange,
+  label,
+  icon: Icon,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+  label: string;
+  icon?: any;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const selectedOption = options.find((o) => o.value === value);
+
+  return (
+    <div ref={containerRef} className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex items-center gap-2 px-3 py-1.5 bg-surface/50 border border-border rounded-lg text-xs font-semibold transition-all hover:bg-surface-hover hover:border-border-strong focus:ring-1 focus:ring-primary ${isOpen ? 'ring-1 ring-primary border-primary bg-surface' : ''}`}
+      >
+        {Icon && <Icon className="w-3.5 h-3.5 text-muted" />}
+        <span className="text-foreground">{selectedOption?.label || label}</span>
+        <ChevronDown className={`w-3 h-3 text-muted transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ duration: 0.1, ease: 'easeOut' }}
+            className="absolute right-0 top-full mt-2 min-w-[120px] bg-card border border-border rounded-xl shadow-popover overflow-hidden z-[100] backdrop-blur-xl"
+          >
+            <div className="p-1.5 flex flex-col gap-0.5">
+              {options.map((opt) => (
+                <button
+                  key={opt.value}
+                  onClick={() => {
+                    onChange(opt.value);
+                    setIsOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors text-left ${
+                    value === opt.value
+                      ? 'bg-primary text-primary-foreground'
+                      : 'text-muted hover:bg-surface hover:text-foreground'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
 
 function ThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -63,33 +149,43 @@ function ThemeToggle() {
         <Icon className="w-4 h-4" />
       </button>
 
-      {open && (
-        <div className="absolute right-0 top-10 w-36 bg-card border border-border rounded-lg shadow-popover overflow-hidden z-50 animate-slide-down">
-          {(
-            [
-              { value: 'light', label: 'Light', Icon: Sun },
-              { value: 'dark', label: 'Dark', Icon: Moon },
-              { value: 'system', label: 'System', Icon: Monitor },
-            ] as const
-          ).map(({ value, label, Icon: OptionIcon }) => (
-            <button
-              key={value}
-              onClick={() => {
-                setTheme(value);
-                setOpen(false);
-              }}
-              className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm transition-colors ${
-                theme === value
-                  ? 'bg-surface text-foreground font-medium'
-                  : 'text-muted hover:bg-surface hover:text-foreground'
-              }`}
-            >
-              <OptionIcon className="w-3.5 h-3.5" />
-              {label}
-            </button>
-          ))}
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            initial={{ opacity: 0, y: 4, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 4, scale: 0.95 }}
+            transition={{ duration: 0.1, ease: 'easeOut' }}
+            className="absolute right-0 top-full mt-2 w-36 bg-card border border-border rounded-xl shadow-popover overflow-hidden z-50 backdrop-blur-xl"
+          >
+            <div className="p-1.5 flex flex-col gap-0.5">
+              {(
+                [
+                  { value: 'light', label: 'Light', Icon: Sun },
+                  { value: 'dark', label: 'Dark', Icon: Moon },
+                  { value: 'system', label: 'System', Icon: Monitor },
+                ] as const
+              ).map(({ value: val, label, Icon: OptionIcon }) => (
+                <button
+                  key={val}
+                  onClick={() => {
+                    setTheme(val);
+                    setOpen(false);
+                  }}
+                  className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-lg transition-colors ${
+                    theme === val
+                      ? 'bg-surface text-foreground font-semibold shadow-sm'
+                      : 'text-muted hover:bg-surface hover:text-foreground'
+                  }`}
+                >
+                  <OptionIcon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
@@ -186,7 +282,7 @@ function NavbarInner() {
   const showSelectors = pathname === '/resources' || pathname === '/syllabus' || pathname === '/gpa' || pathname.startsWith('/resources');
 
   return (
-    <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border h-16 flex items-center">
+    <nav className="fixed top-0 left-0 right-0 z-50 bg-background backdrop-blur-md border-b border-border h-16 flex items-center">
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 flex justify-between items-center gap-4">
         {/* Logo */}
         <Link
@@ -204,37 +300,20 @@ function NavbarInner() {
           {/* Selectors — only show on relevant pages */}
           {showSelectors && (
             <div className="flex items-center gap-2 mr-2">
-              <div className="relative group">
-                <select
-                  title="Select Branch"
-                  className="appearance-none bg-surface border border-border rounded-md pl-2.5 pr-8 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary text-foreground cursor-pointer transition-all hover:bg-surface-hover hover:border-border-strong"
-                  value={branch}
-                  onChange={(e) => updateUrl(e.target.value, semester)}
-                >
-                  <option value="AIDS">AIDS</option>
-                  <option value="CSE">CSE</option>
-                </select>
-                <div className="absolute inset-y-0 right-2.5 flex items-center pointer-events-none text-muted">
-                  <ChevronDown className="w-3 h-3" />
-                </div>
-              </div>
-              <div className="relative group">
-                <select
-                  title="Select Semester"
-                  className="appearance-none bg-surface border border-border rounded-md pl-2.5 pr-8 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary text-foreground cursor-pointer transition-all hover:bg-surface-hover hover:border-border-strong"
-                  value={semester}
-                  onChange={(e) => updateUrl(branch, Number(e.target.value))}
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                    <option key={sem} value={sem}>
-                      Sem {sem}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-2.5 flex items-center pointer-events-none text-muted">
-                  <ChevronDown className="w-3 h-3" />
-                </div>
-              </div>
+              <CustomSelect
+                label="Branch"
+                value={branch}
+                options={BRANCH_OPTIONS}
+                onChange={(val) => updateUrl(val, semester)}
+                icon={GraduationCap}
+              />
+              <CustomSelect
+                label="Semester"
+                value={semester}
+                options={SEMESTER_OPTIONS}
+                onChange={(val) => updateUrl(branch, Number(val))}
+                icon={Calendar}
+              />
             </div>
           )}
 
@@ -301,31 +380,41 @@ function NavbarInner() {
                 <ChevronDown className="w-3 h-3" />
               </button>
 
-              {userMenuOpen && (
-                <div className="absolute right-0 top-10 w-52 bg-card border border-border rounded-lg shadow-popover overflow-hidden z-50 animate-slide-down">
-                  <div className="px-3 py-2.5 border-b border-border">
-                    <p className="text-xs text-muted">Signed in as</p>
-                    <p className="text-sm font-medium text-foreground truncate">{user.email}</p>
-                  </div>
-                  {isAdmin && (
-                    <Link
-                      href="/admin"
-                      onClick={() => setUserMenuOpen(false)}
-                      className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-muted hover:bg-surface hover:text-foreground transition-colors"
-                    >
-                      <ShieldCheck className="w-4 h-4" />
-                      Admin Dashboard
-                    </Link>
-                  )}
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2.5 w-full px-3 py-2 text-sm text-muted hover:bg-surface hover:text-foreground transition-colors"
+              <AnimatePresence>
+                {userMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 4, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 4, scale: 0.95 }}
+                    transition={{ duration: 0.1, ease: 'easeOut' }}
+                    className="absolute right-0 top-full mt-2 w-52 bg-card border border-border rounded-xl shadow-popover overflow-hidden z-50 backdrop-blur-xl"
                   >
-                    <LogOut className="w-4 h-4" />
-                    Sign out
-                  </button>
-                </div>
-              )}
+                    <div className="px-4 py-3 border-b border-border bg-surface/30">
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-muted mb-0.5">Signed in as</p>
+                      <p className="text-xs font-semibold text-foreground truncate">{user.email}</p>
+                    </div>
+                    <div className="p-1.5 flex flex-col gap-0.5">
+                      {isAdmin && (
+                        <Link
+                          href="/admin"
+                          onClick={() => setUserMenuOpen(false)}
+                          className="flex items-center gap-2.5 w-full px-3 py-2 text-xs font-medium text-muted hover:bg-surface hover:text-foreground rounded-lg transition-colors"
+                        >
+                          <ShieldCheck className="w-3.5 h-3.5" />
+                          Admin Dashboard
+                        </Link>
+                      )}
+                      <button
+                        onClick={handleLogout}
+                        className="flex items-center gap-2.5 w-full px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-lg transition-colors"
+                      >
+                        <LogOut className="w-3.5 h-3.5" />
+                        Sign out
+                      </button>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
           ) : (
             <Link
@@ -370,36 +459,23 @@ function NavbarInner() {
           {/* Selectors */}
           {showSelectors && (
             <div className="flex gap-2">
-              <div className="relative flex-1 group">
-                <select
-                  title="Select Branch"
-                  className="appearance-none w-full bg-surface border border-border rounded-md pl-3 pr-9 py-2.5 text-sm font-semibold outline-none text-foreground"
+              <div className="flex-1">
+                <CustomSelect
+                  label="Branch"
                   value={branch}
-                  onChange={(e) => updateUrl(e.target.value, semester)}
-                >
-                  <option value="AIDS">AIDS</option>
-                  <option value="CSE">CSE</option>
-                </select>
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
-                  <ChevronDown className="w-4 h-4" />
-                </div>
+                  options={BRANCH_OPTIONS}
+                  onChange={(val) => updateUrl(val, semester)}
+                  icon={GraduationCap}
+                />
               </div>
-              <div className="relative flex-1 group">
-                <select
-                  title="Select Semester"
-                  className="appearance-none w-full bg-surface border border-border rounded-md pl-3 pr-9 py-2.5 text-sm font-semibold outline-none text-foreground"
+              <div className="flex-1">
+                <CustomSelect
+                  label="Semester"
                   value={semester}
-                  onChange={(e) => updateUrl(branch, Number(e.target.value))}
-                >
-                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                    <option key={sem} value={sem}>
-                      Sem {sem}
-                    </option>
-                  ))}
-                </select>
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
-                  <ChevronDown className="w-4 h-4" />
-                </div>
+                  options={SEMESTER_OPTIONS}
+                  onChange={(val) => updateUrl(branch, Number(val))}
+                  icon={Calendar}
+                />
               </div>
             </div>
           )}

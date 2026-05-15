@@ -60,9 +60,31 @@
           "is_nullable": "YES"
         }
       ]
+    },
+    {
+      "name": "planner_data",
+      "type": "BASE TABLE",
+      "rowCount": 0,
+      "primaryKeys": [],
+      "columns": [
+        {
+          "column_name": "user_id",
+          "data_type": "string",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "data",
+          "is_nullable": "NO"
+        },
+        {
+          "column_name": "updated_at",
+          "data_type": "string",
+          "is_nullable": "NO"
+        }
+      ]
     }
   ],
   "relationships": [],
-  "_cachedAt": 1778772043101,
-  "_generatedAt": "2026-05-14T15:20:43.101Z"
+  "_cachedAt": 1778866753629,
+  "_generatedAt": "2026-05-15T17:39:13.629Z"
 }
