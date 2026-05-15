@@ -39,6 +39,7 @@ const EXCLUDED_TITLE_PATTERNS: RegExp[] = [
 const EXCLUDED_TITLES: string[] = [
   "aies unit-2 extra (2022)",
   "aies unit_1 (2023)",
+  ".emptyfolderplaceholder",
 ];
 
 const BRANCH_SUBJECT_EXCLUSIONS: Record<string, string[]> = {
@@ -164,7 +165,7 @@ export async function getResourcesFromDB(
     seen.add(key);
 
     return true;
-  });
+  }).sort((a, b) => a.title.localeCompare(b.title, undefined, { numeric: true, sensitivity: 'base' }));
 }
 
 export async function getSyllabusFile(
