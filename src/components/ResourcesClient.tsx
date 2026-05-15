@@ -125,14 +125,14 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
                   key={subjectName}
                   onClick={() => setSelectedSubject(subjectName)}
                   className={`flex items-center gap-3 px-4 py-2.5 text-left transition-colors border-b border-border/50 last:border-0 text-sm ${
-                    selectedSubject === subjectName
-                      ? 'bg-foreground text-background font-medium'
-                      : 'text-foreground hover:bg-surface'
-                  }`}
+                      selectedSubject === subjectName
+                        ? 'bg-primary text-primary-foreground font-semibold shadow-sm'
+                        : 'text-foreground hover:bg-surface'
+                    }`}
                 >
                   <Folder className={`w-3.5 h-3.5 flex-shrink-0 ${selectedSubject === subjectName ? 'text-background' : 'text-muted'}`} />
                   <span className="flex-1 truncate">{subjectName}</span>
-                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-medium ${selectedSubject === subjectName ? 'bg-background/20 text-background' : 'bg-surface text-muted'}`}>
+                  <span className={`text-[10px] px-1.5 py-0.5 rounded font-bold transition-colors ${selectedSubject === subjectName ? 'bg-primary-foreground/20 text-primary-foreground' : 'bg-surface text-muted'}`}>
                     {subjectsMap[subjectName].length}
                   </span>
                 </button>

@@ -154,22 +154,22 @@ export default function GPAClient({ initialSubjects, branch, semester }: GPAClie
             </p>
           </div>
 
-          <div className="flex bg-surface border border-border p-1 rounded-xl">
+          <div className="flex bg-surface border border-border p-1 rounded-xl shadow-sm">
             <button
               onClick={() => setActiveTab('sgpa')}
-              className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === 'sgpa' ? 'bg-foreground text-background shadow-sm' : 'text-muted hover:text-foreground'
+              className={`px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
+                activeTab === 'sgpa' ? 'bg-foreground text-background shadow-md scale-[1.02]' : 'text-muted hover:text-foreground hover:bg-surface-hover'
               }`}
             >
-              SGPA (Semester)
+              SGPA
             </button>
             <button
               onClick={() => setActiveTab('cgpa')}
-              className={`px-4 py-1.5 text-sm font-semibold rounded-lg transition-all ${
-                activeTab === 'cgpa' ? 'bg-foreground text-background shadow-sm' : 'text-muted hover:text-foreground'
+              className={`px-5 py-2 text-xs font-bold uppercase tracking-wider rounded-lg transition-all ${
+                activeTab === 'cgpa' ? 'bg-foreground text-background shadow-md scale-[1.02]' : 'text-muted hover:text-foreground hover:bg-surface-hover'
               }`}
             >
-              CGPA (Cumulative)
+              CGPA
             </button>
           </div>
         </div>
@@ -207,16 +207,16 @@ export default function GPAClient({ initialSubjects, branch, semester }: GPAClie
                         <th className="px-4 py-3 w-12 text-center"></th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-border/50">
+                    <tbody className="divide-y divide-border/30">
                       {entries.map((entry) => (
-                        <tr key={entry.id} className="hover:bg-surface/30 transition-colors group">
+                        <tr key={entry.id} className="hover:bg-surface/20 transition-colors group">
                           <td className="px-6 py-4">
                             <input
                               type="text"
                               value={entry.name}
                               onChange={(e) => updateEntry(entry.id, 'name', e.target.value)}
-                              placeholder="Enter subject name..."
-                              className="w-full bg-transparent outline-none text-sm text-foreground placeholder:text-muted/40 font-medium"
+                              placeholder="Subject name"
+                              className="w-full bg-transparent outline-none text-sm text-foreground placeholder:text-muted/30 font-medium"
                             />
                           </td>
                           <td className="px-4 py-4">
@@ -226,25 +226,30 @@ export default function GPAClient({ initialSubjects, branch, semester }: GPAClie
                               max="10"
                               value={entry.credits}
                               onChange={(e) => updateEntry(entry.id, 'credits', parseInt(e.target.value) || 0)}
-                              className="w-full bg-surface border border-border rounded-md px-2 py-1 text-sm text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
+                              className="w-full bg-surface/50 border border-border rounded-lg px-3 py-1.5 text-xs text-foreground font-mono outline-none focus:ring-1 focus:ring-primary transition-all"
                             />
                           </td>
                           <td className="px-4 py-4">
-                            <select
-                              value={entry.grade}
-                              onChange={(e) => updateEntry(entry.id, 'grade', e.target.value)}
-                              className="w-full bg-surface border border-border rounded-md px-2 py-1.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-foreground cursor-pointer"
-                            >
-                              <option value="" disabled>Select Grade</option>
-                              {GRADES.map(g => (
-                                <option key={g.value} value={g.value}>{g.label}</option>
-                              ))}
-                            </select>
+                            <div className="relative">
+                              <select
+                                value={entry.grade}
+                                onChange={(e) => updateEntry(entry.id, 'grade', e.target.value)}
+                                className="appearance-none w-full bg-surface/50 border border-border rounded-lg pl-3 pr-8 py-1.5 text-xs text-foreground outline-none focus:ring-1 focus:ring-primary cursor-pointer transition-all hover:bg-surface"
+                              >
+                                <option value="" disabled>Grade</option>
+                                {GRADES.map(g => (
+                                  <option key={g.value} value={g.value}>{g.label}</option>
+                                ))}
+                              </select>
+                              <div className="absolute inset-y-0 right-2.5 flex items-center pointer-events-none text-muted">
+                                <ChevronRight className="w-3 h-3 rotate-90" />
+                              </div>
+                            </div>
                           </td>
                           <td className="px-4 py-4 text-center">
                             <button 
                               onClick={() => removeEntry(entry.id)}
-                              className="text-muted hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
+                              className="text-muted/40 hover:text-red-500 transition-all opacity-0 group-hover:opacity-100 p-1.5 hover:bg-red-500/10 rounded-md"
                             >
                               <Trash2 className="w-4 h-4" />
                             </button>

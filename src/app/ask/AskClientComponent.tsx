@@ -2,7 +2,7 @@
 
 import { useChat } from '@ai-sdk/react';
 import { useState, useEffect, useRef, useMemo } from 'react';
-import { Send, Trash2, Bot, User, Sparkles, ArrowDown, Loader2, Copy, Check } from 'lucide-react';
+import { Send, Trash2, Bot, User, Brain, ArrowDown, Loader2, Copy, Check } from 'lucide-react';
 import { useAcademicStore } from '@/store/academicStore';
 import { createClient } from '@/lib/supabase';
 
@@ -237,7 +237,7 @@ export default function AskClient() {
           /* Empty state */
           <div className="h-full flex flex-col items-center justify-center text-center px-4">
             <div className="w-12 h-12 rounded-2xl bg-surface border border-border flex items-center justify-center mb-5">
-              <Sparkles className="w-6 h-6 text-foreground" />
+              <Brain className="w-6 h-6 text-foreground" />
             </div>
             <h1 className="text-xl font-bold text-foreground mb-2">Ask anything about your courses</h1>
             <p className="text-sm text-muted mb-8 max-w-md">

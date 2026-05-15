@@ -17,7 +17,7 @@ import {
   ChevronDown,
   LogOut,
   ShieldCheck,
-  Sparkles,
+  Brain,
 } from 'lucide-react';
 import { useAcademicStore, Branch, Semester } from '../store/academicStore';
 import { createClient } from '@/lib/supabase';
@@ -25,7 +25,7 @@ import { createClient } from '@/lib/supabase';
 const NAV_LINKS = [
   { href: '/syllabus', label: 'Syllabus', Icon: BookOpen },
   { href: '/resources', label: 'Resources', Icon: FileText },
-  { href: '/ask', label: 'Ask AI', Icon: Sparkles },
+  { href: '/ask', label: 'Ask AI', Icon: Brain },
   { href: '/gpa', label: 'GPA', Icon: ShieldCheck },
   { href: '/planner', label: 'Planner', Icon: CalendarCheck },
 ];
@@ -183,7 +183,7 @@ function NavbarInner() {
   const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map((e) => e.trim()) ?? [];
   const isAdmin = user && adminEmails.includes(user.email ?? '');
 
-  const showSelectors = pathname === '/resources' || pathname === '/syllabus' || pathname.startsWith('/resources');
+  const showSelectors = pathname === '/resources' || pathname === '/syllabus' || pathname === '/gpa' || pathname.startsWith('/resources');
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border h-16 flex items-center">
@@ -204,27 +204,37 @@ function NavbarInner() {
           {/* Selectors — only show on relevant pages */}
           {showSelectors && (
             <div className="flex items-center gap-2 mr-2">
-              <select
-                title="Select Branch"
-                className="bg-surface border border-border rounded-md px-2.5 py-1.5 text-sm font-medium outline-none focus:ring-1 focus:ring-primary text-foreground cursor-pointer"
-                value={branch}
-                onChange={(e) => updateUrl(e.target.value, semester)}
-              >
-                <option value="AIDS">AIDS</option>
-                <option value="CSE">CSE</option>
-              </select>
-              <select
-                title="Select Semester"
-                className="bg-surface border border-border rounded-md px-2.5 py-1.5 text-sm font-medium outline-none focus:ring-1 focus:ring-primary text-foreground cursor-pointer"
-                value={semester}
-                onChange={(e) => updateUrl(branch, Number(e.target.value))}
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                  <option key={sem} value={sem}>
-                    Sem {sem}
-                  </option>
-                ))}
-              </select>
+              <div className="relative group">
+                <select
+                  title="Select Branch"
+                  className="appearance-none bg-surface border border-border rounded-md pl-2.5 pr-8 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary text-foreground cursor-pointer transition-all hover:bg-surface-hover hover:border-border-strong"
+                  value={branch}
+                  onChange={(e) => updateUrl(e.target.value, semester)}
+                >
+                  <option value="AIDS">AIDS</option>
+                  <option value="CSE">CSE</option>
+                </select>
+                <div className="absolute inset-y-0 right-2.5 flex items-center pointer-events-none text-muted">
+                  <ChevronDown className="w-3 h-3" />
+                </div>
+              </div>
+              <div className="relative group">
+                <select
+                  title="Select Semester"
+                  className="appearance-none bg-surface border border-border rounded-md pl-2.5 pr-8 py-1.5 text-xs font-semibold outline-none focus:ring-1 focus:ring-primary text-foreground cursor-pointer transition-all hover:bg-surface-hover hover:border-border-strong"
+                  value={semester}
+                  onChange={(e) => updateUrl(branch, Number(e.target.value))}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                    <option key={sem} value={sem}>
+                      Sem {sem}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-2.5 flex items-center pointer-events-none text-muted">
+                  <ChevronDown className="w-3 h-3" />
+                </div>
+              </div>
             </div>
           )}
 
@@ -236,7 +246,7 @@ function NavbarInner() {
             <input
               ref={searchRef}
               type="text"
-              placeholder="Search… (⌘K)"
+              placeholder="Search…"
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
               className="pl-8 pr-8 py-1.5 bg-surface border border-border rounded-md outline-none text-sm w-56 focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted transition-all focus:w-72"
@@ -360,27 +370,37 @@ function NavbarInner() {
           {/* Selectors */}
           {showSelectors && (
             <div className="flex gap-2">
-              <select
-                title="Select Branch"
-                className="flex-1 bg-surface border border-border rounded-md px-2.5 py-2 text-sm font-medium outline-none text-foreground"
-                value={branch}
-                onChange={(e) => updateUrl(e.target.value, semester)}
-              >
-                <option value="AIDS">AIDS</option>
-                <option value="CSE">CSE</option>
-              </select>
-              <select
-                title="Select Semester"
-                className="flex-1 bg-surface border border-border rounded-md px-2.5 py-2 text-sm font-medium outline-none text-foreground"
-                value={semester}
-                onChange={(e) => updateUrl(branch, Number(e.target.value))}
-              >
-                {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                  <option key={sem} value={sem}>
-                    Sem {sem}
-                  </option>
-                ))}
-              </select>
+              <div className="relative flex-1 group">
+                <select
+                  title="Select Branch"
+                  className="appearance-none w-full bg-surface border border-border rounded-md pl-3 pr-9 py-2.5 text-sm font-semibold outline-none text-foreground"
+                  value={branch}
+                  onChange={(e) => updateUrl(e.target.value, semester)}
+                >
+                  <option value="AIDS">AIDS</option>
+                  <option value="CSE">CSE</option>
+                </select>
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
+              <div className="relative flex-1 group">
+                <select
+                  title="Select Semester"
+                  className="appearance-none w-full bg-surface border border-border rounded-md pl-3 pr-9 py-2.5 text-sm font-semibold outline-none text-foreground"
+                  value={semester}
+                  onChange={(e) => updateUrl(branch, Number(e.target.value))}
+                >
+                  {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                    <option key={sem} value={sem}>
+                      Sem {sem}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
+                  <ChevronDown className="w-4 h-4" />
+                </div>
+              </div>
             </div>
           )}
 

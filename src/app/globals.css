@@ -42,23 +42,23 @@
   --foreground: #fafafa;
   --foreground-subtle: #a1a1aa;
 
-  --card: #18181b;
-  --card-hover: #27272a;
+  --card: #111113;
+  --card-hover: #18181b;
 
-  --surface: #18181b;
-  --surface-hover: #27272a;
+  --surface: #111113;
+  --surface-hover: #18181b;
 
-  --border: #27272a;
-  --border-strong: #3f3f46;
+  --border: #1d1d20;
+  --border-strong: #27272a;
 
-  --muted: #71717a;
-  --muted-hover: #a1a1aa;
+  --muted: #636366;
+  --muted-hover: #8e8e93;
 
   --primary: #fafafa;
   --primary-hover: #d4d4d8;
   --primary-foreground: #09090b;
 
-  --ring: rgba(250, 250, 250, 0.1);
+  --ring: rgba(250, 250, 250, 0.05);
 
   color-scheme: dark;
 }

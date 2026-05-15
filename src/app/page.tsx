@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CalendarCheck, BookOpen, FileText, ArrowRight, Sparkles, ShieldCheck } from 'lucide-react';
+import { CalendarCheck, BookOpen, FileText, ArrowRight, Brain, ShieldCheck } from 'lucide-react';
 import { FadeIn, ScaleButton } from '@/components/Animations';
 
 const FEATURES = [
@@ -15,7 +15,7 @@ const FEATURES = [
     href: '/ask',
     label: 'Ask AI',
     number: '02',
-    Icon: Sparkles,
+    Icon: Brain,
     description:
       'Get instant explanations, flashcards, and study help powered by Llama 3.3.',
   },
@@ -51,10 +51,7 @@ export default function Home() {
       {/* Hero */}
       <section className="w-full max-w-7xl mx-auto px-6 pt-20 pb-28 flex flex-col items-center justify-center text-center">
         <FadeIn>
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface text-muted text-xs font-medium mb-10 border border-border">
-            <Sparkles className="w-3 h-3" />
-            Academic Workspace
-          </div>
+
 
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.08] mb-6 text-foreground max-w-4xl mx-auto">
             Everything for your

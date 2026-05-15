@@ -5,6 +5,7 @@ import Link from 'next/link';
 import './globals.css';
 import Navbar from '@/components/Navbar';
 import { Providers } from '@/components/Providers';
+import { BookOpen } from 'lucide-react';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -45,55 +46,63 @@ export default function RootLayout({
             </Suspense>
           </main>
 
-          <footer className="w-full border-t border-border bg-background-subtle mt-auto">
-            <div className="max-w-7xl mx-auto px-6 py-10">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mb-8">
-                {/* Brand */}
-                <div className="col-span-2 md:col-span-1">
-                  <p className="font-bold text-foreground tracking-tight mb-2">Utility</p>
-                  <p className="text-xs text-muted leading-relaxed">
-                    A premium academic workspace for students.
+          <footer className="w-full border-t border-border/50 bg-background-subtle/50 backdrop-blur-sm mt-auto">
+            <div className="max-w-7xl mx-auto px-6 py-12">
+              <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-12">
+                <div className="max-w-xs">
+                  <Link href="/" className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2 mb-3">
+                    <div className="w-6 h-6 rounded bg-foreground flex items-center justify-center">
+                      <BookOpen className="w-3 h-3 text-background" />
+                    </div>
+                    Utility
+                  </Link>
+                  <p className="text-sm text-muted leading-relaxed">
+                    A premium academic workspace designed to streamline your university experience. 
                   </p>
                 </div>
 
-                {/* Tools */}
-                <div>
-                  <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3">Tools</p>
-                  <div className="flex flex-col gap-2">
-                    <Link href="/ask" className="text-sm text-muted hover:text-foreground">Ask AI</Link>
-                    <Link href="/planner" className="text-sm text-muted hover:text-foreground">Weekly Planner</Link>
-                    <Link href="/gpa" className="text-sm text-muted hover:text-foreground">GPA Calculator</Link>
-                    <Link href="/timer" className="text-sm text-muted hover:text-foreground">Focus Timer</Link>
-                    <Link href="/syllabus" className="text-sm text-muted hover:text-foreground">Syllabus</Link>
-                    <Link href="/resources" className="text-sm text-muted hover:text-foreground">Resources</Link>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-10">
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Workspace</h4>
+                    <nav className="flex flex-col gap-2.5">
+                      <Link href="/syllabus" className="text-sm text-muted hover:text-foreground transition-colors">Syllabus</Link>
+                      <Link href="/resources" className="text-sm text-muted hover:text-foreground transition-colors">Resources</Link>
+                      <Link href="/ask" className="text-sm text-muted hover:text-foreground transition-colors">Ask AI</Link>
+                    </nav>
                   </div>
-                </div>
-
-                {/* More */}
-                <div>
-                  <p className="text-xs font-semibold text-foreground uppercase tracking-wider mb-3">More</p>
-                  <div className="flex flex-col gap-2">
-                    <Link href="/admin" className="text-sm text-muted hover:text-foreground">Admin</Link>
-                    <a href="https://www.aryandani.com" target="_blank" rel="noopener noreferrer" className="text-sm text-muted hover:text-foreground">Portfolio</a>
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Tools</h4>
+                    <nav className="flex flex-col gap-2.5">
+                      <Link href="/gpa" className="text-sm text-muted hover:text-foreground transition-colors">GPA Calculator</Link>
+                      <Link href="/planner" className="text-sm text-muted hover:text-foreground transition-colors">Weekly Planner</Link>
+                      <Link href="/timer" className="text-sm text-muted hover:text-foreground transition-colors">Focus Timer</Link>
+                    </nav>
+                  </div>
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Company</h4>
+                    <nav className="flex flex-col gap-2.5">
+                      <Link href="/admin" className="text-sm text-muted hover:text-foreground transition-colors">Admin</Link>
+                      <a href="https://www.aryandani.com" target="_blank" rel="noopener noreferrer" className="text-sm text-muted hover:text-foreground transition-colors">Portfolio</a>
+                    </nav>
                   </div>
                 </div>
               </div>
 
-              <div className="border-t border-border pt-6 flex flex-col sm:flex-row justify-between items-center gap-3">
-                <p className="text-xs text-muted">
-                  © {new Date().getFullYear()} Utility. All rights reserved.
+              <div className="pt-8 border-t border-border/30 flex flex-col sm:flex-row justify-between items-center gap-4">
+                <p className="text-xs text-muted/60">
+                  © {new Date().getFullYear()} Utility. Built for efficiency.
                 </p>
-                <p className="text-xs text-muted">
-                  Made by{' '}
+                <div className="flex items-center gap-6">
                   <a
                     href="https://www.aryandani.com"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-foreground hover:underline underline-offset-4 font-medium"
+                    className="text-xs text-muted/60 hover:text-foreground transition-colors flex items-center gap-1.5"
                   >
-                    Aryan Dani
+                    <span>Crafted by</span>
+                    <span className="font-semibold text-foreground">Aryan Dani</span>
                   </a>
-                </p>
+                </div>
               </div>
             </div>
           </footer>
