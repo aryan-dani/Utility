@@ -13,6 +13,7 @@ import {
   Search,
   ExternalLink,
 } from 'lucide-react';
+import ResourceViewer from './ResourceViewer';
 
 interface ResourcesClientProps {
   initialResources: ResourceItem[];
@@ -34,6 +35,7 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
   const { searchQuery } = useAcademicStore();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<ResourceFilter>('all');
+  const [viewerResource, setViewerResource] = useState<ResourceItem | null>(null);
 
   const subjectsMap = useMemo(
     () =>
@@ -196,26 +198,31 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
                       title="Question Banks"
                       icon={<BookOpenCheck className="w-3.5 h-3.5" />}
                       items={filteredResources.filter((r) => r.category === 'question-bank')}
+                      onOpenResource={setViewerResource}
                     />
                     <ResourceSection
                       title="Class Presentations"
                       icon={<FileSpreadsheet className="w-3.5 h-3.5" />}
                       items={filteredResources.filter((r) => r.category === 'ppt')}
+                      onOpenResource={setViewerResource}
                     />
                     <ResourceSection
                       title="Previous Year Questions"
                       icon={<FileText className="w-3.5 h-3.5" />}
                       items={filteredResources.filter((r) => r.category === 'pyq')}
+                      onOpenResource={setViewerResource}
                     />
                     <ResourceSection
                       title="Handwritten Notes"
                       icon={<FileText className="w-3.5 h-3.5" />}
                       items={filteredResources.filter((r) => r.category === 'notes')}
+                      onOpenResource={setViewerResource}
                     />
                     <ResourceSection
                       title="Other Resources"
                       icon={<HardDrive className="w-3.5 h-3.5" />}
                       items={filteredResources.filter((r) => r.category === 'other')}
+                      onOpenResource={setViewerResource}
                     />
                   </>
                 )}
@@ -229,6 +236,12 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
           </div>
         </div>
       )}
+      {viewerResource && (
+        <ResourceViewer
+          resource={viewerResource}
+          onClose={() => setViewerResource(null)}
+        />
+      )}
     </div>
   );
 }
@@ -237,10 +250,12 @@ function ResourceSection({
   title,
   icon,
   items,
+  onOpenResource,
 }: {
   title: string;
   icon: React.ReactNode;
   items: ResourceItem[];
+  onOpenResource: (item: ResourceItem) => void;
 }) {
   if (items.length === 0) return null;
   return (
@@ -251,53 +266,84 @@ function ResourceSection({
       </h3>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         {items.map((item) => (
-          <ResourceCard key={item.id} item={item} />
+          <ResourceCard key={item.id} item={item} onOpenResource={onOpenResource} />
         ))}
       </div>
     </div>
   );
 }
 
-function ResourceCard({ item }: { item: ResourceItem }) {
-  const fileUpper = item.file_url.toUpperCase();
-  const isPdf = fileUpper.endsWith('.PDF');
-  const isPpt = fileUpper.endsWith('.PPT') || fileUpper.endsWith('.PPTX');
+function getFileExtension(url: string) {
+  try {
+    const pathname = new URL(url).pathname;
+    return pathname.split('.').pop()?.toLowerCase() ?? '';
+  } catch {
+    return url.split('?')[0].split('#')[0].split('.').pop()?.toLowerCase() ?? '';
+  }
+}
+
+function ResourceCard({
+  item,
+  onOpenResource,
+}: {
+  item: ResourceItem;
+  onOpenResource: (item: ResourceItem) => void;
+}) {
+  const extension = getFileExtension(item.file_url);
+  const isPdf = extension === 'pdf';
+  const isPpt = extension === 'ppt' || extension === 'pptx';
+  const opensInViewer = isPdf || isPpt;
   const isSolved = item.title.toLowerCase().includes('(solved)');
+  const cardContent = (
+    <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 hover:bg-surface hover:border-border-strong transition-all shadow-card h-full text-left">
+      <div className="flex items-start justify-between gap-2">
+        <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center flex-shrink-0 group-hover:bg-surface-hover transition-colors">
+          {isPdf ? (
+            <FileText className="w-4 h-4 text-foreground" />
+          ) : isPpt ? (
+            <FileSpreadsheet className="w-4 h-4 text-foreground" />
+          ) : (
+            <HardDrive className="w-4 h-4 text-foreground" />
+          )}
+        </div>
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {isSolved && (
+            <span className="text-[10px] font-semibold uppercase tracking-wide bg-surface border border-border text-muted px-1.5 py-0.5 rounded-full">
+              Solved
+            </span>
+          )}
+          <ExternalLink className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
+        </div>
+      </div>
+
+      <p
+        className="text-sm font-medium text-foreground line-clamp-2 leading-tight"
+        title={item.title}
+      >
+        {item.title}
+      </p>
+
+      <p className="text-[10px] uppercase font-medium text-muted tracking-wider mt-auto">
+        {isPdf ? 'PDF' : isPpt ? 'Presentation' : 'File'}
+      </p>
+    </div>
+  );
+
+  if (opensInViewer) {
+    return (
+      <button
+        type="button"
+        onClick={() => onOpenResource(item)}
+        className="group block h-full w-full"
+      >
+        {cardContent}
+      </button>
+    );
+  }
 
   return (
     <a href={item.file_url} target="_blank" rel="noopener noreferrer" className="group block">
-      <div className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 hover:bg-surface hover:border-border-strong transition-all shadow-card h-full">
-        <div className="flex items-start justify-between gap-2">
-          <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center flex-shrink-0 group-hover:bg-surface-hover transition-colors">
-            {isPdf ? (
-              <FileText className="w-4 h-4 text-foreground" />
-            ) : isPpt ? (
-              <FileSpreadsheet className="w-4 h-4 text-foreground" />
-            ) : (
-              <HardDrive className="w-4 h-4 text-foreground" />
-            )}
-          </div>
-          <div className="flex items-center gap-1.5 flex-shrink-0">
-            {isSolved && (
-              <span className="text-[10px] font-semibold uppercase tracking-wide bg-surface border border-border text-muted px-1.5 py-0.5 rounded-full">
-                Solved
-              </span>
-            )}
-            <ExternalLink className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
-          </div>
-        </div>
-
-        <p
-          className="text-sm font-medium text-foreground line-clamp-2 leading-tight"
-          title={item.title}
-        >
-          {item.title}
-        </p>
-
-        <p className="text-[10px] uppercase font-medium text-muted tracking-wider mt-auto">
-          {isPdf ? 'PDF' : isPpt ? 'Presentation' : 'File'}
-        </p>
-      </div>
+      {cardContent}
     </a>
   );
 }
