@@ -31,7 +31,7 @@ export default function ResourceCard({
   const isSummarizable = isPdf || isPpt || isDoc;
   const isSolved = item.title.toLowerCase().includes('(solved)');
 
-  const handleCardClick = () => {
+  const handleOpen = () => {
     if (opensInViewer) {
       onOpenResource(item);
     } else {
@@ -41,17 +41,7 @@ export default function ResourceCard({
 
   return (
     <div
-      onClick={handleCardClick}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          handleCardClick();
-        }
-      }}
-      tabIndex={0}
-      role="button"
-      aria-label={`Open ${item.title}`}
-      className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 hover:bg-surface hover:border-border-strong transition-all shadow-card h-full text-left cursor-pointer group outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+      className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 hover:bg-surface hover:border-border-strong transition-all shadow-card h-full text-left group"
     >
       <div className="flex items-start justify-between gap-2">
         <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center flex-shrink-0 group-hover:bg-surface-hover transition-colors">
@@ -69,7 +59,6 @@ export default function ResourceCard({
               Solved
             </span>
           )}
-          <ExternalLink className="w-3 h-3 text-muted opacity-0 group-hover:opacity-100 transition-opacity" />
         </div>
       </div>
 
@@ -84,18 +73,33 @@ export default function ResourceCard({
         {isPdf ? 'PDF' : isPpt ? 'Presentation' : isDoc ? 'Document' : 'File'}
       </p>
 
-      {isSummarizable && (
+      <div className={`grid gap-2 mt-2 ${isSummarizable ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <button
+          type="button"
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            onSummarize(item);
+            handleOpen();
           }}
-          className="flex items-center justify-center gap-1.5 w-full mt-2 py-1.5 bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg text-[11px] font-bold text-primary transition-all group/btn"
+          className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-surface hover:bg-surface-hover border border-border rounded-lg text-[11px] font-bold text-foreground transition-all"
         >
-          Summarize
+          <ExternalLink className="w-3 h-3" />
+          Open
         </button>
-      )}
+        {isSummarizable && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              onSummarize(item);
+            }}
+            className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg text-[11px] font-bold text-primary transition-all group/btn"
+          >
+            Summarize
+          </button>
+        )}
+      </div>
     </div>
   );
 }
