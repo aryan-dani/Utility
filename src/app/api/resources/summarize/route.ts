@@ -1,11 +1,7 @@
-import { createGroq } from '@ai-sdk/groq';
+import { groq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 import { createAdminClient } from '@/lib/supabaseAdmin';
 import { NextResponse } from 'next/server';
-
-const groqClient = createGroq({
-  apiKey: process.env.GROQ_API_KEY,
-});
 
 export const runtime = 'edge';
 
@@ -41,7 +37,7 @@ export async function GET(request: Request) {
 
     // 3. Generate summary
     const { text } = await generateText({
-      model: groqClient('llama-3.1-8b-instant'),
+      model: groq('llama-3.1-8b-instant'),
       maxOutputTokens: 1024,
       system: `You are an elite academic summarizer. Your goal is to help students quickly grasp the core concepts of their study materials.`,
       prompt: `Summarize the following study material titled "${title}".
@@ -60,6 +56,10 @@ export async function GET(request: Request) {
     return NextResponse.json({ summary: text });
   } catch (err: any) {
     console.error('Summarization error:', err);
-    return NextResponse.json({ error: 'Failed to generate AI summary' }, { status: 500 });
+    return NextResponse.json({ 
+      error: 'Failed to generate AI summary',
+      details: err?.message || String(err),
+      stack: err?.stack
+    }, { status: 500 });
   }
 }
