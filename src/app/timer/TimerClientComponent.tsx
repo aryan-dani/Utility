@@ -27,14 +27,14 @@ export default function TimerClient() {
   const [showSettings, setShowSettings] = useState(false);
   
   // Settings
-  const [workTime, setWorkTime] = useState(25);
-  const [breakTime, setBreakTime] = useState(5);
-  const [longBreakTime, setLongBreakTime] = useState(15);
+  const [workTime, setWorkTime] = useState<number | string>(25);
+  const [breakTime, setBreakTime] = useState<number | string>(5);
+  const [longBreakTime, setLongBreakTime] = useState<number | string>(15);
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const totalTime = mode === 'work' ? workTime * 60 : mode === 'break' ? breakTime * 60 : longBreakTime * 60;
+  const totalTime = mode === 'work' ? (Number(workTime) || 1) * 60 : mode === 'break' ? (Number(breakTime) || 1) * 60 : (Number(longBreakTime) || 1) * 60;
   const progress = ((totalTime - timeLeft) / totalTime) * 100;
 
   const playSound = useCallback(() => {
@@ -48,9 +48,9 @@ export default function TimerClient() {
   const switchMode = useCallback((newMode: TimerMode) => {
     setMode(newMode);
     setIsActive(false);
-    if (newMode === 'work') setTimeLeft(workTime * 60);
-    else if (newMode === 'break') setTimeLeft(breakTime * 60);
-    else setTimeLeft(longBreakTime * 60);
+    if (newMode === 'work') setTimeLeft((Number(workTime) || 1) * 60);
+    else if (newMode === 'break') setTimeLeft((Number(breakTime) || 1) * 60);
+    else setTimeLeft((Number(longBreakTime) || 1) * 60);
   }, [workTime, breakTime, longBreakTime]);
 
   useEffect(() => {
@@ -215,7 +215,7 @@ export default function TimerClient() {
                 <input 
                   type="number" 
                   value={workTime} 
-                  onChange={(e) => setWorkTime(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setWorkTime(e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
                   className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
                 />
               </div>
@@ -224,7 +224,7 @@ export default function TimerClient() {
                 <input 
                   type="number" 
                   value={breakTime} 
-                  onChange={(e) => setBreakTime(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setBreakTime(e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
                   className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
                 />
               </div>
@@ -233,7 +233,7 @@ export default function TimerClient() {
                 <input 
                   type="number" 
                   value={longBreakTime} 
-                  onChange={(e) => setLongBreakTime(parseInt(e.target.value) || 1)}
+                  onChange={(e) => setLongBreakTime(e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
                   className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
                 />
               </div>

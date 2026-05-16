@@ -35,6 +35,7 @@ CREATE TABLE IF NOT EXISTS resource_content (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   resource_id UUID REFERENCES resources(id) ON DELETE CASCADE UNIQUE,
   content TEXT NOT NULL,
+  ai_summary TEXT,
   pages INTEGER,
   last_indexed TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

@@ -16,10 +16,10 @@ export async function GET(request: Request) {
   try {
     const supabase = createAdminClient();
     
-    // 1. Fetch content from the index
+    // 1. Fetch content and any cached summary from the index
     const { data, error } = await supabase
       .from('resource_content')
-      .select('content, resources(title)')
+      .select('content, ai_summary, resources(title)')
       .eq('resource_id', resourceId)
       .single();
 
@@ -29,11 +29,17 @@ export async function GET(request: Request) {
       }, { status: 404 });
     }
 
-    const { content, resources } = data as any;
+    const { content, ai_summary, resources } = data as any;
+
+    // Return cached summary instantly if available
+    if (ai_summary) {
+      return NextResponse.json({ summary: ai_summary });
+    }
+
     const title = resources?.title || 'this document';
 
-    // 2. Prepare content for AI (limit to ~14k chars / ~3.5k tokens to prevent Groq rate limits)
-    const contextContent = content.substring(0, 14000); 
+    // 2. Prepare content for AI (limit to ~6k chars / ~1.5k tokens to prevent Groq rate limits)
+    const contextContent = content.substring(0, 6000); 
 
     // 3. Generate summary
     const { text } = await generateText({
@@ -52,6 +58,12 @@ export async function GET(request: Request) {
       CONTENT:
       ${contextContent}`,
     });
+
+    // 4. Cache the summary asynchronously so future requests are instant
+    await supabase
+      .from('resource_content')
+      .update({ ai_summary: text })
+      .eq('resource_id', resourceId);
 
     return NextResponse.json({ summary: text });
   } catch (err: any) {
