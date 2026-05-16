@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { createClient } from '@/lib/supabase';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Eye, EyeOff, BookOpen } from 'lucide-react';
@@ -12,11 +12,11 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
+  const [googleLoading, setGoogleLoading] = useState(false);
   const searchParams = useSearchParams();
   const supabase = useMemo(() => createClient(), []);
 
-  const redirectTo = searchParams.get('redirectTo') || '/admin';
+  const redirectTo = searchParams.get('redirectTo') || '/planner';
 
   // If already logged in, redirect
   useEffect(() => {
@@ -42,6 +42,24 @@ export default function LoginPage() {
     }
   };
 
+  const handleGoogleSignIn = async () => {
+    setGoogleLoading(true);
+    setError(null);
+    document.cookie = `utility_oauth_redirect=${encodeURIComponent(redirectTo)}; path=/; max-age=600; SameSite=Lax`;
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      setGoogleLoading(false);
+    }
+  };
+
   return (
     <div className="flex min-h-[85vh] items-center justify-center px-4">
       <div className="w-full max-w-sm">
@@ -63,18 +81,43 @@ export default function LoginPage() {
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">Utility</p>
-              <p className="text-xs text-muted">Admin access</p>
+              <p className="text-xs text-muted">Student workspace</p>
             </div>
           </div>
 
           <h1 className="text-xl font-bold text-foreground mb-1">Sign in</h1>
-          <p className="text-sm text-muted mb-6">Enter your credentials to access the dashboard.</p>
+          <p className="text-sm text-muted mb-6">Sign in to access your planner and resources.</p>
 
           {error && (
             <div className="mb-5 text-sm text-foreground bg-surface border border-border-strong p-3 rounded-lg">
               {error}
             </div>
           )}
+
+          <button
+            type="button"
+            onClick={handleGoogleSignIn}
+            disabled={googleLoading || loading}
+            className="w-full bg-background border border-border text-foreground py-2.5 rounded-lg text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-colors flex items-center justify-center gap-2 mb-5"
+          >
+            {googleLoading ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <span className="flex h-4 w-4 items-center justify-center text-sm font-bold leading-none">
+                G
+              </span>
+            )}
+            Continue with Google
+          </button>
+
+          <div className="relative mb-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-card px-2 text-xs text-muted">or sign in with email</span>
+            </div>
+          </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
@@ -134,7 +177,13 @@ export default function LoginPage() {
         </div>
 
         <p className="text-center text-xs text-muted mt-6">
-          Access is restricted to authorized personnel.
+          New to Utility?{' '}
+          <Link
+            href={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            Create an account
+          </Link>
         </p>
       </div>
     </div>

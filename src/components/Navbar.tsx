@@ -324,6 +324,7 @@ function NavbarInner() {
             </div>
             <input
               ref={searchRef}
+              suppressHydrationWarning
               type="text"
               placeholder="Search…"
               value={searchQuery}
@@ -448,6 +449,7 @@ function NavbarInner() {
               <Search className="w-4 h-4 text-muted" />
             </div>
             <input
+              suppressHydrationWarning
               type="text"
               placeholder="Search resources, topics…"
               value={searchQuery}

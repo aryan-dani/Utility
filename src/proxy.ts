@@ -57,22 +57,20 @@ export async function proxy(request: NextRequest) {
     }
   }
 
-  // Redirect already-logged-in users away from login page
-  if (request.nextUrl.pathname === '/login' && user) {
-    const adminEmails = process.env.ADMIN_EMAILS
-      ? process.env.ADMIN_EMAILS.split(',').map((e) => e.trim())
-      : [];
-
-    if (adminEmails.includes(user.email ?? '')) {
-      const url = request.nextUrl.clone();
-      url.pathname = '/admin';
-      return NextResponse.redirect(url);
-    }
+  // Redirect already-logged-in users away from auth pages
+  if ((request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/signup') && user) {
+    const url = request.nextUrl.clone();
+    const redirectTo = url.searchParams.get('redirectTo');
+    url.pathname = redirectTo && redirectTo.startsWith('/') && !redirectTo.startsWith('//')
+      ? redirectTo
+      : '/planner';
+    url.search = '';
+    return NextResponse.redirect(url);
   }
 
   return supabaseResponse;
 }
 
 export const config = {
-  matcher: ['/admin/:path*', '/login'],
+  matcher: ['/admin/:path*', '/login', '/signup'],
 };

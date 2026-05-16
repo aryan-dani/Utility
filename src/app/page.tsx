@@ -1,6 +1,7 @@
 import Link from 'next/link';
 import { CalendarCheck, BookOpen, FileText, ArrowRight, Brain, ShieldCheck } from 'lucide-react';
 import { FadeIn, ScaleButton } from '@/components/Animations';
+import { createClient } from '@/lib/supabaseServer';
 
 const FEATURES = [
   {
@@ -45,7 +46,13 @@ const FEATURES = [
   },
 ];
 
-export default function Home() {
+export default async function Home() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  const isLoggedIn = Boolean(user);
+
   return (
     <div className="flex-1 w-full flex flex-col">
       {/* Hero */}
@@ -63,18 +70,28 @@ export default function Home() {
             A structured, premium workspace for accessing syllabi, course materials, and managing your weekly schedule.
           </p>
 
-          <div className="flex flex-wrap gap-3 justify-center">
-            <Link href="/planner">
-              <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-foreground text-background rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity shadow-card">
-                Open Planner <ArrowRight className="w-4 h-4" />
-              </ScaleButton>
-            </Link>
-            <Link href="/resources">
-              <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface border border-border text-foreground rounded-lg text-sm font-medium hover:bg-surface-hover transition-colors">
-                Browse Resources
-              </ScaleButton>
-            </Link>
-          </div>
+          {isLoggedIn ? (
+            <div className="flex flex-wrap gap-3 justify-center">
+              <Link href="/planner">
+                <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-foreground text-background rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity shadow-card">
+                  Open Planner <ArrowRight className="w-4 h-4" />
+                </ScaleButton>
+              </Link>
+              <Link href="/resources">
+                <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface border border-border text-foreground rounded-lg text-sm font-medium hover:bg-surface-hover transition-colors">
+                  Browse Resources
+                </ScaleButton>
+              </Link>
+            </div>
+          ) : (
+            <div className="flex justify-center">
+              <Link href="/login">
+                <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-foreground text-background rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity shadow-card">
+                  Get Started <ArrowRight className="w-4 h-4" />
+                </ScaleButton>
+              </Link>
+            </div>
+          )}
         </FadeIn>
       </section>
 
