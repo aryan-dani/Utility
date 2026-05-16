@@ -7,7 +7,7 @@ const groqClient = createGroq({
   apiKey: process.env.GROQ_API_KEY,
 });
 
-export const maxDuration = 30; // 30 seconds for AI generation
+export const runtime = 'edge';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -36,12 +36,13 @@ export async function GET(request: Request) {
     const { content, resources } = data as any;
     const title = resources?.title || 'this document';
 
-    // 2. Prepare content for AI (limit to ~12k tokens roughly by chars)
-    const contextContent = content.substring(0, 30000); 
+    // 2. Prepare content for AI (limit to ~14k chars / ~3.5k tokens to prevent Groq rate limits)
+    const contextContent = content.substring(0, 14000); 
 
     // 3. Generate summary
     const { text } = await generateText({
-      model: groqClient('llama-3.3-70b-versatile'),
+      model: groqClient('llama-3.1-8b-instant'),
+      maxOutputTokens: 1024,
       system: `You are an elite academic summarizer. Your goal is to help students quickly grasp the core concepts of their study materials.`,
       prompt: `Summarize the following study material titled "${title}".
       
