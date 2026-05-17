@@ -194,17 +194,22 @@ function NavbarInner() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { searchQuery, setBranch, setSemester, setSearchQuery } = useAcademicStore();
+  const { searchQuery, setBranch, setSemester, setSearchQuery, setCommandPaletteOpen } = useAcademicStore();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [user, setUser] = useState<{ email: string | undefined } | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [isMac, setIsMac] = useState(true);
   const searchRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const supabase = useRef(createClient());
 
   const branch = (searchParams.get('branch') as Branch) || 'AIDS';
   const semester = Number(searchParams.get('semester') || '4') as Semester;
+
+  useEffect(() => {
+    setIsMac(typeof navigator !== 'undefined' && (navigator.userAgent.includes('Mac') || navigator.platform.includes('Mac')));
+  }, []);
 
   useEffect(() => {
     setBranch(branch);
@@ -251,13 +256,12 @@ function NavbarInner() {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
         e.preventDefault();
-        searchRef.current?.focus();
-        searchRef.current?.select();
+        setCommandPaletteOpen(true);
       }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, []);
+  }, [setCommandPaletteOpen]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
@@ -287,6 +291,7 @@ function NavbarInner() {
         {/* Logo */}
         <Link
           href="/"
+          onClick={() => setSearchQuery('')}
           className="text-base font-bold tracking-tight text-foreground flex items-center gap-2 shrink-0"
         >
           <div className="w-7 h-7 rounded bg-foreground flex items-center justify-center">
@@ -300,7 +305,7 @@ function NavbarInner() {
           {/* Selectors — only show on relevant pages */}
           {showSelectors && (
             <div className="flex items-center gap-2 mr-2">
-              <CustomSelect
+               <CustomSelect
                 label="Branch"
                 value={branch}
                 options={BRANCH_OPTIONS}
@@ -317,29 +322,19 @@ function NavbarInner() {
             </div>
           )}
 
-          {/* Search Bar */}
-          <div className="relative">
-            <div className="absolute inset-y-0 left-3 flex items-center pointer-events-none">
-              <Search className="w-3.5 h-3.5 text-muted" />
-            </div>
-            <input
-              ref={searchRef}
-              suppressHydrationWarning
-              type="text"
-              placeholder="Search…"
-              value={searchQuery}
-              onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-8 pr-8 py-1.5 bg-surface border border-border rounded-md outline-none text-sm w-56 focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted transition-all focus:w-72"
-            />
-            {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute inset-y-0 right-2.5 flex items-center text-muted hover:text-foreground"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            )}
-          </div>
+          {/* Command Palette Trigger */}
+          <button
+            onClick={() => setCommandPaletteOpen(true)}
+            className="flex items-center justify-between px-3 py-1.5 bg-surface border border-border rounded-lg text-sm w-56 text-muted hover:text-foreground hover:border-border-strong transition-all hover:w-64 shadow-sm"
+          >
+            <span className="flex items-center gap-2 truncate">
+              <Search className="w-3.5 h-3.5" />
+              <span>Search Spotlight...</span>
+            </span>
+            <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] font-bold bg-background border border-border rounded shadow-sm text-muted">
+              {isMac ? '⌘K' : 'Ctrl+K'}
+            </kbd>
+          </button>
 
           <div className="w-px h-5 bg-border mx-1" />
 
@@ -351,6 +346,7 @@ function NavbarInner() {
               <Link
                 key={href}
                 href={finalHref}
+                onClick={() => setSearchQuery('')}
                 className={`px-3 py-1.5 flex items-center gap-2 rounded-md text-sm font-medium transition-colors ${
                   isActive(href)
                     ? 'bg-surface text-foreground'
@@ -491,6 +487,10 @@ function NavbarInner() {
                 <Link
                   key={href}
                   href={finalHref}
+                  onClick={() => {
+                    setSearchQuery('');
+                    setMobileOpen(false);
+                  }}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-md text-sm font-medium transition-colors ${
                     isActive(href)
                       ? 'bg-surface text-foreground'

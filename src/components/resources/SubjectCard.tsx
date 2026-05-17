@@ -27,29 +27,29 @@ export default function SubjectCard({
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col text-left bg-card border border-border rounded-2xl p-6 hover:border-border-strong hover:shadow-card transition-all"
+      className="group flex flex-col text-left bg-card border border-border rounded-xl p-6 hover:border-border-strong hover:shadow-sm transition-colors"
     >
-      <div className="flex items-center justify-between mb-4">
-        <div className="w-12 h-12 rounded-xl bg-surface border border-border flex items-center justify-center group-hover:bg-primary/5 transition-colors">
-          <Folder className="w-6 h-6 text-primary" />
+      <div className="flex items-center justify-between mb-6 w-full">
+        <div className="w-10 h-10 rounded-lg bg-surface border border-border flex items-center justify-center text-muted group-hover:text-foreground transition-colors shadow-xs">
+          <Folder className="w-5 h-5" />
         </div>
-        <span className="text-xs font-bold text-muted bg-surface px-2.5 py-1 rounded-full border border-border">
-          {resources.length} Files
+        <span className="text-[10px] font-semibold bg-surface px-2.5 py-1 rounded-md border border-border text-muted group-hover:text-foreground transition-colors">
+          {resources.length} {resources.length === 1 ? 'File' : 'Files'}
         </span>
       </div>
       
-      <h3 className="text-lg font-bold text-foreground mb-4 group-hover:text-primary transition-colors line-clamp-1">
+      <h3 className="text-base font-bold text-foreground mb-6 group-hover:text-primary transition-colors line-clamp-2 leading-snug">
         {name}
       </h3>
 
-      <div className="grid grid-cols-2 gap-2 mt-auto">
+      <div className="grid grid-cols-2 gap-2 mt-auto w-full pt-4 border-t border-border">
         {filters.filter(f => f.value !== 'all').map(filter => {
           const count = counts[filter.value] || 0;
           if (count === 0) return null;
           return (
-            <div key={filter.value} className="flex items-center gap-2 text-[11px] text-muted font-medium">
-              <filter.Icon className="w-3 h-3" />
-              <span>{count} {filter.label}</span>
+            <div key={filter.value} className="flex items-center gap-2 text-xs text-muted font-medium">
+              <filter.Icon className="w-3.5 h-3.5" />
+              <span className="truncate">{count} {filter.label}</span>
             </div>
           );
         })}

@@ -40,37 +40,33 @@ export default function ResourceCard({
   };
 
   return (
-    <div
-      className="bg-card border border-border rounded-xl p-4 flex flex-col gap-3 hover:bg-surface hover:border-border-strong transition-all shadow-card h-full text-left group"
-    >
-      <div className="flex items-start justify-between gap-2">
-        <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center flex-shrink-0 group-hover:bg-surface-hover transition-colors">
+    <div className="bg-card border border-border hover:border-border-strong p-5 rounded-xl flex flex-col gap-4 transition-colors text-left shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center flex-shrink-0 text-foreground">
           {isPdf ? (
-            <FileText className="w-4 h-4 text-foreground" />
+            <FileText className="w-4 h-4" />
           ) : isPpt ? (
-            <FileSpreadsheet className="w-4 h-4 text-foreground" />
+            <FileSpreadsheet className="w-4 h-4" />
           ) : (
-            <HardDrive className="w-4 h-4 text-foreground" />
+            <HardDrive className="w-4 h-4" />
           )}
         </div>
-        <div className="flex items-center gap-1.5 flex-shrink-0">
-          {isSolved && (
-            <span className="text-[10px] font-semibold uppercase tracking-wide bg-surface border border-border text-muted px-1.5 py-0.5 rounded-full">
-              Solved
-            </span>
-          )}
-        </div>
+        {isSolved && (
+          <span className="text-[10px] font-semibold uppercase tracking-wider bg-surface border border-border text-foreground px-2 py-0.5 rounded-md">
+            Solved
+          </span>
+        )}
       </div>
 
       <p
-        className="text-sm font-medium text-foreground line-clamp-2 leading-tight"
+        className="text-sm font-medium text-foreground line-clamp-2 leading-snug"
         title={item.title}
       >
         {item.title}
       </p>
 
-      <p className="text-[10px] uppercase font-medium text-muted tracking-wider mt-auto">
-        {isPdf ? 'PDF' : isPpt ? 'Presentation' : isDoc ? 'Document' : 'File'}
+      <p className="text-[11px] font-medium text-muted mt-auto flex items-center gap-1.5">
+        {isPdf ? 'PDF Document' : isPpt ? 'Presentation Slides' : isDoc ? 'Word Document' : 'Resource File'}
       </p>
 
       <div className={`grid gap-2 mt-2 ${isSummarizable ? 'grid-cols-2' : 'grid-cols-1'}`}>
@@ -81,9 +77,9 @@ export default function ResourceCard({
             e.stopPropagation();
             handleOpen();
           }}
-          className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-surface hover:bg-surface-hover border border-border rounded-lg text-[11px] font-bold text-foreground transition-all"
+          className="flex items-center justify-center gap-1.5 w-full py-2 bg-surface hover:bg-surface-hover border border-border rounded-lg text-xs font-medium text-foreground transition-colors"
         >
-          <ExternalLink className="w-3 h-3" />
+          <ExternalLink className="w-3.5 h-3.5 text-muted" />
           Open
         </button>
         {isSummarizable && (
@@ -94,7 +90,7 @@ export default function ResourceCard({
               e.stopPropagation();
               onSummarize(item);
             }}
-            className="flex items-center justify-center gap-1.5 w-full py-1.5 bg-primary/5 hover:bg-primary/10 border border-primary/10 rounded-lg text-[11px] font-bold text-primary transition-all group/btn"
+            className="flex items-center justify-center gap-1.5 w-full py-2 bg-foreground text-background hover:opacity-90 rounded-lg text-xs font-medium transition-opacity"
           >
             Summarize
           </button>
