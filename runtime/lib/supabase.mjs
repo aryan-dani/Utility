@@ -14,6 +14,9 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 // ── Env loading ────────────────────────────────────────────────────────────────
 
 function loadEnv() {
+  if (process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return process.env;
+  }
   const envPath = join(__dirname, "..", "..", ".env.local");
   if (!existsSync(envPath)) {
     throw new Error(`❌  .env.local not found at: ${envPath}`);

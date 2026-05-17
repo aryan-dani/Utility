@@ -96,7 +96,7 @@ async function syncProject() {
     console.log(`\n🧹 Cleaning up stale database records…`);
     
     // Delete resources not in the bucket
-    const { data: allResources } = await import("../lib/db.mjs").then(m => m.select("resources", { columns: "id, title" }));
+    const { data: allResources } = await import("../lib/db.mjs").then(m => m.select("resources", { columns: "id, title", limit: 5000 }));
     const staleResourceIds = allResources.filter(r => !liveResourceIds.has(r.id)).map(r => r.id);
     
     if (staleResourceIds.length > 0) {
@@ -114,7 +114,7 @@ async function syncProject() {
     }
 
     // Delete subjects that have no resources left (and weren't hit)
-    const { data: allSubjects } = await import("../lib/db.mjs").then(m => m.select("subjects", { columns: "id, name" }));
+    const { data: allSubjects } = await import("../lib/db.mjs").then(m => m.select("subjects", { columns: "id, name", limit: 5000 }));
     const staleSubjectIds = allSubjects.filter(s => !liveSubjectIds.has(s.id)).map(s => s.id);
     
     if (staleSubjectIds.length > 0) {

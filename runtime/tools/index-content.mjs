@@ -13,7 +13,7 @@ export default async function indexContent() {
 
   try {
     // 1. Fetch all resources
-    const { data: resources } = await select("resources", { limit: 1000 });
+    const { data: resources } = await select("resources", { limit: 5000 });
     const supportedExts = ['.pdf', '.docx', '.pptx', '.doc', '.ppt'];
     const indexable = resources.filter(r => 
       supportedExts.some(ext => r.file_url.toLowerCase().endsWith(ext))
@@ -21,12 +21,12 @@ export default async function indexContent() {
 
     console.log(`📦 Found ${indexable.length} indexable resources to check.\n`);
 
-    // 2. Fetch already indexed IDs
-    let indexedIds = new Set();
+    // 2. Fetch already indexed IDs and timestamps
+    let indexedMap = new Map();
     try {
-      const { data: indexed } = await select("resource_content", { columns: "resource_id" });
-      indexedIds = new Set(indexed.map(i => i.resource_id));
-      console.log(`✅ ${indexedIds.size} resources already indexed.`);
+      const { data: indexed } = await select("resource_content", { columns: "resource_id, last_indexed", limit: 5000 });
+      indexedMap = new Map(indexed.map(i => [i.resource_id, i.last_indexed]));
+      console.log(`✅ ${indexedMap.size} resources already indexed.`);
     } catch (e) {
       console.warn(`⚠️  Could not fetch indexed IDs (resource_content table might not exist yet).`);
       console.log(`👉 Please run the following SQL in your Supabase dashboard first:\n`);
@@ -45,8 +45,16 @@ CREATE INDEX IF NOT EXISTS idx_resource_content_fts ON resource_content USING GI
       return;
     }
 
-    const toIndex = indexable.filter(p => !indexedIds.has(p.id));
-    console.log(`🚀 ${toIndex.length} new resources to index.\n`);
+    const toIndex = indexable.filter(p => {
+      const lastIndexed = indexedMap.get(p.id);
+      if (!lastIndexed) return true;
+      if (p.created_at && new Date(p.created_at).getTime() > new Date(lastIndexed).getTime()) {
+        console.log(`🔄 File updated in storage: ${p.title}. Re-indexing...`);
+        return true;
+      }
+      return false;
+    });
+    console.log(`🚀 ${toIndex.length} resources to index (new or updated).\n`);
 
     // Helper for parallel processing with concurrency limit
     async function processInParallel(items, concurrency, processor) {
@@ -86,9 +94,11 @@ CREATE INDEX IF NOT EXISTS idx_resource_content_fts ON resource_content USING GI
           return;
         }
 
+        const cleanText = text.replace(/\u0000/g, '').replace(/\\u0000/g, '').replace(/\x00/g, '');
+
         await upsert("resource_content", {
           resource_id: res.id,
-          content: text,
+          content: cleanText,
           pages: pages,
           last_indexed: new Date().toISOString()
         }, "resource_id");
