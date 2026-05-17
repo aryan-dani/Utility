@@ -22,6 +22,7 @@ import {
   Folder,
   X,
   ArrowRight,
+  Users,
 } from 'lucide-react';
 import { useAcademicStore } from '../store/academicStore';
 import { createClient } from '../lib/supabase';
@@ -146,6 +147,18 @@ export default function CommandPalette() {
       },
 
       // Navigation
+      {
+        id: 'nav-community',
+        title: 'Explore Community Shared Decks',
+        category: 'Navigation',
+        icon: Users,
+        shortcut: 'C',
+        badge: 'Social',
+        action: () => {
+          router.push('/community');
+          setCommandPaletteOpen(false);
+        },
+      },
       {
         id: 'nav-syllabus',
         title: 'View Syllabus & Curriculum',

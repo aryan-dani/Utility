@@ -13,6 +13,33 @@ export async function POST(req: Request) {
   const semester = context?.semester || 4;
   const subjects = context?.subjects || [];
 
+  const cleanPrompt = lastMessage.trim().toLowerCase();
+
+  // Semantic Caching Interceptor
+  if (cleanPrompt.length > 5) {
+    try {
+      const supabase = createAdminClient();
+      const { data: cached } = await supabase
+        .from('semantic_cache')
+        .select('response')
+        .eq('prompt', cleanPrompt)
+        .single();
+
+      if (cached && cached.response) {
+        console.log('⚡ Semantic Cache Hit for prompt:', cleanPrompt);
+        const streamData = '0:' + JSON.stringify(cached.response) + '\n';
+        return new Response(streamData, {
+          headers: {
+            'Content-Type': 'text/plain; charset=utf-8',
+            'X-Semantic-Cache': 'HIT',
+          },
+        });
+      }
+    } catch (err) {
+      console.warn('Semantic cache check error:', err);
+    }
+  }
+
   // RAG: Fetch relevant snippets from resources
   let snippets: string[] = [];
   
@@ -108,6 +135,19 @@ MODERN TUTOR GUIDELINES:
     model: groq('llama-3.3-70b-versatile'),
     system: systemPrompt,
     messages: finalMessages,
+    onFinish: async ({ text }) => {
+      if (cleanPrompt.length > 5) {
+        try {
+          const supabase = createAdminClient();
+          await supabase.from('semantic_cache').insert({
+            prompt: cleanPrompt,
+            response: text,
+          });
+        } catch (err) {
+          console.warn('Semantic cache insert error:', err);
+        }
+      }
+    },
   });
 
   return result.toUIMessageStreamResponse();

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, X, Check, Trash2, Download, Upload, Cloud, CloudOff, LogIn, Timer } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
+import { logActivity } from '@/components/ActivityHeatmap';
 
 type Todo = {
   id: string;
@@ -140,7 +141,14 @@ export default function PlannerClient() {
   const toggleTodo = (day: string, id: string) => {
     setWeekData((prev) => ({
       ...prev,
-      [day]: prev[day].map((t) => (t.id === id ? { ...t, done: !t.done } : t)),
+      [day]: prev[day].map((t) => {
+        if (t.id === id) {
+          const nextState = !t.done;
+          if (nextState) logActivity('planner_task_completed', 1);
+          return { ...t, done: nextState };
+        }
+        return t;
+      }),
     }));
   };
 

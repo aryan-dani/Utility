@@ -46,6 +46,8 @@ const FEATURES = [
   },
 ];
 
+import ActivityHeatmap from '@/components/ActivityHeatmap';
+
 export default async function Home() {
   const supabase = await createClient();
   const {
@@ -128,6 +130,11 @@ export default async function Home() {
             </Link>
           ))}
         </div>
+      </section>
+
+      {/* Activity Heatmap */}
+      <section className="w-full max-w-7xl mx-auto px-6 py-10">
+        <ActivityHeatmap />
       </section>
 
       {/* Stats Strip */}
