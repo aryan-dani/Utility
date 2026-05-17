@@ -18,6 +18,17 @@ import { FadeIn, ScaleButton } from '@/components/Animations';
 
 type TimerMode = 'work' | 'break' | 'longBreak';
 
+const MIN_DURATION_MINUTES = 1;
+const MAX_DURATION_MINUTES = 180;
+
+function sanitizeDuration(value: number | string) {
+  const parsed = Math.floor(Number(value));
+
+  if (!Number.isFinite(parsed)) return MIN_DURATION_MINUTES;
+
+  return Math.min(MAX_DURATION_MINUTES, Math.max(MIN_DURATION_MINUTES, parsed));
+}
+
 export default function TimerClient() {
   const [mode, setMode] = useState<TimerMode>('work');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -34,8 +45,13 @@ export default function TimerClient() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
-  const totalTime = mode === 'work' ? (Number(workTime) || 1) * 60 : mode === 'break' ? (Number(breakTime) || 1) * 60 : (Number(longBreakTime) || 1) * 60;
-  const progress = ((totalTime - timeLeft) / totalTime) * 100;
+  const totalTime =
+    mode === 'work'
+      ? sanitizeDuration(workTime) * 60
+      : mode === 'break'
+        ? sanitizeDuration(breakTime) * 60
+        : sanitizeDuration(longBreakTime) * 60;
+  const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
 
   const playSound = useCallback(() => {
     if (muted) return;
@@ -48,9 +64,9 @@ export default function TimerClient() {
   const switchMode = useCallback((newMode: TimerMode) => {
     setMode(newMode);
     setIsActive(false);
-    if (newMode === 'work') setTimeLeft((Number(workTime) || 1) * 60);
-    else if (newMode === 'break') setTimeLeft((Number(breakTime) || 1) * 60);
-    else setTimeLeft((Number(longBreakTime) || 1) * 60);
+    if (newMode === 'work') setTimeLeft(sanitizeDuration(workTime) * 60);
+    else if (newMode === 'break') setTimeLeft(sanitizeDuration(breakTime) * 60);
+    else setTimeLeft(sanitizeDuration(longBreakTime) * 60);
   }, [workTime, breakTime, longBreakTime]);
 
   useEffect(() => {
@@ -89,8 +105,11 @@ export default function TimerClient() {
   }, []);
 
   const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
+    const safeSeconds = Number.isFinite(seconds)
+      ? Math.min(MAX_DURATION_MINUTES * 60, Math.max(0, Math.floor(seconds)))
+      : 0;
+    const mins = Math.floor(safeSeconds / 60);
+    const secs = safeSeconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
@@ -214,8 +233,11 @@ export default function TimerClient() {
                 <label className="text-xs font-bold uppercase tracking-widest text-muted">Work Duration (mins)</label>
                 <input 
                   type="number" 
+                  min={MIN_DURATION_MINUTES}
+                  max={MAX_DURATION_MINUTES}
+                  step={1}
                   value={workTime} 
-                  onChange={(e) => setWorkTime(e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
+                  onChange={(e) => setWorkTime(e.target.value === '' ? '' : sanitizeDuration(e.target.value))}
                   className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
                 />
               </div>
@@ -223,8 +245,11 @@ export default function TimerClient() {
                 <label className="text-xs font-bold uppercase tracking-widest text-muted">Short Break (mins)</label>
                 <input 
                   type="number" 
+                  min={MIN_DURATION_MINUTES}
+                  max={MAX_DURATION_MINUTES}
+                  step={1}
                   value={breakTime} 
-                  onChange={(e) => setBreakTime(e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
+                  onChange={(e) => setBreakTime(e.target.value === '' ? '' : sanitizeDuration(e.target.value))}
                   className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
                 />
               </div>
@@ -232,8 +257,11 @@ export default function TimerClient() {
                 <label className="text-xs font-bold uppercase tracking-widest text-muted">Long Break (mins)</label>
                 <input 
                   type="number" 
+                  min={MIN_DURATION_MINUTES}
+                  max={MAX_DURATION_MINUTES}
+                  step={1}
                   value={longBreakTime} 
-                  onChange={(e) => setLongBreakTime(e.target.value === '' ? '' : parseInt(e.target.value) || 1)}
+                  onChange={(e) => setLongBreakTime(e.target.value === '' ? '' : sanitizeDuration(e.target.value))}
                   className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
                 />
               </div>
