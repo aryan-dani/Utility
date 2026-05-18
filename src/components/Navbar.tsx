@@ -21,6 +21,7 @@ import {
   Calendar,
   Users,
   LayoutGrid,
+  Timer,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAcademicStore, Branch, Semester } from '../store/academicStore';
@@ -36,6 +37,7 @@ const SECONDARY_LINKS = [
   { href: '/community', label: 'Community', Icon: Users, desc: 'Collaborate and connect with peers' },
   { href: '/gpa', label: 'GPA Calculator', Icon: ShieldCheck, desc: 'Plan and project your semester GPA' },
   { href: '/planner', label: 'Study Planner', Icon: CalendarCheck, desc: 'Manage your academic schedule' },
+  { href: '/timer', label: 'Focus Timer', Icon: Timer, desc: 'Run Pomodoro focus sessions' },
 ];
 
 const BRANCH_OPTIONS = [
