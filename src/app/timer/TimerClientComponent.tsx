@@ -10,13 +10,34 @@ import {
   Settings2, 
   Volume2, 
   VolumeX,
-  Bell,
   CheckCircle2,
-  X
+  X,
+  Calendar,
+  Trophy,
+  LogIn,
 } from 'lucide-react';
+import Link from 'next/link';
 import { FadeIn, ScaleButton } from '@/components/Animations';
+import { createClient } from '@/lib/supabase';
 
 type TimerMode = 'work' | 'break' | 'longBreak';
+
+type PomodoroSession = {
+  id: string;
+  duration_seconds: number;
+  completed_at: string;
+};
+
+type TimerStats = {
+  todaySeconds: number;
+  weekSeconds: number;
+  monthSeconds: number;
+  weekSessions: number;
+  monthSessions: number;
+  averageSeconds: number;
+  bestDayLabel: string;
+  bestDaySeconds: number;
+};
 
 const MIN_DURATION_MINUTES = 1;
 const MAX_DURATION_MINUTES = 180;
@@ -29,6 +50,87 @@ function sanitizeDuration(value: number | string) {
   return Math.min(MAX_DURATION_MINUTES, Math.max(MIN_DURATION_MINUTES, parsed));
 }
 
+function startOfToday() {
+  const date = new Date();
+  date.setHours(0, 0, 0, 0);
+  return date;
+}
+
+function daysAgo(days: number) {
+  const date = startOfToday();
+  date.setDate(date.getDate() - days);
+  return date;
+}
+
+function formatStudyTime(seconds: number) {
+  const safeSeconds = Math.max(0, Math.floor(seconds));
+  const hours = Math.floor(safeSeconds / 3600);
+  const minutes = Math.round((safeSeconds % 3600) / 60);
+
+  if (hours === 0) return `${minutes}m`;
+  if (minutes === 0) return `${hours}h`;
+  return `${hours}h ${minutes}m`;
+}
+
+function calculateStats(sessions: PomodoroSession[]): TimerStats {
+  const todayStart = startOfToday();
+  const weekStart = daysAgo(6);
+  const monthStart = daysAgo(29);
+  const byDay = new Map<string, number>();
+
+  let todaySeconds = 0;
+  let weekSeconds = 0;
+  let monthSeconds = 0;
+  let weekSessions = 0;
+  let monthSessions = 0;
+
+  sessions.forEach((session) => {
+    const completedAt = new Date(session.completed_at);
+    const duration = Math.max(0, session.duration_seconds || 0);
+    const dayKey = completedAt.toISOString().slice(0, 10);
+
+    byDay.set(dayKey, (byDay.get(dayKey) ?? 0) + duration);
+
+    if (completedAt >= monthStart) {
+      monthSeconds += duration;
+      monthSessions += 1;
+    }
+
+    if (completedAt >= weekStart) {
+      weekSeconds += duration;
+      weekSessions += 1;
+    }
+
+    if (completedAt >= todayStart) {
+      todaySeconds += duration;
+    }
+  });
+
+  let bestDayLabel = 'No sessions yet';
+  let bestDaySeconds = 0;
+
+  byDay.forEach((seconds, day) => {
+    if (seconds > bestDaySeconds) {
+      bestDaySeconds = seconds;
+      bestDayLabel = new Date(`${day}T00:00:00`).toLocaleDateString([], {
+        month: 'short',
+        day: 'numeric',
+      });
+    }
+  });
+
+  return {
+    todaySeconds,
+    weekSeconds,
+    monthSeconds,
+    weekSessions,
+    monthSessions,
+    averageSeconds: monthSessions > 0 ? Math.round(monthSeconds / monthSessions) : 0,
+    bestDayLabel,
+    bestDaySeconds,
+  };
+}
+
 export default function TimerClient() {
   const [mode, setMode] = useState<TimerMode>('work');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -36,6 +138,9 @@ export default function TimerClient() {
   const [sessions, setSessions] = useState(0);
   const [muted, setMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
+  const [cloudSessions, setCloudSessions] = useState<PomodoroSession[]>([]);
+  const [statsLoading, setStatsLoading] = useState(true);
   
   // Settings
   const [workTime, setWorkTime] = useState<number | string>(25);
@@ -44,6 +149,7 @@ export default function TimerClient() {
 
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const supabase = useRef(createClient());
 
   const totalTime =
     mode === 'work'
@@ -52,6 +158,72 @@ export default function TimerClient() {
         ? sanitizeDuration(breakTime) * 60
         : sanitizeDuration(longBreakTime) * 60;
   const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
+  const stats = calculateStats(cloudSessions);
+
+  const fetchPomodoroStats = useCallback(async (userId: string) => {
+    setStatsLoading(true);
+    const since = daysAgo(29).toISOString();
+    const { data, error } = await supabase.current
+      .from('pomodoro_sessions')
+      .select('id, duration_seconds, completed_at')
+      .eq('user_id', userId)
+      .eq('mode', 'work')
+      .gte('completed_at', since)
+      .order('completed_at', { ascending: false });
+
+    if (!error && data) {
+      setCloudSessions(data as PomodoroSession[]);
+    } else if (error) {
+      console.error('Pomodoro stats fetch failed:', error.message);
+    }
+
+    setStatsLoading(false);
+  }, []);
+
+  const logPomodoroSession = useCallback(async (durationSeconds: number) => {
+    if (!user) return;
+
+    const { data, error } = await supabase.current
+      .from('pomodoro_sessions')
+      .insert({
+        user_id: user.id,
+        mode: 'work',
+        duration_seconds: durationSeconds,
+      })
+      .select('id, duration_seconds, completed_at')
+      .single();
+
+    if (!error && data) {
+      setCloudSessions((prev) => [data as PomodoroSession, ...prev]);
+    } else if (error) {
+      console.error('Pomodoro session log failed:', error.message);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    supabase.current.auth.getUser().then(({ data }) => {
+      const currentUser = data.user ? { id: data.user.id, email: data.user.email } : null;
+      setUser(currentUser);
+      if (currentUser) {
+        fetchPomodoroStats(currentUser.id);
+      } else {
+        setStatsLoading(false);
+      }
+    });
+
+    const { data: listener } = supabase.current.auth.onAuthStateChange((_event, session) => {
+      const currentUser = session?.user ? { id: session.user.id, email: session.user.email } : null;
+      setUser(currentUser);
+      setCloudSessions([]);
+      if (currentUser) {
+        fetchPomodoroStats(currentUser.id);
+      } else {
+        setStatsLoading(false);
+      }
+    });
+
+    return () => listener.subscription.unsubscribe();
+  }, [fetchPomodoroStats]);
 
   const playSound = useCallback(() => {
     if (muted) return;
@@ -79,6 +251,7 @@ export default function TimerClient() {
       if (mode === 'work') {
         const newSessions = sessions + 1;
         setSessions(newSessions);
+        void logPomodoroSession(sanitizeDuration(workTime) * 60);
         if (newSessions % 4 === 0) switchMode('longBreak');
         else switchMode('break');
       } else {
@@ -96,7 +269,7 @@ export default function TimerClient() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, timeLeft, mode, sessions, playSound, switchMode]);
+  }, [isActive, timeLeft, mode, sessions, playSound, switchMode, logPomodoroSession, workTime]);
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -120,7 +293,7 @@ export default function TimerClient() {
   };
 
   return (
-    <div className="flex-1 w-full max-w-2xl mx-auto px-6 py-10 flex flex-col items-center justify-center min-h-[80vh]">
+    <div className="flex-1 w-full max-w-4xl mx-auto px-6 py-10 flex flex-col items-center justify-center min-h-[80vh]">
       <FadeIn className="w-full text-center mb-12">
         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface text-muted text-[10px] font-bold uppercase tracking-wider mb-4 border border-border">
           {mode === 'work' ? <Brain className="w-3 h-3" /> : <Coffee className="w-3 h-3" />}
@@ -218,6 +391,91 @@ export default function TimerClient() {
         </div>
       </FadeIn>
 
+      <FadeIn delay={0.3} className="w-full mt-12">
+        <div className="bg-card border border-border rounded-2xl p-5 sm:p-6 shadow-card">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-4 border-b border-border">
+            <div>
+              <h2 className="text-lg font-bold text-foreground tracking-tight">Study Statistics</h2>
+              <p className="text-sm text-muted mt-1">Completed work sessions from your Pomodoro history.</p>
+            </div>
+            {user && (
+              <span className="text-xs text-muted">
+                Last 30 days
+              </span>
+            )}
+          </div>
+
+          {!user ? (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 rounded-xl border border-border bg-surface p-4">
+              <div>
+                <p className="text-sm font-semibold text-foreground">Sign in to track your study time</p>
+                <p className="text-xs text-muted mt-1">Weekly and monthly statistics sync across devices.</p>
+              </div>
+              <Link
+                href="/login?redirectTo=/timer"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-foreground px-4 py-2 text-sm font-semibold text-background hover:opacity-90 transition-opacity"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign in
+              </Link>
+            </div>
+          ) : statsLoading ? (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[...Array(3)].map((_, index) => (
+                <div key={index} className="h-24 rounded-xl border border-border bg-surface animate-pulse" />
+              ))}
+            </div>
+          ) : (
+            <div className="space-y-5">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                <StatCard
+                  icon={<Brain className="w-4 h-4" />}
+                  label="Today"
+                  value={formatStudyTime(stats.todaySeconds)}
+                  detail="Focused today"
+                />
+                <StatCard
+                  icon={<Calendar className="w-4 h-4" />}
+                  label="This Week"
+                  value={formatStudyTime(stats.weekSeconds)}
+                  detail={`${stats.weekSessions} session${stats.weekSessions === 1 ? '' : 's'}`}
+                />
+                <StatCard
+                  icon={<CheckCircle2 className="w-4 h-4" />}
+                  label="This Month"
+                  value={formatStudyTime(stats.monthSeconds)}
+                  detail={`${stats.monthSessions} session${stats.monthSessions === 1 ? '' : 's'}`}
+                />
+                <StatCard
+                  icon={<Trophy className="w-4 h-4" />}
+                  label="Best Day"
+                  value={stats.bestDaySeconds > 0 ? formatStudyTime(stats.bestDaySeconds) : '0m'}
+                  detail={stats.bestDayLabel}
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="rounded-xl border border-border bg-surface/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted mb-2">Monthly Average</p>
+                  <p className="text-sm text-foreground">
+                    Your average completed focus session is{' '}
+                    <span className="font-bold">{formatStudyTime(stats.averageSeconds)}</span>.
+                  </p>
+                </div>
+                <div className="rounded-xl border border-border bg-surface/50 p-4">
+                  <p className="text-xs font-bold uppercase tracking-wider text-muted mb-2">Pace</p>
+                  <p className="text-sm text-foreground">
+                    {stats.weekSeconds > 0
+                      ? `You have studied ${formatStudyTime(stats.weekSeconds)} in the last 7 days.`
+                      : 'Complete a work session to start building your weekly trend.'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </FadeIn>
+
       {/* Settings Modal */}
       {showSettings && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
@@ -280,6 +538,29 @@ export default function TimerClient() {
           </FadeIn>
         </div>
       )}
+    </div>
+  );
+}
+
+function StatCard({
+  icon,
+  label,
+  value,
+  detail,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  detail: string;
+}) {
+  return (
+    <div className="rounded-xl border border-border bg-surface p-4">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted mb-3">
+        {icon}
+        {label}
+      </div>
+      <p className="text-2xl font-black tracking-tight text-foreground">{value}</p>
+      <p className="text-xs text-muted mt-1">{detail}</p>
     </div>
   );
 }
