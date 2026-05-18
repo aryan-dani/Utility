@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { createClient } from '@/lib/supabase';
 import { Flame, Trophy, Calendar, Zap, Info } from 'lucide-react';
 
@@ -65,6 +65,7 @@ export function logActivity(actionType: string, count = 1) {
 }
 
 export default function ActivityHeatmap() {
+  const supabase = useMemo(() => createClient(), []);
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [hoveredCell, setHoveredCell] = useState<{ date: string; count: number } | null>(null);
@@ -79,7 +80,6 @@ export default function ActivityHeatmap() {
     } catch {}
 
     // Try cloud fetch
-    const supabase = createClient();
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       const { data } = await supabase

@@ -1,13 +1,35 @@
 import { groq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
 import { createAdminClient } from '@/lib/supabaseAdmin';
+import { performRAGSearch } from '@/lib/ragSearch';
+import { z } from 'zod';
+
+const studySchema = z.object({
+  type: z.enum(['flashcards', 'quiz']),
+  topic: z.string().min(2),
+  context: z.object({
+    branch: z.string().optional(),
+    semester: z.number().optional(),
+  }).optional(),
+});
 
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { type, topic, context } = body; // type: 'flashcards' | 'quiz'
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
+    }
+
+    const parseResult = studySchema.safeParse(body);
+    if (!parseResult.success) {
+      return new Response(JSON.stringify({ error: 'Invalid request payload', details: parseResult.error.format() }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
+
+    const { type, topic, context } = parseResult.data;
 
     const branch = context?.branch || 'AIDS';
     const branchName = branch === 'AIDS' ? 'Artificial Intelligence & Data Science Engineering' : branch;
@@ -25,7 +47,6 @@ export async function POST(req: Request) {
         .single();
 
       if (cached && cached.response) {
-        console.log('⚡ Semantic Cache Hit for study key:', cacheKey);
         return new Response(cached.response, {
           status: 200,
           headers: {
@@ -41,44 +62,8 @@ export async function POST(req: Request) {
     // RAG: Fetch relevant snippets from resources to ground the flashcards/quiz in their actual coursework!
     let snippets: string[] = [];
     if (topic && topic.length > 2) {
-      try {
-        const supabase = createAdminClient();
-        const { data: searchResults, error: rpcError } = await supabase.rpc('search_resource_content', {
-          query_text: topic,
-        });
-
-        let finalResults = searchResults;
-
-        if (rpcError || !finalResults || finalResults.length === 0) {
-          const { data: fallbackData } = await supabase
-            .from('resource_content')
-            .select(`
-              content,
-              resources!inner (
-                title, 
-                subjects!inner (name)
-              )
-            `)
-            .ilike('content', `%${topic}%`)
-            .limit(3);
-          
-          if (fallbackData) {
-            finalResults = (fallbackData as any[]).map(r => ({
-              title: r.resources.title,
-              subject_name: r.resources.subjects.name,
-              snippet: r.content.substring(0, 500) + '...'
-            }));
-          }
-        }
-
-        if (finalResults && Array.isArray(finalResults)) {
-          snippets = finalResults
-            .slice(0, 5)
-            .map(r => `[SOURCE: ${r.title} | SUBJECT: ${r.subject_name}]: ${r.snippet}`);
-        }
-      } catch (err) {
-        console.error('RAG Search Error in Study API:', err);
-      }
+      const finalResults = await performRAGSearch(topic, 5);
+      snippets = finalResults.map((r: any) => `[SOURCE: ${r.title} | SUBJECT: ${r.subject_name}]: ${r.snippet}`);
     }
 
     const basePromptContext = `You are an expert academic AI tutor for university engineering students in the ${branchName} program, Semester ${semester}.

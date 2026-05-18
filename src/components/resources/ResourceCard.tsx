@@ -39,8 +39,19 @@ export default function ResourceCard({
     }
   };
 
+  const handlePrefetch = () => {
+    if (isPdf) {
+      // Pre-warm the browser cache for this PDF so the iframe loads instantly
+      fetch(item.file_url, { cache: 'force-cache', mode: 'no-cors' }).catch(() => {});
+    }
+  };
+
   return (
-    <div className="bg-card border border-border hover:border-border-strong p-5 rounded-xl flex flex-col gap-4 transition-colors text-left shadow-sm">
+    <div 
+      className="bg-card border border-border hover:border-border-strong p-5 rounded-xl flex flex-col gap-4 transition-colors text-left shadow-sm"
+      onMouseEnter={handlePrefetch}
+      onTouchStart={handlePrefetch}
+    >
       <div className="flex items-start justify-between gap-3">
         <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center flex-shrink-0 text-foreground">
           {isPdf ? (

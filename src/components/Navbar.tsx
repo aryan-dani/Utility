@@ -1,5 +1,5 @@
 'use client';
-import React, { useState, useEffect, useRef, Suspense, useCallback } from 'react';
+import React, { useState, useEffect, useRef, Suspense, useCallback, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTheme } from 'next-themes';
@@ -206,7 +206,7 @@ function NavbarInner() {
   const searchRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const appsRef = useRef<HTMLDivElement>(null);
-  const supabase = useRef(createClient());
+  const supabase = useMemo(() => createClient(), []);
 
   const branch = (searchParams.get('branch') as Branch) || 'AIDS';
   const semester = Number(searchParams.get('semester') || '4') as Semester;
@@ -221,10 +221,10 @@ function NavbarInner() {
   }, [branch, semester, setBranch, setSemester]);
 
   useEffect(() => {
-    supabase.current.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(({ data }) => {
       setUser(data.user ? { email: data.user.email } : null);
     });
-    const { data: listener } = supabase.current.auth.onAuthStateChange((_event, session) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       setUser(session?.user ? { email: session.user.email } : null);
     });
     return () => listener.subscription.unsubscribe();
@@ -285,7 +285,7 @@ function NavbarInner() {
   };
 
   const handleLogout = async () => {
-    await supabase.current.auth.signOut();
+    await supabase.auth.signOut();
     setUserMenuOpen(false);
     window.location.href = '/';
   };

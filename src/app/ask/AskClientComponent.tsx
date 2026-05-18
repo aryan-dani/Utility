@@ -1,7 +1,7 @@
 'use client';
 
 import { useChat } from '@ai-sdk/react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   Send, 
   Trash2, 
@@ -26,6 +26,7 @@ import { useAcademicStore } from '@/store/academicStore';
 import { createClient } from '@/lib/supabase';
 import ReactMarkdown from 'react-markdown';
 import { logActivity } from '@/components/ActivityHeatmap';
+import { toast } from 'sonner';
 
 const SUGGESTED_PROMPTS = [
   'Explain DBMS normalization with examples',
@@ -120,6 +121,8 @@ export default function AskClient() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'chat' | 'flashcards' | 'quiz'>('chat');
 
+  const supabase = useMemo(() => createClient(), []);
+
   // Chat refs & state
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -145,7 +148,6 @@ export default function AskClient() {
 
   // Fetch subjects for context
   useEffect(() => {
-    const supabase = createClient();
     supabase
       .from('subjects')
       .select('name')
@@ -265,6 +267,7 @@ export default function AskClient() {
       }
     } catch (err) {
       console.error('Failed to generate flashcards:', err);
+      toast.error('Failed to generate flashcards. Please try again.');
     } finally {
       setIsGeneratingFlashcards(false);
     }
@@ -274,7 +277,6 @@ export default function AskClient() {
     if (flashcards.length === 0 || isPublishingDeck) return;
     setIsPublishingDeck(true);
     try {
-      const supabase = createClient();
       const { data: userData } = await supabase.auth.getUser();
       const authorName = userData?.user?.email ? userData.user.email.split('@')[0] : 'Anonymous Scholar';
 
@@ -288,9 +290,11 @@ export default function AskClient() {
 
       setPublishedDeck(true);
       logActivity('community_deck_published', 1);
+      toast.success('Deck published to Community Vault!');
       setTimeout(() => setPublishedDeck(false), 3000);
     } catch (err) {
       console.warn('Publish deck error:', err);
+      toast.error('Failed to publish deck.');
     } finally {
       setIsPublishingDeck(false);
     }
@@ -322,6 +326,7 @@ export default function AskClient() {
       }
     } catch (err) {
       console.error('Failed to generate quiz:', err);
+      toast.error('Failed to generate quiz. Please try again.');
     } finally {
       setIsGeneratingQuiz(false);
     }

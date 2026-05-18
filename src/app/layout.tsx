@@ -5,6 +5,7 @@ import './globals.css';
 import Navbar from '@/components/Navbar';
 import ConditionalFooter from '@/components/ConditionalFooter';
 import { Providers } from '@/components/Providers';
+import { Toaster } from 'sonner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -14,11 +15,17 @@ const inter = Inter({
 
 export const metadata: Metadata = {
   title: {
-    default: 'Utility',
-    template: '%s — Utility',
+    default: 'Academic OS',
+    template: '%s — Academic OS',
   },
-  description: 'A premium academic workspace. Access your syllabus, resources, and weekly planner in one place.',
-  keywords: ['academic', 'syllabus', 'resources', 'planner', 'university'],
+  description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
+  keywords: ['academic', 'syllabus', 'resources', 'planner', 'university', 'student', 'AI'],
+  openGraph: {
+    title: 'Academic OS',
+    description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
+    type: 'website',
+    url: 'https://academic-os.vercel.app', // placeholder
+  },
 };
 
 export default function RootLayout({
@@ -46,6 +53,12 @@ export default function RootLayout({
           </main>
 
           <ConditionalFooter />
+          <Toaster 
+            position="bottom-right" 
+            toastOptions={{ 
+              className: 'bg-surface border-border text-foreground shadow-popover',
+            }} 
+          />
         </Providers>
       </body>
     </html>

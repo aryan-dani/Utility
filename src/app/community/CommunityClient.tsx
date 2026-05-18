@@ -5,6 +5,7 @@ import { createClient } from '@/lib/supabase';
 import { useAcademicStore } from '@/store/academicStore';
 import { Search, ThumbsUp, Layers, User, Calendar, BookOpen, X, ArrowRight, Check } from 'lucide-react';
 import { logActivity } from '@/components/ActivityHeatmap';
+import { toast } from 'sonner';
 
 interface CommunityDeck {
   id: string;
@@ -31,7 +32,7 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
   const [copiedDeckId, setCopiedDeckId] = useState<string | null>(null);
 
-  const supabase = createClient();
+  const supabase = useMemo(() => createClient(), []);
 
   const handleUpvote = async (deckId: string, currentUpvotes: number) => {
     if (upvotedDecks[deckId]) return;
@@ -45,6 +46,7 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
       logActivity('community_deck_upvoted', 1);
     } catch (err) {
       console.warn('Upvote error:', err);
+      toast.error('Failed to upvote deck.');
     }
   };
 
@@ -54,8 +56,11 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
       localStorage.setItem(`custom_deck_${deck.id}`, JSON.stringify(deck));
       setCopiedDeckId(deck.id);
       logActivity('community_deck_copied', 1);
+      toast.success('Deck saved to your local storage!');
       setTimeout(() => setCopiedDeckId(null), 2000);
-    } catch {}
+    } catch (err) {
+      toast.error('Failed to save deck.');
+    }
   };
 
   const filteredDecks = useMemo(() => {

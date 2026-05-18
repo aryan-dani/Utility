@@ -1,12 +1,34 @@
 import { groq } from '@ai-sdk/groq';
 import { streamText } from 'ai';
 import { createAdminClient } from '@/lib/supabaseAdmin';
+import { performRAGSearch } from '@/lib/ragSearch';
+import { z } from 'zod';
+
+const chatSchema = z.object({
+  messages: z.array(z.any()).nonempty(),
+  context: z.object({
+    branch: z.string().optional(),
+    semester: z.number().optional(),
+    subjects: z.array(z.string()).optional(),
+  }).optional(),
+});
 
 export const runtime = 'edge';
 
 export async function POST(req: Request) {
-  const body = await req.json();
-  const { messages, context } = body;
+  let body;
+  try {
+    body = await req.json();
+  } catch {
+    return new Response(JSON.stringify({ error: 'Invalid JSON body' }), { status: 400 });
+  }
+
+  const parseResult = chatSchema.safeParse(body);
+  if (!parseResult.success) {
+    return new Response(JSON.stringify({ error: 'Invalid request payload', details: parseResult.error.format() }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+  }
+
+  const { messages, context } = parseResult.data;
 
   const lastMessage = messages[messages.length - 1]?.content || '';
   const branch = context?.branch || 'AIDS';
@@ -26,7 +48,6 @@ export async function POST(req: Request) {
         .single();
 
       if (cached && cached.response) {
-        console.log('⚡ Semantic Cache Hit for prompt:', cleanPrompt);
         const streamData = '0:' + JSON.stringify(cached.response) + '\n';
         return new Response(streamData, {
           headers: {
@@ -53,50 +74,8 @@ export async function POST(req: Request) {
 
   // Only search if there's a substantial query left
   if (cleanQuery.length > 2) {
-    try {
-      const supabase = createAdminClient();
-      
-      // Try the RPC first (fixed search function)
-      const { data: searchResults, error: rpcError } = await supabase.rpc('search_resource_content', {
-        query_text: cleanQuery,
-      });
-
-      let finalResults = searchResults;
-
-      // Robust Fallback: Use standard ILIKE search if RPC fails or returns nothing
-      // This ensures we find matches even if the full-text search index is still updating or strict
-      if (rpcError || !finalResults || finalResults.length === 0) {
-        console.warn('RAG RPC failed or empty, falling back to ILIKE search:', rpcError?.message);
-        
-        const { data: fallbackData } = await supabase
-          .from('resource_content')
-          .select(`
-            content,
-            resources!inner (
-              title, 
-              subjects!inner (name)
-            )
-          `)
-          .ilike('content', `%${cleanQuery}%`)
-          .limit(3);
-        
-        if (fallbackData) {
-          finalResults = (fallbackData as any[]).map(r => ({
-            title: r.resources.title,
-            subject_name: r.resources.subjects.name,
-            snippet: r.content.substring(0, 500) + '...'
-          }));
-        }
-      }
-
-      if (finalResults && Array.isArray(finalResults)) {
-        snippets = finalResults
-          .slice(0, 5)
-          .map(r => `[SOURCE: ${r.title} | SUBJECT: ${r.subject_name}]: ${r.snippet}`);
-      }
-    } catch (err) {
-      console.error('RAG Search Critical Error:', err);
-    }
+    const finalResults = await performRAGSearch(cleanQuery, 5);
+    snippets = finalResults.map((r: any) => `[SOURCE: ${r.title} | SUBJECT: ${r.subject_name}]: ${r.snippet}`);
   }
 
   const subjectList = subjects.length > 0
@@ -105,7 +84,7 @@ export async function POST(req: Request) {
 
   // Map messages to CoreMessage format
   const finalMessages = messages?.map((m: any) => ({
-    role: m.role === 'assistant' ? 'assistant' : 'user',
+    role: (m.role === 'assistant' ? 'assistant' : 'user') as 'user' | 'assistant',
     content: m.content || m.parts?.map((p: any) => p.text || '').join('\n') || '',
   }));
 
