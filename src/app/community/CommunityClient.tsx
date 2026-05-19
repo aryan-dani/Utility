@@ -1,9 +1,9 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { createClient } from '@/lib/supabase';
 import { useAcademicStore } from '@/store/academicStore';
-import { Search, ThumbsUp, Layers, User, Calendar, BookOpen, X, ArrowRight, Check } from 'lucide-react';
+import { Search, ThumbsUp, Layers, User, Calendar, BookOpen, X, ArrowRight, Check, Trash2, Flame, Clock } from 'lucide-react';
 import { logActivity } from '@/components/ActivityHeatmap';
 import { toast } from 'sonner';
 
@@ -31,8 +31,19 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
   const [currentCardIdx, setCurrentCardIdx] = useState<number>(0);
   const [showAnswer, setShowAnswer] = useState<boolean>(false);
   const [copiedDeckId, setCopiedDeckId] = useState<string | null>(null);
+  const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<'top' | 'newest'>('top');
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
   const supabase = useMemo(() => createClient(), []);
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user?.email) {
+        setCurrentUserEmail(data.user.email);
+      }
+    });
+  }, [supabase]);
 
   const handleUpvote = async (deckId: string, currentUpvotes: number) => {
     if (upvotedDecks[deckId]) return;
@@ -50,6 +61,26 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
     }
   };
 
+  const handleDeleteDeck = async (deckId: string) => {
+    if (!window.confirm('Are you sure you want to delete this deck? This action cannot be undone.')) return;
+    
+    setIsDeleting(deckId);
+    try {
+      const res = await fetch(`/api/community-decks/${deckId}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const data = await res.json();
+        throw new Error(data.error || 'Failed to delete');
+      }
+      setDecks((prev) => prev.filter((d) => d.id !== deckId));
+      toast.success('Deck deleted successfully');
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to delete deck');
+    } finally {
+      setIsDeleting(null);
+    }
+  };
+
   const handleCopyDeck = (deck: CommunityDeck) => {
     try {
       // Store into local custom decks or trigger study hub
@@ -64,7 +95,7 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
   };
 
   const filteredDecks = useMemo(() => {
-    return decks.filter((deck) => {
+    let result = decks.filter((deck) => {
       const matchBranch = selectedBranch === 'ALL' || deck.branch === selectedBranch;
       const matchSearch =
         !searchQuery.trim() ||
@@ -72,7 +103,15 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
         deck.author_name.toLowerCase().includes(searchQuery.toLowerCase());
       return matchBranch && matchSearch;
     });
-  }, [decks, selectedBranch, searchQuery]);
+
+    if (sortBy === 'top') {
+      result.sort((a, b) => b.upvotes - a.upvotes);
+    } else {
+      result.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+
+    return result;
+  }, [decks, selectedBranch, searchQuery, sortBy]);
 
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 min-h-[80vh]">
@@ -86,20 +125,45 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
         </div>
 
         {/* Branch Filter Pills */}
-        <div className="flex flex-wrap items-center gap-2">
-          {['ALL', 'AIDS', 'CORE', 'CSF'].map((b) => (
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+          <div className="flex flex-wrap items-center gap-2">
+            {['ALL', 'AIDS', 'CORE', 'CSF'].map((b) => (
+              <button
+                key={b}
+                onClick={() => setSelectedBranch(b)}
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                  selectedBranch === b
+                    ? 'bg-foreground text-background shadow-sm'
+                    : 'bg-surface border border-border text-muted hover:text-foreground hover:bg-surface-hover'
+                }`}
+              >
+                {b}
+              </button>
+            ))}
+          </div>
+          
+          <div className="h-6 w-px bg-border hidden sm:block"></div>
+          
+          <div className="flex bg-surface border border-border rounded-xl p-0.5">
             <button
-              key={b}
-              onClick={() => setSelectedBranch(b)}
-              className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
-                selectedBranch === b
-                  ? 'bg-foreground text-background shadow-sm'
-                  : 'bg-surface border border-border text-muted hover:text-foreground hover:bg-surface-hover'
+              onClick={() => setSortBy('top')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                sortBy === 'top' ? 'bg-background shadow-sm text-foreground' : 'text-muted hover:text-foreground'
               }`}
             >
-              {b}
+              <Flame className={`w-3.5 h-3.5 ${sortBy === 'top' ? 'text-primary' : ''}`} />
+              Top
             </button>
-          ))}
+            <button
+              onClick={() => setSortBy('newest')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                sortBy === 'newest' ? 'bg-background shadow-sm text-foreground' : 'text-muted hover:text-foreground'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              Newest
+            </button>
+          </div>
         </div>
       </div>
 
@@ -119,18 +183,30 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
                   <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold tracking-wider uppercase bg-surface border border-border text-foreground shrink-0">
                     {deck.branch} · Sem {deck.semester}
                   </span>
-                  <button
-                    onClick={() => handleUpvote(deck.id, deck.upvotes)}
-                    disabled={isUpvoted}
-                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                      isUpvoted
-                        ? 'bg-primary/10 border border-primary/30 text-primary'
-                        : 'bg-surface border border-border text-muted hover:text-foreground hover:bg-surface-hover group-hover:border-border-strong'
-                    }`}
-                  >
-                    <ThumbsUp className={`w-3.5 h-3.5 ${isUpvoted ? 'fill-current' : ''}`} />
-                    {deck.upvotes}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {currentUserEmail && currentUserEmail.split('@')[0] === deck.author_name && (
+                      <button
+                        onClick={() => handleDeleteDeck(deck.id)}
+                        disabled={isDeleting === deck.id}
+                        className="p-1.5 rounded-lg text-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
+                        title="Delete Deck"
+                      >
+                        <Trash2 className={`w-4 h-4 ${isDeleting === deck.id ? 'opacity-50' : ''}`} />
+                      </button>
+                    )}
+                    <button
+                      onClick={() => handleUpvote(deck.id, deck.upvotes)}
+                      disabled={isUpvoted}
+                      className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
+                        isUpvoted
+                          ? 'bg-primary/10 border border-primary/30 text-primary'
+                          : 'bg-surface border border-border text-muted hover:text-foreground hover:bg-surface-hover group-hover:border-border-strong'
+                      }`}
+                    >
+                      <ThumbsUp className={`w-3.5 h-3.5 ${isUpvoted ? 'fill-current' : ''}`} />
+                      {deck.upvotes}
+                    </button>
+                  </div>
                 </div>
 
                 <h3 className="text-lg font-bold text-foreground leading-snug group-hover:text-primary transition-colors">
