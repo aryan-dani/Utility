@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { 
   Play, 
   Pause, 
@@ -10,13 +11,21 @@ import {
   Settings2, 
   Volume2, 
   VolumeX,
-  Bell,
   CheckCircle2,
-  X
+  X,
+  Flame,
+  BarChart3
 } from 'lucide-react';
 import { FadeIn, ScaleButton } from '@/components/Animations';
+import { createClient } from '@/lib/supabase';
+import { logActivity } from '@/components/ActivityHeatmap';
 
 type TimerMode = 'work' | 'break' | 'longBreak';
+
+interface FocusLog {
+  date: string; // YYYY-MM-DD
+  minutes: number;
+}
 
 const MIN_DURATION_MINUTES = 1;
 const MAX_DURATION_MINUTES = 180;
@@ -30,12 +39,18 @@ function sanitizeDuration(value: number | string) {
 }
 
 export default function TimerClient() {
+  const searchParams = useSearchParams();
+  const taskId = searchParams.get('taskId');
+  const taskText = searchParams.get('taskText');
+  const day = searchParams.get('day');
+
   const [mode, setMode] = useState<TimerMode>('work');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
   const [sessions, setSessions] = useState(0);
   const [muted, setMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
+  const [focusLogs, setFocusLogs] = useState<FocusLog[]>([]);
   
   // Settings
   const [workTime, setWorkTime] = useState<number | string>(25);
@@ -53,6 +68,16 @@ export default function TimerClient() {
         : sanitizeDuration(longBreakTime) * 60;
   const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
 
+  // Load focus history
+  useEffect(() => {
+    const logsSaved = localStorage.getItem('utility_focus_logs');
+    if (logsSaved) {
+      try {
+        setFocusLogs(JSON.parse(logsSaved));
+      } catch {}
+    }
+  }, []);
+
   const playSound = useCallback(() => {
     if (muted) return;
     if (!audioRef.current) {
@@ -69,6 +94,64 @@ export default function TimerClient() {
     else setTimeLeft(sanitizeDuration(longBreakTime) * 60);
   }, [workTime, breakTime, longBreakTime]);
 
+  const logFocusSession = useCallback(async (minutes: number) => {
+    logActivity('focus_timer_completed', 1);
+
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const logsSaved = localStorage.getItem('utility_focus_logs');
+      let logs: FocusLog[] = [];
+      if (logsSaved) {
+        logs = JSON.parse(logsSaved);
+      }
+      const existingIndex = logs.findIndex(l => l.date === today);
+      if (existingIndex !== -1) {
+        logs[existingIndex].minutes += minutes;
+      } else {
+        logs.push({ date: today, minutes });
+      }
+      localStorage.setItem('utility_focus_logs', JSON.stringify(logs));
+      setFocusLogs(logs);
+    } catch (e) {
+      console.error('Failed to log focus history:', e);
+    }
+
+    if (taskId && day) {
+      const plannerSaved = localStorage.getItem('utility_planner_week');
+      if (plannerSaved) {
+        try {
+          const weekData = JSON.parse(plannerSaved);
+          if (weekData[day]) {
+            weekData[day] = weekData[day].map((todo: any) => {
+              if (todo.id === taskId) {
+                return {
+                  ...todo,
+                  focusSessions: (todo.focusSessions || 0) + 1,
+                  focusMinutes: (todo.focusMinutes || 0) + minutes,
+                };
+              }
+              return todo;
+            });
+            localStorage.setItem('utility_planner_week', JSON.stringify(weekData));
+            
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+              await supabase
+                .from('planner_data')
+                .upsert(
+                  { user_id: user.id, data: weekData, updated_at: new Date().toISOString() },
+                  { onConflict: 'user_id' }
+                );
+            }
+          }
+        } catch (e) {
+          console.error('Failed to update planner data:', e);
+        }
+      }
+    }
+  }, [taskId, day]);
+
   useEffect(() => {
     if (isActive && timeLeft > 0) {
       timerRef.current = setInterval(() => {
@@ -79,6 +162,10 @@ export default function TimerClient() {
       if (mode === 'work') {
         const newSessions = sessions + 1;
         setSessions(newSessions);
+        
+        const durationMins = sanitizeDuration(workTime);
+        logFocusSession(durationMins);
+
         if (newSessions % 4 === 0) switchMode('longBreak');
         else switchMode('break');
       } else {
@@ -96,7 +183,7 @@ export default function TimerClient() {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, timeLeft, mode, sessions, playSound, switchMode]);
+  }, [isActive, timeLeft, mode, sessions, playSound, switchMode, logFocusSession, workTime]);
 
   useEffect(() => {
     if ("Notification" in window && Notification.permission === "default") {
@@ -119,102 +206,172 @@ export default function TimerClient() {
     setTimeLeft(totalTime);
   };
 
+  const weeklyChartData = useMemo(() => {
+    const data = [];
+    const daysOfWeek = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateString = d.toISOString().split('T')[0];
+      const log = focusLogs.find(l => l.date === dateString);
+      const dayLabel = daysOfWeek[d.getDay()];
+      data.push({
+        day: dayLabel,
+        minutes: log ? log.minutes : 0,
+        date: dateString
+      });
+    }
+    return data;
+  }, [focusLogs]);
+
+  const maxMinutes = useMemo(() => {
+    const max = Math.max(...weeklyChartData.map(d => d.minutes), 0);
+    return max === 0 ? 60 : max;
+  }, [weeklyChartData]);
+
   return (
-    <div className="flex-1 w-full max-w-2xl mx-auto px-6 py-10 flex flex-col items-center justify-center min-h-[80vh]">
-      <FadeIn className="w-full text-center mb-12">
-        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface text-muted text-[10px] font-bold uppercase tracking-wider mb-4 border border-border">
-          {mode === 'work' ? <Brain className="w-3 h-3" /> : <Coffee className="w-3 h-3" />}
-          {mode === 'work' ? 'Deep Work Session' : mode === 'break' ? 'Short Break' : 'Long Break'}
-        </div>
-        <h1 className="text-4xl font-bold tracking-tight text-foreground">Stay Focused</h1>
-        <p className="text-sm text-muted mt-2">Using the Pomodoro technique for maximum productivity.</p>
-      </FadeIn>
+    <div className="flex-1 w-full max-w-4xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-center gap-12 min-h-[85vh]">
+      
+      {/* Left panel: Pomodoro timer */}
+      <div className="flex-1 flex flex-col items-center max-w-md w-full">
+        <FadeIn className="w-full text-center mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface text-muted text-[10px] font-bold uppercase tracking-wider mb-4 border border-border">
+            {mode === 'work' ? <Brain className="w-3 h-3" /> : <Coffee className="w-3 h-3" />}
+            {mode === 'work' ? 'Deep Work Session' : mode === 'break' ? 'Short Break' : 'Long Break'}
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Stay Focused</h1>
+          <p className="text-xs text-muted mt-1.5">Pomodoro tracker optimized for your weekly targets.</p>
+        </FadeIn>
 
-      <FadeIn delay={0.1} className="relative mb-12">
-        {/* Progress Circle */}
-        <div className="relative w-72 h-72 sm:w-80 sm:h-80">
-          <svg className="w-full h-full -rotate-90">
-            <circle
-              cx="50%"
-              cy="50%"
-              r="48%"
-              className="fill-none stroke-surface-hover stroke-[6]"
-            />
-            <circle
-              cx="50%"
-              cy="50%"
-              r="48%"
-              className="fill-none stroke-foreground stroke-[6] transition-all duration-1000 ease-linear"
-              strokeDasharray="301.6%"
-              strokeDashoffset={`${301.6 - (301.6 * progress) / 100}%`}
-              strokeLinecap="round"
-            />
-          </svg>
-          
-          <div className="absolute inset-0 flex flex-col items-center justify-center">
-            <span className="text-6xl sm:text-7xl font-black tabular-nums tracking-tighter text-foreground">
-              {formatTime(timeLeft)}
-            </span>
-            <div className="flex items-center gap-2 mt-4">
-              {[...Array(4)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className={`w-2 h-2 rounded-full border border-foreground/20 ${
-                    i < (sessions % 4) ? 'bg-foreground' : 'bg-transparent'
-                  }`} 
-                />
-              ))}
+        {/* Active Task Callout */}
+        {taskText && (
+          <FadeIn delay={0.05} className="w-full mb-8 bg-surface/60 border border-border rounded-2xl p-4 flex items-center gap-3">
+            <div className="w-8 h-8 rounded-lg bg-background border border-border flex items-center justify-center text-primary shrink-0 animate-pulse">
+              <Flame className="w-4 h-4 fill-current" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-muted">Focused Task</p>
+              <p className="text-xs font-semibold text-foreground truncate">{decodeURIComponent(taskText)}</p>
+            </div>
+          </FadeIn>
+        )}
+
+        <FadeIn delay={0.1} className="relative mb-8">
+          {/* Progress Circle */}
+          <div className="relative w-64 h-64 sm:w-72 sm:h-72">
+            <svg className="w-full h-full -rotate-90">
+              <circle
+                cx="50%"
+                cy="50%"
+                r="48%"
+                className="fill-none stroke-surface-hover stroke-[6]"
+              />
+              <circle
+                cx="50%"
+                cy="50%"
+                r="48%"
+                className="fill-none stroke-foreground stroke-[6] transition-all duration-1000 ease-linear"
+                strokeDasharray="301.6%"
+                strokeDashoffset={`${301.6 - (301.6 * progress) / 100}%`}
+                strokeLinecap="round"
+              />
+            </svg>
+            
+            <div className="absolute inset-0 flex flex-col items-center justify-center">
+              <span className="text-5xl sm:text-6xl font-black tabular-nums tracking-tighter text-foreground">
+                {formatTime(timeLeft)}
+              </span>
+              <div className="flex items-center gap-2 mt-4">
+                {[...Array(4)].map((_, i) => (
+                  <div 
+                    key={i} 
+                    className={`w-2 h-2 rounded-full border border-foreground/20 ${
+                      i < (sessions % 4) ? 'bg-foreground' : 'bg-transparent'
+                    }`} 
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+        </FadeIn>
+
+        {/* Controls */}
+        <FadeIn delay={0.2} className="w-full space-y-6">
+          <div className="flex items-center justify-center gap-4">
+            <button
+              onClick={resetTimer}
+              className="w-12 h-12 rounded-full border border-border bg-card flex items-center justify-center text-muted hover:text-foreground hover:bg-surface transition-all"
+              title="Reset"
+            >
+              <RotateCcw className="w-5 h-5" />
+            </button>
+            
+            <ScaleButton
+              onClick={toggleTimer}
+              className="w-24 h-12 rounded-full bg-foreground text-background flex items-center justify-center shadow-xl"
+            >
+              {isActive ? <span className="font-bold text-xs uppercase tracking-widest">Pause</span> : <span className="font-bold text-xs uppercase tracking-widest">Start</span>}
+            </ScaleButton>
+
+            <button
+              onClick={() => setShowSettings(true)}
+              className="w-12 h-12 rounded-full border border-border bg-card flex items-center justify-center text-muted hover:text-foreground hover:bg-surface transition-all"
+              title="Settings"
+            >
+              <Settings2 className="w-5 h-5" />
+            </button>
+          </div>
+        </FadeIn>
+      </div>
+
+      {/* Right panel: Focus analytics */}
+      <FadeIn delay={0.3} className="flex-1 w-full max-w-sm space-y-6">
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-muted mb-4 flex items-center gap-2">
+            <CheckCircle2 className="w-4 h-4" />
+            Session Statistics
+          </h3>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="bg-surface/50 border border-border rounded-xl p-3 text-center">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-widest">Completed</span>
+              <p className="text-2xl font-black text-foreground mt-1">{sessions}</p>
+            </div>
+            <div className="bg-surface/50 border border-border rounded-xl p-3 text-center">
+              <span className="text-[10px] font-bold text-muted uppercase tracking-widest">Today's Focus</span>
+              <p className="text-2xl font-black text-foreground mt-1">
+                {focusLogs.find(l => l.date === new Date().toISOString().split('T')[0])?.minutes || 0}m
+              </p>
             </div>
           </div>
         </div>
-      </FadeIn>
 
-      {/* Controls */}
-      <FadeIn delay={0.2} className="w-full max-w-xs space-y-8">
-        <div className="flex items-center justify-center gap-4">
-          <button
-            onClick={resetTimer}
-            className="w-12 h-12 rounded-full border border-border bg-card flex items-center justify-center text-muted hover:text-foreground hover:bg-surface transition-all"
-            title="Reset"
-          >
-            <RotateCcw className="w-5 h-5" />
-          </button>
-          
-          <ScaleButton
-            onClick={toggleTimer}
-            className="w-20 h-20 rounded-full bg-foreground text-background flex items-center justify-center shadow-xl"
-          >
-            {isActive ? <Pause className="w-8 h-8 fill-current" /> : <Play className="w-8 h-8 fill-current translate-x-0.5" />}
-          </ScaleButton>
-
-          <button
-            onClick={() => setShowSettings(true)}
-            className="w-12 h-12 rounded-full border border-border bg-card flex items-center justify-center text-muted hover:text-foreground hover:bg-surface transition-all"
-            title="Settings"
-          >
-            <Settings2 className="w-5 h-5" />
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-between items-center px-4 py-3 rounded-xl bg-surface border border-border">
-            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-              <CheckCircle2 className="w-4 h-4 text-muted" />
-              Sessions Completed
-            </div>
-            <span className="text-sm font-bold font-mono">{sessions}</span>
+        {/* Weekly Chart */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-muted" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Weekly Study Time</h3>
           </div>
-          
-          <button 
-            onClick={() => setMuted(!muted)}
-            className="flex justify-between items-center px-4 py-3 rounded-xl bg-surface/50 border border-border hover:bg-surface transition-colors"
-          >
-            <div className="flex items-center gap-2 text-sm font-medium text-muted">
-              {muted ? <VolumeX className="w-4 h-4" /> : <Volume2 className="w-4 h-4" />}
-              Sound Effects
-            </div>
-            <span className="text-xs font-bold uppercase tracking-wider">{muted ? 'Off' : 'On'}</span>
-          </button>
+          <div className="flex justify-between items-end h-28 pt-2 px-2">
+            {weeklyChartData.map((d, index) => {
+              const pct = (d.minutes / maxMinutes) * 100;
+              return (
+                <div key={index} className="flex flex-col items-center flex-1 group relative">
+                  {/* Tooltip */}
+                  <div className="absolute -top-8 bg-foreground text-background text-[10px] font-bold rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-md z-10">
+                    {d.minutes}m
+                  </div>
+                  <div className="w-5 bg-surface border border-border rounded-md overflow-hidden flex items-end h-20 transition-all group-hover:border-foreground/30">
+                    <div 
+                      className="w-full bg-foreground transition-all duration-500 ease-out" 
+                      style={{ height: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-semibold text-muted mt-2">{d.day}</span>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </FadeIn>
 

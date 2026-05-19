@@ -17,6 +17,7 @@ interface Resource {
   title: string;
   file_url: string;
   subject_id: string;
+  is_indexed?: boolean;
 }
 
 function getErrorMessage(error: unknown): string {
@@ -38,6 +39,7 @@ export default function AdminClient() {
   const [title, setTitle] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [isDragActive, setIsDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Manage State
@@ -77,11 +79,27 @@ export default function AdminClient() {
     setLoadingResources(true);
     const { data, error } = await supabase
       .from('resources')
-      .select(`id, title, file_url, subject_id, subjects!inner(branch, semester)`)
+      .select(`
+        id, 
+        title, 
+        file_url, 
+        subject_id, 
+        subjects!inner(branch, semester),
+        resource_content(id)
+      `)
       .eq('subjects.branch', branch)
       .eq('subjects.semester', parseInt(semester));
 
-    if (!error) setResources(data || []);
+    if (!error) {
+      const mapped = (data || []).map((r: any) => ({
+        id: r.id,
+        title: r.title,
+        file_url: r.file_url,
+        subject_id: r.subject_id,
+        is_indexed: Array.isArray(r.resource_content) ? r.resource_content.length > 0 : false
+      }));
+      setResources(mapped);
+    }
     setLoadingResources(false);
   }, [supabase, branch, semester]);
 
@@ -98,6 +116,30 @@ export default function AdminClient() {
     setFile(selectedFile);
     if (selectedFile && !title) {
       setTitle(selectedFile.name.split('.').slice(0, -1).join('.'));
+    }
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setIsDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setIsDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const droppedFile = e.dataTransfer.files[0];
+      setFile(droppedFile);
+      if (!title) {
+        setTitle(droppedFile.name.split('.').slice(0, -1).join('.'));
+      }
     }
   };
 
@@ -124,7 +166,12 @@ export default function AdminClient() {
         .insert({ subject_id: selectedSubject, title, file_url: publicUrl });
       if (dbError) throw dbError;
 
-      setMessage('✓ File uploaded and linked successfully.');
+      // Trigger RAG indexing webhook in the background
+      fetch('/api/webhooks/storage-sync', { method: 'POST' }).catch((err) => {
+        console.warn('Failed to auto-trigger indexing pipeline:', err);
+      });
+
+      setMessage('✓ File uploaded, linked and queued for AI indexing.');
       setTitle('');
       setFile(null);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -284,14 +331,50 @@ export default function AdminClient() {
       {tab === 'upload' && (
         <form onSubmit={handleUpload} className="space-y-5 bg-card p-6 rounded-xl border border-border">
           <div>
-            <label className="block text-xs font-medium text-foreground mb-1.5">File</label>
-            <input
-              ref={fileInputRef}
-              type="file"
-              required
-              onChange={handleFileChange}
-              className="w-full text-sm bg-background border border-border rounded-lg p-2.5 text-foreground file:mr-3 file:text-xs file:font-medium file:bg-surface file:border file:border-border file:rounded-md file:px-2.5 file:py-1 file:text-foreground"
-            />
+            <label className="block text-xs font-semibold text-foreground mb-2">Resource File</label>
+            <div
+              onDragEnter={handleDrag}
+              onDragOver={handleDrag}
+              onDragLeave={handleDrag}
+              onDrop={handleDrop}
+              onClick={() => fileInputRef.current?.click()}
+              className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
+                isDragActive
+                  ? 'border-primary bg-primary/5 text-primary scale-[1.01]'
+                  : file
+                  ? 'border-emerald-500/50 bg-emerald-500/5 text-foreground'
+                  : 'border-border bg-surface hover:bg-surface-hover hover:border-border-strong text-muted'
+              }`}
+            >
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+              
+              {file ? (
+                <div className="flex flex-col items-center text-center">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 mb-2">
+                    <FileIcon className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground max-w-[280px] truncate">{file.name}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full mt-3">
+                    Ready to Upload
+                  </span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center text-center animate-fade-in">
+                  <div className="w-12 h-12 rounded-xl bg-surface border border-border flex items-center justify-center text-muted-foreground mb-2">
+                    <Plus className="w-6 h-6" />
+                  </div>
+                  <p className="text-sm font-bold text-foreground">Drag and drop file here</p>
+                  <p className="text-xs text-muted-foreground mt-1">or click to browse files</p>
+                  <p className="text-[10px] text-muted-foreground mt-3 font-mono">Supports PDF, PPT, DOC, etc.</p>
+                </div>
+              )}
+            </div>
           </div>
           <div>
             <label className="block text-xs font-medium text-foreground mb-1.5">Title</label>
@@ -403,13 +486,24 @@ export default function AdminClient() {
                             <h3 className="font-bold text-foreground text-sm tracking-tight truncate">
                               {resource.title}
                             </h3>
-                            <div className="flex items-center gap-2 mt-0.5">
+                            <div className="flex items-center flex-wrap gap-2 mt-1">
                               <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-1.5 py-0.5 rounded">
                                 {subject?.name || 'Uncategorized'}
                               </span>
                               <span className="text-[10px] text-muted font-mono uppercase tracking-tighter">
                                 ID: {resource.id.slice(0, 8)}
                               </span>
+                              {resource.is_indexed ? (
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
+                                  <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
+                                  Indexed
+                                </span>
+                              ) : (
+                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded flex items-center gap-1 animate-pulse">
+                                  <span className="w-1 h-1 rounded-full bg-amber-500"></span>
+                                  Indexing...
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>

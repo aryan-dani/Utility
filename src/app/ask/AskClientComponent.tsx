@@ -20,13 +20,16 @@ import {
   XCircle, 
   ChevronLeft, 
   ChevronRight,
-  BookOpen
+  BookOpen,
+  Plus
 } from 'lucide-react';
 import { useAcademicStore } from '@/store/academicStore';
 import { createClient } from '@/lib/supabase';
 import ReactMarkdown from 'react-markdown';
 import { logActivity } from '@/components/ActivityHeatmap';
 import { toast } from 'sonner';
+import { useSRSStore } from '@/store/srsStore';
+import { useSearchParams } from 'next/navigation';
 
 const SUGGESTED_PROMPTS = [
   'Explain DBMS normalization with examples',
@@ -114,6 +117,92 @@ interface QuizQuestion {
   options: string[];
   correctIndex: number;
   explanation: string;
+  citations?: string[];
+}
+
+function AddToSrsButton({ cards, defaultName }: { cards: Flashcard[]; defaultName: string }) {
+  const { decks, createDeck, addMultipleCards, initStore } = useSRSStore();
+  const [isOpen, setIsOpen] = useState(false);
+  const [added, setAdded] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    initStore();
+  }, [initStore]);
+
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const handleAddToDeck = (deckId: string) => {
+    const formatted = cards.map(c => ({ question: c.question, answer: c.answer }));
+    addMultipleCards(deckId, formatted);
+    setAdded(true);
+    setIsOpen(false);
+    toast.success('Added cards to SRS Deck!');
+    setTimeout(() => setAdded(false), 2000);
+  };
+
+  const handleCreateAndAdd = () => {
+    const newDeck = createDeck(defaultName);
+    const formatted = cards.map(c => ({ question: c.question, answer: c.answer }));
+    addMultipleCards(newDeck.id, formatted);
+    setAdded(true);
+    setIsOpen(false);
+    toast.success(`Created deck "${defaultName}" and added cards!`);
+    setTimeout(() => setAdded(false), 2000);
+  };
+
+  return (
+    <div ref={dropdownRef} className="relative">
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        disabled={added}
+        className="flex items-center gap-1.5 px-4 py-2 border border-border hover:bg-surface text-xs font-semibold rounded-xl text-foreground transition-all shadow-xs"
+      >
+        {added ? (
+          <>
+            <Check className="w-3.5 h-3.5 text-emerald-500" />
+            Saved to SRS!
+          </>
+        ) : (
+          <>
+            <Plus className="w-3.5 h-3.5 text-muted shrink-0" />
+            Add to SRS
+          </>
+        )}
+      </button>
+
+      {isOpen && (
+        <div className="absolute right-0 bottom-full mb-2 w-56 bg-card border border-border rounded-2xl shadow-popover overflow-hidden z-[100] backdrop-blur-xl p-1.5 flex flex-col gap-0.5">
+          <div className="px-3 py-1.5 border-b border-border/60 mb-1">
+            <p className="text-[9px] uppercase font-extrabold tracking-wider text-muted">Select SRS Deck</p>
+          </div>
+          {decks.map(deck => (
+            <button
+              key={deck.id}
+              onClick={() => handleAddToDeck(deck.id)}
+              className="w-full text-left px-3 py-2 text-xs font-semibold rounded-xl hover:bg-surface text-foreground transition-colors"
+            >
+              {deck.name}
+            </button>
+          ))}
+          <button
+            onClick={handleCreateAndAdd}
+            className="w-full text-left px-3 py-2 text-xs font-bold rounded-xl text-primary bg-surface border border-border/80 hover:bg-surface-hover transition-colors mt-1"
+          >
+            + Create "{defaultName.slice(0, 16)}..."
+          </button>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function AskClient() {
@@ -122,6 +211,7 @@ export default function AskClient() {
   const [activeTab, setActiveTab] = useState<'chat' | 'flashcards' | 'quiz'>('chat');
 
   const supabase = useMemo(() => createClient(), []);
+  const searchParams = useSearchParams();
 
   // Chat refs & state
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -173,6 +263,26 @@ export default function AskClient() {
 
   const [input, setInput] = useState('');
   const isLoading = status === 'streaming' || status === 'loading';
+
+  useEffect(() => {
+    const tab = searchParams.get('tab');
+    const topic = searchParams.get('topic');
+    const prompt = searchParams.get('prompt');
+
+    if (tab === 'flashcards' || tab === 'quiz' || tab === 'chat') {
+      setActiveTab(tab);
+    }
+    if (topic) {
+      if (tab === 'flashcards') {
+        setFlashcardTopic(topic);
+      } else if (tab === 'quiz') {
+        setQuizTopic(topic);
+      }
+    }
+    if (prompt && tab === 'chat') {
+      setInput(prompt);
+    }
+  }, [searchParams]);
   
   const handleInputChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setInput(e.target.value);
@@ -673,34 +783,39 @@ export default function AskClient() {
                 </button>
               </div>
 
-              {/* Publish Deck CTA */}
+              {/* Save & Publish Deck CTA */}
               <div className="mt-8 pt-6 border-t border-border w-full flex flex-col sm:flex-row items-center justify-between gap-4">
                 <div>
-                  <h4 className="text-xs font-bold text-foreground">Share with Peer Scholars</h4>
-                  <p className="text-[11px] text-muted mt-0.5">Publish this AI deck to the Community Vault for your classmates.</p>
+                  <h4 className="text-xs font-bold text-foreground">Save to Study Decks</h4>
+                  <p className="text-[11px] text-muted mt-0.5">Add these flashcards to your personal Spaced Repetition (SRS) box or publish them.</p>
                 </div>
-                <button
-                  onClick={handlePublishDeck}
-                  disabled={isPublishingDeck || publishedDeck}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl bg-foreground text-background text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-xs shrink-0"
-                >
-                  {isPublishingDeck ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      Publishing...
-                    </>
-                  ) : publishedDeck ? (
-                    <>
-                      <Check className="w-3.5 h-3.5 text-emerald-400" />
-                      Published to Community!
-                    </>
-                  ) : (
-                    <>
-                      <BookOpen className="w-3.5 h-3.5" />
-                      Publish Deck
-                    </>
-                  )}
-                </button>
+                
+                <div className="flex items-center gap-2">
+                  <AddToSrsButton cards={flashcards} defaultName={flashcardTopic || 'Academic Flashcards'} />
+                  
+                  <button
+                    onClick={handlePublishDeck}
+                    disabled={isPublishingDeck || publishedDeck}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-foreground text-background text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-xs shrink-0"
+                  >
+                    {isPublishingDeck ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        Publishing...
+                      </>
+                    ) : publishedDeck ? (
+                      <>
+                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        Published to Community!
+                      </>
+                    ) : (
+                      <>
+                        <BookOpen className="w-3.5 h-3.5" />
+                        Publish Deck
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
           ) : (
@@ -819,9 +934,29 @@ export default function AskClient() {
                   </div>
 
                   {quizSubmitted && (
-                    <div className="mt-6 p-4 rounded-xl bg-surface border border-border text-xs text-muted leading-relaxed">
-                      <span className="font-semibold text-foreground block mb-1">Explanation:</span>
-                      {q.explanation}
+                    <div className="mt-6 p-4 rounded-xl bg-surface border border-border text-xs text-muted leading-relaxed space-y-3">
+                      <div>
+                        <span className="font-semibold text-foreground block mb-1">Explanation:</span>
+                        <p>{q.explanation}</p>
+                      </div>
+                      {q.citations && q.citations.length > 0 && (
+                        <div className="pt-2.5 border-t border-border/40 flex flex-wrap gap-1.5 items-center">
+                          <span className="font-bold text-[9px] text-muted uppercase tracking-wider mr-1">Cited Sources:</span>
+                          {q.citations.map((cite: string, idx: number) => {
+                            const cleanedCite = cite.replace(/^\[?SOURCE:\s*/i, '').replace(/\]$/, '').trim();
+                            if (!cleanedCite || cleanedCite.toLowerCase() === 'leave empty array if no context snippet was used.') return null;
+                            return (
+                              <span 
+                                key={idx} 
+                                className="inline-flex items-center gap-1 bg-card px-2.5 py-0.5 border border-border text-[9px] font-bold text-foreground rounded-md shadow-2xs"
+                              >
+                                <BookOpen className="w-3 h-3 text-muted shrink-0" />
+                                {cleanedCite}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>

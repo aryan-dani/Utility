@@ -1,16 +1,45 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { SubjectItem } from '@/lib/dataFetcher';
+import { SubjectItem, ResourceItem, getResourcesFromDB } from '@/lib/dataFetcher';
 import { useAcademicStore } from '@/store/academicStore';
-import { BookMarked, Layers, Search, FileText, ArrowRight, Check, ChevronDown, ChevronUp, Trophy } from 'lucide-react';
+import { 
+  BookMarked, 
+  Layers, 
+  Search, 
+  FileText, 
+  ArrowRight, 
+  Check, 
+  ChevronDown, 
+  ChevronUp, 
+  Trophy, 
+  Brain, 
+  HelpCircle, 
+  Sparkles, 
+  Clock, 
+  BookOpen, 
+  Cpu, 
+  Database, 
+  Activity, 
+  CheckCircle2, 
+  ChevronRight,
+  GraduationCap,
+  Compass
+} from 'lucide-react';
 import { logActivity } from '@/components/ActivityHeatmap';
+import { createClient } from '@/lib/supabase';
+import { isSubjectMatch } from '@/lib/subjectMatcher';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface SyllabusClientProps {
   subjects: SubjectItem[];
   branch: string;
   semester: number;
   syllabusUrl?: string | null;
+}
+
+interface ResourceItemExt extends ResourceItem {
+  subject_name: string;
 }
 
 const STORAGE_KEY = 'utility_syllabus_progress';
@@ -94,67 +123,6 @@ const AIDS_SEM_4_SUBJECTS = [
       { title: 'Implementation & Sprint I', desc: 'Core feature development, algorithmic module integration, and initial unit testing.' },
       { title: 'Final Evaluation & Presentation', desc: 'Project deployment, rigorous user testing, technical report writing, and viva voce.' }
     ]
-  },
-  {
-    id: 'aud20020',
-    code: 'AUD20020',
-    name: 'German Basic II',
-    type: 'UC',
-    credits: 2,
-    modules: [
-      { title: 'Advanced Grammar & Sentence Structure', desc: 'Complex sentence formation, past tenses, separable verbs, and modal verbs.' },
-      { title: 'Vocabulary & Daily Communication', desc: 'Vocabulary for professional workplace settings, travel, ordering food, and cultural exchanges.' },
-      { title: 'Reading & Comprehension', desc: 'Reading German short texts, articles, dialogues, and practicing comprehension skills.' },
-      { title: 'Listening & Oral Dialogue', desc: 'Interactive conversational practice, listening audio exercises, and oral presentations.' }
-    ]
-  },
-  {
-    id: 'aud20140',
-    code: 'AUD20140',
-    name: 'Constitution II',
-    type: 'UC',
-    credits: 2,
-    modules: [
-      { title: 'Fundamental Rights & Duties', desc: 'In-depth study of constitutional rights, directive principles of state policy, and citizen duties.' },
-      { title: 'Organs of Governance', desc: 'Structure, powers, and functioning of the Legislature, Executive, and Judiciary.' },
-      { title: 'Constitutional Amendments & Judgments', desc: 'Key constitutional amendments, judicial review, and landmark Supreme Court cases.' },
-      { title: 'Local Self-Government & Elections', desc: 'Panchayati Raj, municipal governance structure, and the Election Commission framework.' }
-    ]
-  },
-  {
-    id: 'dec210',
-    code: 'DEC210',
-    name: 'Co-curricular Activity',
-    type: 'CE',
-    credits: 0,
-    modules: [
-      { title: 'Professional Workshops & Seminars', desc: 'Active participation in technical symposiums, coding hackathons, and industry guest lectures.' },
-      { title: 'Community & Social Impact', desc: 'Extension activities, NSS involvement, technical club leadership, and societal contributions.' }
-    ]
-  },
-  {
-    id: 'uhv200',
-    code: 'UHV200',
-    name: 'Life Transforming Skills II',
-    type: 'UC',
-    credits: 2,
-    modules: [
-      { title: 'Harmony in the Self & Family', desc: 'Understanding human values, self-exploration, and fostering healthy interpersonal relationships.' },
-      { title: 'Harmony in Society & Nature', desc: 'Social ethics, universal human order, co-existence with nature, and sustainable development.' },
-      { title: 'Professional Ethics & Integrity', desc: 'Ethical conduct in engineering, resolving moral dilemmas, and corporate social responsibility.' }
-    ]
-  },
-  {
-    id: 'ues203',
-    code: 'UES203',
-    name: 'Knowledge Skills for Life',
-    type: 'I',
-    credits: 1,
-    modules: [
-      { title: 'Critical Thinking & Problem Solving', desc: 'Frameworks for analytical thinking, identifying cognitive biases, and logical reasoning.' },
-      { title: 'Financial Literacy & Management', desc: 'Basics of personal finance, budgeting, investment strategies, and economic awareness.' },
-      { title: 'Effective Communication & Leadership', desc: 'Public speaking articulation, negotiation skills, teamwork dynamics, and leadership principles.' }
-    ]
   }
 ];
 
@@ -181,10 +149,10 @@ function getModulesForSubject(name: string) {
   if (upper.includes('OPERATING SYSTEM') || upper.includes('OS')) {
     return [
       { title: 'OS Structures & Process Management', desc: 'System calls, process states, PCB, context switching, and inter-process communication.' },
-      { title: 'CPU Scheduling & Threads', desc: 'Scheduling algorithms (FCFS, SJF, RR, Multilevel queue), multithreading models, and POSIX threads.' },
-      { title: 'Process Synchronization & Deadlocks', desc: 'Critical section problem, semaphores, mutexes, dining philosophers, and deadlock detection/avoidance.' },
-      { title: 'Memory Management & Virtual Memory', desc: 'Paging, segmentation, TLB, demand paging, and page replacement algorithms (FIFO, LRU, Optimal).' },
-      { title: 'File Systems & I/O Management', desc: 'File allocation methods, directory structures, disk scheduling (FCFS, SSTF, SCAN), and kernel I/O subsystem.' }
+      { title: 'CPU Scheduling & Threads', desc: 'System calls, CPU scheduling (FCFS, SJF, RR, Multilevel), and multithreading.' },
+      { title: 'Process Synchronization & Deadlocks', desc: 'Critical section problem, semaphores, mutexes, dining philosophers, and deadlock avoidance.' },
+      { title: 'Memory Management & Virtual Memory', desc: 'Paging, segmentation, TLB, demand paging, and page replacement (FIFO, LRU, Optimal).' },
+      { title: 'File Systems & I/O Management', desc: 'File allocation, directory structures, disk scheduling, and kernel I/O subsystem.' }
     ];
   }
   if (upper.includes('NETWORK') || upper.includes('CN')) {
@@ -196,7 +164,6 @@ function getModulesForSubject(name: string) {
       { title: 'Application Layer & Security', desc: 'DNS, HTTP, FTP, SMTP, cryptography basics, SSL/TLS, and network security protocols.' }
     ];
   }
-  // Generic but professional academic fallback for any other subject
   return [
     { title: 'Unit I: Core Principles & Theoretical Foundations', desc: 'Fundamental definitions, historical context, underlying mathematical models, and primary architectural concepts.' },
     { title: 'Unit II: Operational Workflows & System Mechanisms', desc: 'Detailed structural breakdown, core operational workflows, intermediate theorems, and standard analytical methodologies.' },
@@ -210,6 +177,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
+  const [resources, setResources] = useState<ResourceItemExt[]>([]);
 
   useEffect(() => {
     try {
@@ -220,6 +188,56 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
     } catch {}
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    const supabase = createClient();
+    getResourcesFromDB(branch, semester, supabase).then(res => {
+      setResources(res as ResourceItemExt[]);
+    });
+  }, [branch, semester]);
+
+  const getMatchingResources = (
+    moduleTitle: string,
+    moduleDesc: string,
+    subjectName: string
+  ) => {
+    const subjectResources = resources.filter(
+      r => isSubjectMatch(r.subject_name, subjectName)
+    );
+    
+    const pool = subjectResources;
+    if (pool.length === 0) return [];
+    
+    const titleWords = moduleTitle.toLowerCase()
+      .replace(/unit\s+[ivx]+/gi, '')
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 3);
+      
+    const descWords = moduleDesc.toLowerCase()
+      .replace(/[^\w\s]/g, '')
+      .split(/\s+/)
+      .filter(w => w.length > 3);
+      
+    const keywords = Array.from(new Set([...titleWords, ...descWords]));
+    
+    const scored = pool.map(resource => {
+      const rTitle = resource.title.toLowerCase();
+      let score = 0;
+      keywords.forEach(word => {
+        if (rTitle.includes(word)) {
+          score += 1;
+        }
+      });
+      return { resource, score };
+    });
+    
+    return scored
+      .filter(item => item.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .map(item => item.resource)
+      .slice(0, 3);
+  };
 
   const toggleModule = (subjectId: string, moduleIdx: number) => {
     const key = `${subjectId}_${moduleIdx}`;
@@ -240,7 +258,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
   const displaySubjects = useMemo(() => {
     if (branch === 'AIDS' && semester === 4) {
       return AIDS_SEM_4_SUBJECTS.map((officialSub) => {
-        const dbSub = subjects.find(s => s.name.toLowerCase() === officialSub.name.toLowerCase() || s.name.toLowerCase().includes(officialSub.name.toLowerCase()));
+        const dbSub = subjects.find(s => isSubjectMatch(s.name, officialSub.name));
         return {
           id: dbSub ? dbSub.id : officialSub.id,
           name: officialSub.name,
@@ -270,7 +288,11 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
   const filtered = useMemo(() => {
     if (!searchQuery.trim()) return displaySubjects;
     const q = searchQuery.toLowerCase();
-    return displaySubjects.filter((s) => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q));
+    return displaySubjects.filter(
+      (s) => s.name.toLowerCase().includes(q) || 
+             s.code.toLowerCase().includes(q) || 
+             isSubjectMatch(s.name, searchQuery)
+    );
   }, [displaySubjects, searchQuery]);
 
   // Calculate Overall Progress
@@ -284,15 +306,44 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
   }, [filtered, progressMap]);
 
   const overallPercentage = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
+  const estimatedHoursLeft = (totalModules - completedModules) * 3;
+
+  const getSubjectIcon = (name: string) => {
+    const n = name.toLowerCase();
+    if (n.includes('artificial intelligence') || n.includes('expert systems') || n.includes('ai')) return Brain;
+    if (n.includes('data engineering') || n.includes('database') || n.includes('dbms')) return Database;
+    if (n.includes('algorithm') || n.includes('daa') || n.includes('data structure') || n.includes('dsa')) return Cpu;
+    if (n.includes('project') || n.includes('pbl') || n.includes('lab')) return Activity;
+    if (n.includes('german')) return Compass;
+    return BookOpen;
+  };
+
+  if (!mounted) {
+    return (
+      <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-12 flex justify-center items-center h-[50vh]">
+        <span className="text-sm font-semibold text-muted">Initializing dashboard...</span>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 min-h-[80vh]">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 min-h-[90vh] relative">
+      {/* Decorative ambient blurred spots for premium futuristic feel */}
+      <div className="absolute top-[-10%] left-[-20%] w-[600px] h-[600px] rounded-full bg-primary/10 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-500/5 blur-[130px] pointer-events-none" />
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-border pb-6">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-border/60 pb-6 relative z-10">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight text-foreground">Syllabus Tracker</h1>
-          <p className="text-muted text-sm mt-1">
-            {branch} · Semester {semester} · {filtered.length} subject{filtered.length !== 1 ? 's' : ''}
+          <div className="flex items-center gap-2 text-xs font-bold text-primary uppercase tracking-widest bg-primary/5 border border-primary/20 px-3 py-1 rounded-full w-max mb-3">
+            <GraduationCap className="w-3.5 h-3.5" />
+            Curriculum Navigator
+          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight text-foreground bg-clip-text">
+            Syllabus Tracker
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1.5 font-medium">
+            {branch} Workspace <span className="mx-1.5 text-border">•</span> Semester {semester} <span className="mx-1.5 text-border">•</span> {filtered.length} Course{filtered.length !== 1 ? 's' : ''}
           </p>
         </div>
 
@@ -302,38 +353,46 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
               href={syllabusUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-surface border border-border text-foreground text-sm font-semibold hover:bg-surface-hover transition-all shadow-xs flex-shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-surface to-surface/80 border border-border/80 text-foreground text-sm font-bold hover:border-border-strong hover:scale-[1.01] transition-all shadow-xs shrink-0 backdrop-blur-md"
             >
-              <FileText className="w-4 h-4" />
-              Download PDF Syllabus
+              <FileText className="w-4 h-4 text-primary" />
+              Download Official PDF
             </a>
           )}
         </div>
       </div>
 
-      {/* Overall Progress Strip */}
-      {filtered.length > 0 && mounted && (
-        <div className="bg-card border border-border rounded-2xl p-6 mb-8 shadow-sm flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="flex items-center gap-4 w-full sm:w-auto">
-            <div className="w-12 h-12 rounded-2xl bg-surface border border-border flex items-center justify-center shrink-0 shadow-xs">
-              <Trophy className="w-6 h-6 text-primary" />
+      {/* Premium Dashboard Metrics Panel */}
+      {filtered.length > 0 && (
+        <div className="bg-gradient-to-br from-card/85 to-card/60 border border-border/80 rounded-3xl p-6 mb-10 shadow-lg backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+          <div className="flex flex-wrap items-center gap-6 w-full md:w-auto">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/25 to-primary/5 border border-primary/20 flex items-center justify-center shrink-0 shadow-inner">
+              <Trophy className="w-7 h-7 text-primary animate-pulse" />
             </div>
-            <div>
-              <h3 className="text-base font-bold text-foreground leading-snug">Semester Progress Overview</h3>
-              <p className="text-xs text-muted mt-0.5">
-                {completedModules} of {totalModules} modules completed ({overallPercentage}%)
-              </p>
+            
+            <div className="space-y-1">
+              <h3 className="text-lg font-bold text-foreground tracking-tight">Semester Completion</h3>
+              <div className="flex flex-wrap gap-4 text-xs text-muted-foreground font-semibold">
+                <span className="flex items-center gap-1.5">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  {completedModules} / {totalModules} Units Done
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <Clock className="w-4 h-4 text-amber-500" />
+                  ~{estimatedHoursLeft} Hours Study Left
+                </span>
+              </div>
             </div>
           </div>
 
-          <div className="w-full sm:w-72 flex flex-col gap-2">
-            <div className="flex justify-between text-xs font-semibold">
-              <span className="text-muted">Completion Rate</span>
-              <span className="text-foreground">{overallPercentage}%</span>
+          <div className="w-full md:w-80 flex flex-col gap-2 shrink-0">
+            <div className="flex justify-between items-end text-xs font-bold">
+              <span className="text-muted-foreground">Overall Completion</span>
+              <span className="text-primary text-sm font-extrabold">{overallPercentage}%</span>
             </div>
-            <div className="h-2 w-full bg-surface border border-border rounded-full overflow-hidden">
+            <div className="h-3 w-full bg-surface border border-border/60 rounded-full overflow-hidden p-0.5">
               <div
-                className="h-full bg-foreground transition-all duration-500 rounded-full"
+                className="h-full bg-gradient-to-r from-primary to-primary-strong transition-all duration-700 rounded-full shadow-[0_0_8px_rgba(var(--primary-rgb),0.3)]"
                 style={{ width: `${overallPercentage}%` }}
               />
             </div>
@@ -341,164 +400,253 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
         </div>
       )}
 
-      {/* Subject Grid / List */}
-      <div className="space-y-4">
-        {filtered.map((subject, i) => {
-          const isExpanded = expandedSubject === subject.id;
-          const subCompleted = subject.modules.filter((_, idx) => progressMap[`${subject.id}_${idx}`]).length;
-          const subPercentage = subject.modules.length > 0 ? Math.round((subCompleted / subject.modules.length) * 100) : 0;
+      {/* Subject Cards List */}
+      <div className="space-y-6 relative z-10">
+        <AnimatePresence mode="popLayout">
+          {filtered.map((subject, i) => {
+            const isExpanded = expandedSubject === subject.id;
+            const subCompleted = subject.modules.filter((_, idx) => progressMap[`${subject.id}_${idx}`]).length;
+            const subPercentage = subject.modules.length > 0 ? Math.round((subCompleted / subject.modules.length) * 100) : 0;
+            const SubjectIcon = getSubjectIcon(subject.name);
 
-          return (
-            <div
-              key={subject.id}
-              className={`bg-card border transition-all rounded-2xl overflow-hidden shadow-card ${
-                isExpanded ? 'border-border-strong ring-1 ring-border-strong' : 'border-border hover:border-muted'
-              }`}
-            >
-              {/* Card Header (Clickable) */}
-              <div
-                onClick={() => setExpandedSubject(isExpanded ? null : subject.id)}
-                className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4 cursor-pointer bg-card hover:bg-surface/50 transition-colors"
+            return (
+              <motion.div
+                key={subject.id}
+                layout="position"
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                transition={{ duration: 0.3 }}
+                className={`bg-gradient-to-br from-card/90 to-card/70 border transition-all rounded-3xl overflow-hidden ${
+                  isExpanded 
+                    ? 'border-primary/45 shadow-[0_4px_24px_rgba(var(--primary-rgb),0.06)]' 
+                    : 'border-border/80 hover:border-border-strong hover:shadow-md'
+                }`}
               >
-                <div className="flex items-center gap-4 min-w-0">
-                  <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center shrink-0 shadow-xs">
-                    <BookMarked className="w-5 h-5 text-foreground" />
-                  </div>
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-base font-bold text-foreground leading-tight">
-                        {subject.name}
-                      </h2>
-                      <span className="text-[10px] font-mono font-semibold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-md shrink-0">
-                        {subject.code}
-                      </span>
-                      <span className="text-[10px] font-medium text-muted bg-surface border border-border px-2 py-0.5 rounded-md shrink-0">
-                        {subject.type} · {subject.credits} Credit{subject.credits > 1 ? 's' : ''}
-                      </span>
+                {/* Subject Header */}
+                <div
+                  onClick={() => setExpandedSubject(isExpanded ? null : subject.id)}
+                  className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5 cursor-pointer hover:bg-surface/30 transition-colors"
+                >
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
+                      isExpanded 
+                        ? 'bg-primary/10 border-primary/25 text-primary' 
+                        : 'bg-surface border-border text-foreground'
+                    }`}>
+                      <SubjectIcon className="w-6 h-6" />
                     </div>
-                    <p className="text-xs text-muted mt-1">
-                      {branch} · Sem {semester}
-                    </p>
+
+                    <div className="min-w-0 space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-lg font-bold text-foreground tracking-tight truncate max-w-[280px] sm:max-w-md">
+                          {subject.name}
+                        </h2>
+                        <span className="text-[10px] font-mono font-bold text-primary bg-primary/10 border border-primary/20 px-2 py-0.5 rounded-lg shrink-0">
+                          {subject.code}
+                        </span>
+                        <span className="text-[10px] font-bold text-muted-foreground bg-surface border border-border px-2 py-0.5 rounded-lg shrink-0">
+                          {subject.type} · {subject.credits} CR
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground font-semibold">
+                        Syllabus Tracker Core Modules
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Progress Indicator & Actions */}
+                  <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 pt-4 sm:pt-0 border-border/40 shrink-0">
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <span className="text-sm font-extrabold text-foreground block leading-tight">{subPercentage}%</span>
+                        <span className="text-[10px] text-muted-foreground font-bold">{subCompleted} / {subject.modules.length} Completed</span>
+                      </div>
+                      
+                      {/* Apple Watch Style SVG Progress Ring */}
+                      <div className="relative w-10 h-10 flex items-center justify-center">
+                        <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
+                          <circle
+                            cx="18"
+                            cy="18"
+                            r="15.915"
+                            className="stroke-surface"
+                            strokeWidth="3.5"
+                            fill="none"
+                          />
+                          <circle
+                            cx="18"
+                            cy="18"
+                            r="15.915"
+                            className="stroke-primary transition-all duration-500"
+                            strokeWidth="3.5"
+                            strokeDasharray={`${subPercentage}, 100`}
+                            strokeLinecap="round"
+                            fill="none"
+                          />
+                        </svg>
+                        {subPercentage === 100 && (
+                          <Check className="w-4 h-4 text-primary absolute" />
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="w-9 h-9 rounded-xl bg-surface border border-border flex items-center justify-center text-muted-foreground hover:text-foreground transition-all shrink-0">
+                      {isExpanded ? <ChevronUp className="w-4.5 h-4.5" /> : <ChevronDown className="w-4.5 h-4.5" />}
+                    </div>
                   </div>
                 </div>
 
-                {/* Progress pill & Chevron */}
-                <div className="flex items-center justify-between sm:justify-end gap-6 border-t sm:border-t-0 pt-4 sm:pt-0 border-border">
-                  <div className="flex items-center gap-3">
-                    <div className="text-right">
-                      <span className="text-xs font-bold text-foreground block">{subPercentage}%</span>
-                      <span className="text-[10px] text-muted">{subCompleted} / {subject.modules.length} Done</span>
-                    </div>
-                    {/* Mini circular progress */}
-                    <div className="relative w-9 h-9 flex items-center justify-center">
-                      <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                        <path
-                          className="text-surface stroke-current"
-                          strokeWidth="3.5"
-                          fill="none"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                        <path
-                          className="text-foreground stroke-current transition-all duration-500"
-                          strokeWidth="3.5"
-                          strokeDasharray={`${subPercentage}, 100`}
-                          strokeLinecap="round"
-                          fill="none"
-                          d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-muted hover:text-foreground transition-colors">
-                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                  </div>
-                </div>
-              </div>
-
-              {/* Expanded Modules */}
-              {isExpanded && (
-                <div className="border-t border-border bg-surface/30 p-6 space-y-3 animate-fade-in">
-                  <h4 className="text-xs font-bold uppercase tracking-wider text-muted mb-4">Curriculum Modules</h4>
-                  {subject.modules.map((mod, modIdx) => {
-                    const isDone = progressMap[`${subject.id}_${modIdx}`];
-
-                    return (
-                      <div
-                        key={modIdx}
-                        onClick={() => toggleModule(subject.id, modIdx)}
-                        className={`flex items-start gap-4 p-4 rounded-xl border transition-all cursor-pointer ${
-                          isDone
-                            ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-600 dark:text-emerald-400'
-                            : 'bg-card border-border hover:border-border-strong text-foreground'
-                        }`}
-                      >
-                        <div
-                          className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 mt-0.5 transition-colors ${
-                            isDone ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-surface border-border'
-                          }`}
-                        >
-                          {isDone && <Check className="w-3.5 h-3.5" />}
+                {/* Collapsible Subject Modules */}
+                <AnimatePresence initial={false}>
+                  {isExpanded && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: 'auto', opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      transition={{ duration: 0.25, ease: 'easeInOut' }}
+                      className="border-t border-border/50 bg-surface/10"
+                    >
+                      <div className="p-6 space-y-4">
+                        <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                          <Sparkles className="w-3.5 h-3.5 text-primary" />
+                          Curriculum Units
                         </div>
 
-                        <div className="min-w-0 flex-1">
-                          <h5 className={`text-sm font-bold leading-tight ${isDone ? 'line-through opacity-80' : ''}`}>
-                            {mod.title}
-                          </h5>
-                          <p className={`text-xs mt-1 leading-relaxed ${isDone ? 'text-muted opacity-80' : 'text-muted'}`}>
-                            {mod.desc}
-                          </p>
+                        <div className="space-y-3.5">
+                          {subject.modules.map((mod, modIdx) => {
+                            const isDone = progressMap[`${subject.id}_${modIdx}`];
+                            const matches = getMatchingResources(mod.title, mod.desc, subject.name);
+
+                            return (
+                              <div
+                                key={modIdx}
+                                onClick={() => toggleModule(subject.id, modIdx)}
+                                className={`flex flex-col p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+                                  isDone
+                                    ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/25 hover:border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+                                    : 'bg-card border-border/80 hover:border-border-strong hover:scale-[1.005] hover:shadow-xs text-foreground'
+                                }`}
+                              >
+                                <div className="flex items-start gap-4 z-10">
+                                  <div
+                                    className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 transition-all ${
+                                      isDone 
+                                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' 
+                                        : 'bg-surface border-border group-hover:border-border-strong'
+                                    }`}
+                                  >
+                                    {isDone && <Check className="w-4 h-4 stroke-[3]" />}
+                                  </div>
+
+                                  <div className="min-w-0 flex-1 space-y-1">
+                                    <h5 className={`text-base font-bold leading-snug tracking-tight ${isDone ? 'line-through opacity-75' : ''}`}>
+                                      {mod.title}
+                                    </h5>
+                                    <p className={`text-xs leading-relaxed font-medium ${isDone ? 'text-muted-foreground opacity-70' : 'text-muted-foreground'}`}>
+                                      {mod.desc}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                {/* Study resources pill cards */}
+                                {matches.length > 0 && (
+                                  <div 
+                                    className="mt-4 flex flex-wrap gap-2 items-center pl-10 z-10" 
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <span className="text-[9px] text-muted-foreground font-bold uppercase tracking-wider">Vault Files:</span>
+                                    {matches.map(file => (
+                                      <a
+                                        key={file.id}
+                                        href={file.file_url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-1.5 text-xs font-semibold bg-surface hover:bg-surface-hover hover:border-border-strong border border-border/80 px-2.5 py-1 rounded-xl text-foreground transition-all shadow-3xs"
+                                      >
+                                        <FileText className="w-3.5 h-3.5 text-primary" />
+                                        <span className="truncate max-w-[140px] font-bold">{file.title}</span>
+                                      </a>
+                                    ))}
+                                  </div>
+                                )}
+
+                                {/* Premium quick launch actions */}
+                                <div 
+                                  className="mt-4 pt-3.5 border-t border-border/40 flex flex-wrap gap-2 pl-10 z-10" 
+                                  onClick={(e) => e.stopPropagation()}
+                                >
+                                  <a
+                                    href={`/ask?tab=chat&prompt=${encodeURIComponent(`Create a detailed study guide explaining this syllabus topic: "${subject.name} - ${mod.title}". Focus on: ${mod.desc}`)}`}
+                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs hover:scale-[1.01]"
+                                  >
+                                    <Brain className="w-3.5 h-3.5 text-primary shrink-0" />
+                                    Study Guide
+                                  </a>
+                                  <a
+                                    href={`/ask?tab=flashcards&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}`}
+                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs hover:scale-[1.01]"
+                                  >
+                                    <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
+                                    Flashcards
+                                  </a>
+                                  <a
+                                    href={`/ask?tab=quiz&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}`}
+                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs hover:scale-[1.01]"
+                                  >
+                                    <HelpCircle className="w-3.5 h-3.5 text-primary shrink-0" />
+                                    Take Quiz
+                                  </a>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Subject Card Footer */}
+                        <div className="pt-4 flex items-center justify-between border-t border-border/40 mt-6 pl-1">
+                          <span className="text-xs text-muted-foreground italic font-medium">Click any unit block to log completion progress.</span>
+                          <a
+                            href={`/ask?topic=${encodeURIComponent(subject.name)}`}
+                            className="inline-flex items-center gap-1 text-xs font-bold text-primary hover:underline hover:gap-1.5 transition-all"
+                          >
+                            Query AI on Subject
+                            <ChevronRight className="w-4.5 h-4.5" />
+                          </a>
                         </div>
                       </div>
-                    );
-                  })}
-
-                  <div className="pt-4 flex items-center justify-between border-t border-border mt-6">
-                    <span className="text-xs text-muted italic">Click any module to mark it as completed.</span>
-                    <a
-                      href={`/ask?topic=${encodeURIComponent(subject.name)}`}
-                      className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary hover:underline"
-                    >
-                      Ask AI about this subject
-                      <ArrowRight className="w-3.5 h-3.5" />
-                    </a>
-                  </div>
-                </div>
-              )}
-            </div>
-          );
-        })}
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
 
       {/* Empty states */}
-      {filtered.length === 0 && searchQuery && (
-        <div className="flex flex-col items-center justify-center p-16 text-center border border-dashed border-border rounded-2xl bg-surface my-12">
-          <Search className="w-10 h-10 text-muted/30 mb-3" />
-          <p className="text-base font-semibold text-foreground mb-1">No matches for &ldquo;{searchQuery}&rdquo;</p>
-          <p className="text-sm text-muted">Try a different search term.</p>
-        </div>
-      )}
-
-      {filtered.length === 0 && !searchQuery && (
-        <div className="flex flex-col items-center justify-center p-16 text-center border border-dashed border-border rounded-2xl bg-surface my-12">
-          <BookMarked className="w-10 h-10 text-muted/30 mb-3" />
-          <p className="text-base font-semibold text-foreground mb-1">No Subjects Found</p>
-          <p className="text-sm text-muted">
-            No subjects configured for {branch} Semester {semester}.
+      {filtered.length === 0 && (
+        <div className="flex flex-col items-center justify-center p-20 text-center border-2 border-dashed border-border/80 rounded-3xl bg-card my-12 relative z-10">
+          <BookMarked className="w-12 h-12 text-muted-foreground/30 mb-4 animate-bounce" />
+          <p className="text-lg font-bold text-foreground mb-1">No matching courses found</p>
+          <p className="text-sm text-muted-foreground max-w-sm">
+            {searchQuery 
+              ? `We couldn't find any subjects matching "${searchQuery}". Please check your search query.`
+              : `No curriculum subjects are populated for ${branch} Semester ${semester} in the database.`}
           </p>
         </div>
       )}
 
-      {/* Hint to resources */}
+      {/* Global Navigation Link to Resource Vault */}
       {filtered.length > 0 && (
-        <div className="mt-12 flex items-center justify-center">
+        <div className="mt-14 flex justify-center relative z-10">
           <a
             href={`/resources?branch=${branch}&semester=${semester}`}
-            className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition-colors group"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl bg-surface border border-border/80 hover:border-border-strong hover:bg-surface-hover text-sm font-bold text-muted-foreground hover:text-foreground transition-all group shadow-sm hover:scale-[1.01]"
           >
-            <Layers className="w-4 h-4" />
-            View all study materials for these subjects
-            <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform" />
+            <Layers className="w-4 h-4 text-primary" />
+            Open Study Resource Vault
+            <ArrowRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground group-hover:translate-x-1.5 transition-all" />
           </a>
         </div>
       )}

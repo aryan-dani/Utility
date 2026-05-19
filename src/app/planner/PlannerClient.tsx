@@ -11,6 +11,8 @@ type Todo = {
   id: string;
   text: string;
   done: boolean;
+  focusSessions?: number;
+  focusMinutes?: number;
 };
 
 type WeekData = Record<string, Todo[]>;
@@ -337,45 +339,67 @@ export default function PlannerClient() {
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.96 }}
                       transition={{ duration: 0.12 }}
-                      className={`flex items-start gap-2 group bg-background border rounded-lg p-2.5 transition-all ${
+                      className={`flex flex-col gap-1 group bg-background border rounded-lg p-2.5 transition-all ${
                         todo.done ? 'border-border opacity-60' : 'border-border shadow-card'
                       }`}
                     >
-                      {/* Checkbox */}
-                      <button
-                        onClick={() => toggleTodo(day, todo.id)}
-                        className={`flex-shrink-0 w-4 h-4 mt-0.5 rounded-sm border flex items-center justify-center transition-colors ${
-                          todo.done
-                            ? 'bg-foreground border-foreground text-background'
-                            : 'bg-card border-border hover:border-foreground'
-                        }`}
-                      >
-                        {todo.done && <Check className="w-2.5 h-2.5" />}
-                      </button>
+                      <div className="flex items-start gap-2 w-full">
+                        {/* Checkbox */}
+                        <button
+                          onClick={() => toggleTodo(day, todo.id)}
+                          className={`flex-shrink-0 w-4 h-4 mt-0.5 rounded-sm border flex items-center justify-center transition-colors ${
+                            todo.done
+                              ? 'bg-foreground border-foreground text-background'
+                              : 'bg-card border-border hover:border-foreground'
+                          }`}
+                        >
+                          {todo.done && <Check className="w-2.5 h-2.5" />}
+                        </button>
 
-                      {/* Text */}
-                      <textarea
-                        value={todo.text}
-                        onChange={(e) => updateTodoText(day, todo.id, e.target.value)}
-                        placeholder="Task…"
-                        rows={1}
-                        className={`bg-transparent outline-none resize-none overflow-hidden text-sm w-full pt-0 ${
-                          todo.done ? 'line-through text-muted' : 'text-foreground'
-                        }`}
-                        onInput={(e) => {
-                          const t = e.target as HTMLTextAreaElement;
-                          t.style.height = 'auto';
-                          t.style.height = t.scrollHeight + 'px';
-                        }}
-                      />
+                        {/* Text */}
+                        <textarea
+                          value={todo.text}
+                          onChange={(e) => updateTodoText(day, todo.id, e.target.value)}
+                          placeholder="Task…"
+                          rows={1}
+                          className={`bg-transparent outline-none resize-none overflow-hidden text-sm w-full pt-0 ${
+                            todo.done ? 'line-through text-muted' : 'text-foreground'
+                          }`}
+                          onInput={(e) => {
+                            const t = e.target as HTMLTextAreaElement;
+                            t.style.height = 'auto';
+                            t.style.height = t.scrollHeight + 'px';
+                          }}
+                        />
 
-                      {/* Delete */}
-                      <button
-                        onClick={() => deleteTodo(day, todo.id)}
-                        className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-muted hover:text-foreground transition-all"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
+                        {/* Focus Timer Button */}
+                        {!todo.done && (
+                          <Link
+                            href={`/timer?taskId=${todo.id}&taskText=${encodeURIComponent(todo.text)}&day=${day}`}
+                            className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-muted hover:text-foreground transition-all ml-1 mt-0.5"
+                            title="Start Focus Session"
+                          >
+                            <Timer className="w-3.5 h-3.5 text-muted hover:text-primary animate-pulse" />
+                          </Link>
+                        )}
+
+                        {/* Delete */}
+                        <button
+                          onClick={() => deleteTodo(day, todo.id)}
+                          className="opacity-0 group-hover:opacity-100 flex-shrink-0 text-muted hover:text-foreground transition-all mt-0.5"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      {/* Focus Sessions Indicator */}
+                      {todo.focusSessions && todo.focusSessions > 0 ? (
+                        <div className="flex items-center gap-1 text-[10px] font-bold text-muted uppercase pl-6 select-none">
+                          <span className="flex items-center gap-0.5 text-foreground">🔥 {todo.focusSessions} {todo.focusSessions === 1 ? 'Session' : 'Sessions'}</span>
+                          <span>•</span>
+                          <span>{todo.focusMinutes}m</span>
+                        </div>
+                      ) : null}
                     </motion.div>
                   ))}
                 </AnimatePresence>

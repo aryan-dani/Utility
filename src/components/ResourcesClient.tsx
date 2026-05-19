@@ -3,6 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import { ResourceCategory, ResourceItem } from '@/lib/dataFetcher';
 import { useAcademicStore } from '@/store/academicStore';
+import { isSubjectMatch } from '@/lib/subjectMatcher';
 import {
   HardDrive,
   BookOpenCheck,
@@ -70,7 +71,9 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
     const q = searchQuery.toLowerCase();
     return subjectNames.filter((name) => {
       const subjResources = subjectsMap[name] ?? [];
-      return name.toLowerCase().includes(q) || subjResources.some((r) => r.title.toLowerCase().includes(q));
+      return name.toLowerCase().includes(q) || 
+             isSubjectMatch(name, searchQuery) || 
+             subjResources.some((r) => r.title.toLowerCase().includes(q));
     });
   }, [subjectNames, subjectsMap, searchQuery]);
 
@@ -118,7 +121,9 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
     if (!searchQuery.trim()) return all;
     const q = searchQuery.toLowerCase();
     return all.filter(
-      (r) => r.title.toLowerCase().includes(q) || r.subject_name.toLowerCase().includes(q),
+      (r) => r.title.toLowerCase().includes(q) || 
+             r.subject_name.toLowerCase().includes(q) || 
+             isSubjectMatch(r.subject_name, searchQuery),
     );
   }, [selectedSubject, subjectsMap, searchQuery]);
 

@@ -97,7 +97,7 @@ CRITICAL INSTRUCTION: You MUST output ONLY a block of valid JSON matching the ex
 
 Generate a 5-question multiple-choice practice quiz on the academic topic: "${topic}".
 
-${snippets.length > 0 ? `Use the following excerpts from the student's actual course materials to ground your quiz questions:\n${snippets.join('\n\n')}\n\n` : ''}
+${snippets.length > 0 ? `Use the following excerpts from the student's actual course materials to ground your quiz questions. Cite the specific file names using the [SOURCE: ...] tags in the "citations" field:\n${snippets.join('\n\n')}\n\n` : ''}
 CRITICAL INSTRUCTION: You MUST output ONLY a block of valid JSON matching the exact structure below, with NO markdown formatting, NO backticks, and NO additional commentary:
 {
   "quiz": [
@@ -106,7 +106,8 @@ CRITICAL INSTRUCTION: You MUST output ONLY a block of valid JSON matching the ex
       "question": "Clear academic question here?",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctIndex": 0,
-      "explanation": "Explanation of why Option A is correct."
+      "explanation": "Explanation of why Option A is correct.",
+      "citations": ["Source name matching the [SOURCE: ...] tag from context (e.g., 'Data_Engineering_Unit_1.pdf'). Leave empty array if no context snippet was used."]
     }
   ]
 }`;
