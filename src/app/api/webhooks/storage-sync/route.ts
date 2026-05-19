@@ -1,8 +1,9 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, after } from 'next/server';
 import syncProject from '../../../../../runtime/tools/sync.mjs';
 import indexContent from '../../../../../runtime/tools/index-content.mjs';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60; // Allow up to 60s for Vercel timeout
 
 export async function POST(request: Request) {
   try {
@@ -15,18 +16,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
     }
 
-    console.log('🔔 Storage webhook triggered. Starting sync and index pipeline...');
+    console.log('🔔 Storage webhook triggered. Queuing sync and index pipeline in background...');
 
-    // 1. Run syncProject
-    await syncProject();
+    // 1. Run syncProject and indexContent in the background using Next.js `after`
+    after(async () => {
+      try {
+        console.log('🚀 Starting background sync and index...');
+        await syncProject();
+        await indexContent();
+        console.log('✅ Background sync and index completed successfully.');
+      } catch (err) {
+        console.error('❌ Background pipeline failed:', err);
+      }
+    });
 
-    // 2. Run indexContent
-    await indexContent();
-
-    console.log('✅ Webhook sync and index pipeline completed successfully.');
-    return NextResponse.json({ success: true, message: 'Sync and index completed.' });
+    // 2. Respond immediately to Supabase to prevent webhook timeout
+    return NextResponse.json({ success: true, message: 'Sync and index queued in background.' });
   } catch (error: any) {
-    console.error('❌ Webhook pipeline failed:', error);
+    console.error('❌ Webhook handler failed:', error);
     return NextResponse.json({ success: false, error: error.message || String(error) }, { status: 500 });
   }
 }
