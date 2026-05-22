@@ -1,7 +1,7 @@
 'use client';
 
-import { FileText, FileSpreadsheet, HardDrive, ExternalLink } from 'lucide-react';
-import { ResourceItem } from '@/lib/dataFetcher';
+import { FileText, FileSpreadsheet, HardDrive, ExternalLink, CheckCircle2, Sparkles, PenTool } from 'lucide-react';
+import { ResourceItem, ResourceCategory } from '@/lib/dataFetcher';
 
 interface ResourceCardProps {
   item: ResourceItem;
@@ -18,6 +18,23 @@ function getFileExtension(url: string) {
   }
 }
 
+const CATEGORY_CONFIG: Record<ResourceCategory, { color: string; label: string }> = {
+  'notes': { color: 'var(--accent-notes)', label: 'Notes' },
+  'question-bank': { color: 'var(--accent-qb)', label: 'Question Bank' },
+  'solved-question-bank': { color: 'var(--accent-qb-solved)', label: 'Solved QB' },
+  'ppt': { color: 'var(--accent-ppt)', label: 'Presentation' },
+  'pyq': { color: 'var(--accent-pyq)', label: 'PYQ' },
+  'writeup': { color: 'var(--accent-writeup)', label: 'Writeup' },
+  'other': { color: 'var(--accent-other)', label: 'Other' },
+};
+
+function isNewResource(createdAt: string): boolean {
+  const created = new Date(createdAt);
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+  return created > sevenDaysAgo;
+}
+
 export default function ResourceCard({
   item,
   onOpenResource,
@@ -29,7 +46,9 @@ export default function ResourceCard({
   const isDoc = extension === 'doc' || extension === 'docx';
   const opensInViewer = isPdf || isPpt;
   const isSummarizable = isPdf || isPpt || isDoc;
-  const isSolved = item.title.toLowerCase().includes('(solved)');
+  const isSolved = item.category === 'solved-question-bank';
+  const isNew = isNewResource(item.created_at);
+  const config = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG['other'];
 
   const handleOpen = () => {
     if (opensInViewer) {
@@ -41,46 +60,80 @@ export default function ResourceCard({
 
   const handlePrefetch = () => {
     if (isPdf) {
-      // Pre-warm the browser cache for this PDF so the iframe loads instantly
       fetch(item.file_url, { cache: 'force-cache', mode: 'no-cors' }).catch(() => {});
     }
   };
 
+  const FileIcon = isPdf ? FileText 
+    : isPpt ? FileSpreadsheet 
+    : item.category === 'writeup' ? PenTool 
+    : HardDrive;
+
   return (
     <div 
-      className="bg-card border border-border hover:border-border-strong p-5 rounded-xl flex flex-col gap-4 transition-colors text-left shadow-sm"
+      className="group bg-card border border-border hover:border-border-strong rounded-xl p-4 flex flex-col gap-3 transition-all text-left shadow-sm hover:shadow-md relative overflow-hidden"
       onMouseEnter={handlePrefetch}
       onTouchStart={handlePrefetch}
+      style={{ '--card-accent': config.color } as React.CSSProperties}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center flex-shrink-0 text-foreground">
-          {isPdf ? (
-            <FileText className="w-4 h-4" />
-          ) : isPpt ? (
-            <FileSpreadsheet className="w-4 h-4" />
-          ) : (
-            <HardDrive className="w-4 h-4" />
+      {/* Accent top border */}
+      <div 
+        className="absolute top-0 left-0 right-0 h-[2px] opacity-60 group-hover:opacity-100 transition-opacity"
+        style={{ background: config.color }}
+      />
+
+      <div className="flex items-start justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
+          {/* File type icon with accent color */}
+          <div 
+            className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
+            style={{ 
+              background: `color-mix(in srgb, ${config.color} 12%, transparent)`,
+              color: config.color,
+            }}
+          >
+            {isSolved ? (
+              <CheckCircle2 className="w-4 h-4" />
+            ) : (
+              <FileIcon className="w-4 h-4" />
+            )}
+          </div>
+
+          <p className="text-sm font-medium text-foreground line-clamp-2 leading-snug" title={item.title}>
+            {item.title}
+          </p>
+        </div>
+
+        {/* Badges */}
+        <div className="flex items-center gap-1.5 flex-shrink-0">
+          {isNew && (
+            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+              <Sparkles className="w-2.5 h-2.5" />
+              New
+            </span>
+          )}
+          {isSolved && (
+            <span 
+              className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
+              style={{ 
+                background: `color-mix(in srgb, ${config.color} 12%, transparent)`,
+                color: config.color,
+                border: `1px solid color-mix(in srgb, ${config.color} 25%, transparent)`,
+              }}
+            >
+              Solved
+            </span>
           )}
         </div>
-        {isSolved && (
-          <span className="text-[10px] font-semibold uppercase tracking-wider bg-surface border border-border text-foreground px-2 py-0.5 rounded-md">
-            Solved
-          </span>
-        )}
       </div>
 
-      <p
-        className="text-sm font-medium text-foreground line-clamp-2 leading-snug"
-        title={item.title}
-      >
-        {item.title}
+      {/* File info */}
+      <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-auto">
+        {isPdf ? 'PDF' : isPpt ? 'PPT' : isDoc ? 'DOC' : extension.toUpperCase()} · {config.label}
       </p>
 
-      <p className="text-[11px] font-medium text-muted mt-auto flex items-center gap-1.5">
-        {isPdf ? 'PDF Document' : isPpt ? 'Presentation Slides' : isDoc ? 'Word Document' : 'Resource File'}
-      </p>
-
-      <div className={`grid gap-2 mt-2 ${isSummarizable ? 'grid-cols-2' : 'grid-cols-1'}`}>
+      {/* Actions */}
+      <div className={`grid gap-2 ${isSummarizable ? 'grid-cols-2' : 'grid-cols-1'}`}>
         <button
           type="button"
           onClick={(e) => {

@@ -19,7 +19,7 @@ export interface ResourceItem {
   category: ResourceCategory;
 }
 
-export type ResourceCategory = "notes" | "question-bank" | "ppt" | "pyq" | "other" | "writeup";
+export type ResourceCategory = "notes" | "question-bank" | "solved-question-bank" | "ppt" | "pyq" | "other" | "writeup";
 
 // ─── Internal types for Supabase query results ────────────────────────────────
 
@@ -51,6 +51,11 @@ export function getResourceCategory(title: string, url: string): ResourceCategor
 
   if (/\bpyqs?\b|[_/-]pyqs?[_/-]|previous[_\s-]*year|past[_\s-]*paper/i.test(haystack)) {
     return "pyq";
+  }
+
+  // Solved question banks — must check before regular QBs
+  if (/solved.*\bqbs?\b|\bqbs?\b.*solved|solved.*question[_\s-]*bank/i.test(haystack)) {
+    return "solved-question-bank";
   }
 
   if (/\bqbs?\b|[_/-]qbs?[_/-]|question[_\s-]*banks?|questions[_\s-]*bank/i.test(haystack)) {
