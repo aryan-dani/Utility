@@ -145,8 +145,32 @@ export default function CommandPalette() {
           setCommandPaletteOpen(false);
         },
       },
+      {
+        id: 'srs-review-quick',
+        title: 'Review Due Flashcards (SRS)',
+        category: 'Quick Actions',
+        icon: Layers,
+        shortcut: 'R',
+        badge: 'Active Recall',
+        action: () => {
+          router.push('/srs');
+          setCommandPaletteOpen(false);
+        },
+      },
 
       // Navigation
+      {
+        id: 'nav-srs',
+        title: 'Open SRS Flashcards Deck Reviewer',
+        category: 'Navigation',
+        icon: Layers,
+        shortcut: 'S',
+        badge: 'Recall',
+        action: () => {
+          router.push('/srs');
+          setCommandPaletteOpen(false);
+        },
+      },
       {
         id: 'nav-community',
         title: 'Explore Community Shared Decks',

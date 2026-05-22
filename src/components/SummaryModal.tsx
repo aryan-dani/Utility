@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
-import { X, Brain, Loader2, Copy, Check, Info } from 'lucide-react';
+import { X, Brain, Loader2, Copy, Check, Info, Layers } from 'lucide-react';
 
 interface SummaryModalProps {
   resourceId: string;
@@ -12,6 +13,7 @@ interface SummaryModalProps {
 }
 
 export default function SummaryModal({ resourceId, resourceTitle, onClose }: SummaryModalProps) {
+  const router = useRouter();
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -142,18 +144,30 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
 
           {/* Footer */}
           {!loading && !error && (
-            <div className="px-6 py-4 border-t border-border bg-surface/30 flex items-center justify-between">
+            <div className="px-6 py-4 border-t border-border bg-surface/30 flex flex-col sm:flex-row items-center justify-between gap-3">
               <p className="text-[10px] text-muted flex items-center gap-1.5 font-medium">
-                <Info className="w-3 h-3" />
+                <Info className="w-3 h-3 shrink-0" />
                 Summaries are AI-generated and may occasionally be inaccurate.
               </p>
-              <button
-                onClick={handleCopy}
-                className="flex items-center gap-2 px-3 py-1.5 bg-foreground text-background rounded-lg text-xs font-bold hover:opacity-90 transition-all active:scale-95"
-              >
-                {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
-                {copied ? 'Copied!' : 'Copy Summary'}
-              </button>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={() => {
+                    onClose();
+                    router.push(`/ask?tab=flashcards&topic=${encodeURIComponent(resourceTitle)}`);
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-surface border border-border text-foreground hover:bg-surface-hover rounded-lg text-xs font-bold transition-all active:scale-95"
+                >
+                  <Layers className="w-3.5 h-3.5 text-primary" />
+                  Generate Cards
+                </button>
+                <button
+                  onClick={handleCopy}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-foreground text-background rounded-lg text-xs font-bold hover:opacity-90 transition-all active:scale-95"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copied ? 'Copied!' : 'Copy Summary'}
+                </button>
+              </div>
             </div>
           )}
         </motion.div>

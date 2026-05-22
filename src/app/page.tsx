@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { CalendarCheck, BookOpen, FileText, ArrowRight, Brain, ShieldCheck } from 'lucide-react';
+import { CalendarCheck, BookOpen, FileText, ArrowRight, Brain, ShieldCheck, Layers } from 'lucide-react';
 import { FadeIn, ScaleButton } from '@/components/Animations';
 import { createClient } from '@/lib/supabaseServer';
 
@@ -43,6 +43,14 @@ const FEATURES = [
     Icon: ShieldCheck,
     description:
       'Calculate your SGPA and CGPA with auto-populated subjects from the database.',
+  },
+  {
+    href: '/srs',
+    label: 'SRS Cards',
+    number: '06',
+    Icon: Layers,
+    description:
+      'Active Leitner spacing system. Review cards to lock them in long-term memory.',
   },
 ];
 
@@ -102,7 +110,7 @@ export default async function Home() {
 
       {/* Features */}
       <section className="w-full max-w-[90rem] mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-px bg-border rounded-xl overflow-hidden border border-border shadow-card">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden border border-border shadow-card">
           {FEATURES.map(({ href, label, number, Icon, description }, i) => (
             <Link key={href} href={href} className="group block bg-background hover:bg-surface transition-colors duration-200">
               <FadeIn delay={i * 0.07} y={8}>

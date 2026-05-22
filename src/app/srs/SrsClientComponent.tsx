@@ -17,7 +17,9 @@ import {
   ChevronRight,
   PlusCircle,
   HelpCircle,
-  FolderOpen
+  FolderOpen,
+  Trophy,
+  Award
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase';
@@ -39,7 +41,7 @@ export default function SrsClient() {
     gradeCard 
   } = useSRSStore();
 
-  const [view, setView] = useState<'dashboard' | 'review' | 'manage'>('dashboard');
+  const [view, setView] = useState<'dashboard' | 'review' | 'manage' | 'session-complete'>('dashboard');
   const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
   
   // Modals / Input states
@@ -54,6 +56,7 @@ export default function SrsClient() {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const [reviewSummary, setReviewSummary] = useState<{ gotIt: number; forgot: number } | null>(null);
+  const [forgottenCards, setForgottenCards] = useState<Flashcard[]>([]);
 
   // Auth Status
   const [user, setUser] = useState<{ email?: string } | null>(null);
@@ -101,6 +104,7 @@ export default function SrsClient() {
     setCurrentIndex(0);
     setIsFlipped(false);
     setReviewSummary({ gotIt: 0, forgot: 0 });
+    setForgottenCards([]);
     setSelectedDeckId(deckId);
     setView('review');
   };
@@ -112,6 +116,14 @@ export default function SrsClient() {
     
     // Update store
     gradeCard(currentCard.id, gotIt);
+
+    // Track forgotten cards
+    if (!gotIt) {
+      setForgottenCards(prev => {
+        if (prev.some(c => c.id === currentCard.id)) return prev;
+        return [...prev, currentCard];
+      });
+    }
 
     // Update session summary
     setReviewSummary(prev => {
@@ -128,11 +140,31 @@ export default function SrsClient() {
       if (currentIndex + 1 < reviewQueue.length) {
         setCurrentIndex(prev => prev + 1);
       } else {
-        // Complete review
-        setView('dashboard');
-        // Let reviewSummary display or clear
+        // Complete review and show session complete view
+        setView('session-complete');
       }
     }, 150);
+  };
+
+  const startForgottenReview = () => {
+    if (forgottenCards.length === 0) return;
+    const shuffled = [...forgottenCards].sort(() => Math.random() - 0.5);
+    setReviewQueue(shuffled);
+    setCurrentIndex(0);
+    setIsFlipped(false);
+    setReviewSummary({ gotIt: 0, forgot: 0 });
+    setForgottenCards([]);
+    setView('review');
+  };
+
+  const restartFullSession = () => {
+    if (!selectedDeckId) return;
+    startReview(selectedDeckId);
+  };
+
+  const backToDashboard = () => {
+    setView('dashboard');
+    setReviewSummary(null);
   };
 
   // Keyboard Shortcuts for Review Mode
@@ -602,6 +634,95 @@ export default function SrsClient() {
                 </button>
               </div>
             </form>
+          </motion.div>
+        </div>
+      )}
+
+      {/* ── 5. SESSION COMPLETE VIEW ──────────────────────────────────────── */}
+      {view === 'session-complete' && reviewSummary && (
+        <div className="max-w-md mx-auto flex flex-col items-center justify-center min-h-[70vh] py-10">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            className="w-full bg-card border border-border rounded-3xl p-8 shadow-2xl relative overflow-hidden flex flex-col items-center text-center"
+          >
+            {/* Background dynamic light effect */}
+            <div className="absolute -top-12 -left-12 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+            <div className="absolute -bottom-12 -right-12 w-32 h-32 bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+            {/* Icon Banner */}
+            <div className="w-16 h-16 bg-primary/10 border border-primary/20 text-primary rounded-2xl flex items-center justify-center mb-6">
+              <Trophy className="w-8 h-8 text-primary animate-bounce" />
+            </div>
+
+            <h2 className="text-xl font-black text-foreground tracking-tight">Session Complete!</h2>
+            <p className="text-xs text-muted mt-2 max-w-xs leading-relaxed">
+              Excellent work completing your card queue. Here is how your active recall performed:
+            </p>
+
+            {/* Circular score / stats */}
+            <div className="grid grid-cols-2 gap-4 w-full my-8">
+              <div className="bg-surface/50 border border-border rounded-2xl p-4 flex flex-col items-center">
+                <span className="text-[10px] font-bold text-muted uppercase tracking-widest">Accuracy</span>
+                <p className="text-3xl font-black text-foreground mt-1.5 font-mono">
+                  {Math.round((reviewSummary.gotIt / (reviewSummary.gotIt + reviewSummary.forgot || 1)) * 100)}%
+                </p>
+              </div>
+              <div className="bg-surface/50 border border-border rounded-2xl p-4 flex flex-col items-center">
+                <span className="text-[10px] font-bold text-muted uppercase tracking-widest">Cards Reviewed</span>
+                <p className="text-3xl font-black text-foreground mt-1.5 font-mono">
+                  {reviewSummary.gotIt + reviewSummary.forgot}
+                </p>
+              </div>
+            </div>
+
+            <div className="w-full flex gap-3 text-xs font-semibold px-2 py-3 bg-surface/30 rounded-xl border border-border mb-6">
+              <div className="flex-1 text-center">
+                <span className="text-green-500 font-bold">{reviewSummary.gotIt}</span> Got It
+              </div>
+              <div className="w-px bg-border h-4 self-center" />
+              <div className="flex-1 text-center">
+                <span className="text-red-500 font-bold">{reviewSummary.forgot}</span> Forgot
+              </div>
+            </div>
+
+            {/* Motivational statement */}
+            <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 w-full mb-8 text-center text-xs font-semibold text-foreground/95 leading-relaxed">
+              {(() => {
+                const pct = (reviewSummary.gotIt / (reviewSummary.gotIt + reviewSummary.forgot || 1)) * 100;
+                if (pct === 100) return "🎉 Incredible! A perfect session! Your active recall is top tier.";
+                if (pct >= 80) return "💪 Fantastic retention! You are locking in these concepts.";
+                if (pct >= 50) return "⚡ Good job! Spaced repetition is a process. Keep reinforcing.";
+                return "🧠 Spaced repetition takes time. Let's practice the ones you forgot to build memory paths.";
+              })()}
+            </div>
+
+            {/* Actions */}
+            <div className="w-full space-y-2.5">
+              {forgottenCards.length > 0 && (
+                <button
+                  onClick={startForgottenReview}
+                  className="w-full py-3 bg-foreground text-background hover:opacity-90 font-bold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  Review {forgottenCards.length} Forgotten Cards
+                </button>
+              )}
+
+              <button
+                onClick={restartFullSession}
+                className="w-full py-3 border border-border hover:bg-surface-hover text-foreground font-semibold text-xs rounded-xl transition-all"
+              >
+                Restart Session
+              </button>
+
+              <button
+                onClick={backToDashboard}
+                className="w-full py-3 border border-border bg-surface hover:bg-surface-hover text-foreground font-semibold text-xs rounded-xl transition-all"
+              >
+                Back to Dashboard
+              </button>
+            </div>
           </motion.div>
         </div>
       )}
