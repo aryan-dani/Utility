@@ -1,6 +1,7 @@
 'use client';
 
-import { FileText, FileSpreadsheet, HardDrive, ExternalLink, CheckCircle2, Sparkles, PenTool } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, FileSpreadsheet, HardDrive, ExternalLink, CheckCircle2, PenTool } from 'lucide-react';
 import { ResourceItem, ResourceCategory } from '@/lib/dataFetcher';
 
 interface ResourceCardProps {
@@ -40,6 +41,7 @@ export default function ResourceCard({
   onOpenResource,
   onSummarize,
 }: ResourceCardProps) {
+  const [isHovered, setIsHovered] = useState(false);
   const extension = getFileExtension(item.file_url);
   const isPdf = extension === 'pdf';
   const isPpt = extension === 'ppt' || extension === 'pptx';
@@ -71,16 +73,27 @@ export default function ResourceCard({
 
   return (
     <div 
-      className="group bg-card border border-border hover:border-border-strong rounded-xl p-4 flex flex-col gap-3 transition-all text-left shadow-sm hover:shadow-md relative overflow-hidden"
-      onMouseEnter={handlePrefetch}
+      onClick={handleOpen}
+      onMouseEnter={() => {
+        setIsHovered(true);
+        handlePrefetch();
+      }}
+      onMouseLeave={() => setIsHovered(false)}
       onTouchStart={handlePrefetch}
-      style={{ '--card-accent': config.color } as React.CSSProperties}
+      className="group bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 text-left shadow-sm hover:shadow-md hover:-translate-y-[2px] active:translate-y-0 cursor-pointer relative overflow-hidden"
+      style={{ 
+        borderColor: isHovered ? config.color : 'var(--border)',
+        boxShadow: isHovered 
+          ? `0 10px 15px -3px color-mix(in srgb, ${config.color} 12%, transparent), 0 4px 6px -4px color-mix(in srgb, ${config.color} 12%, transparent)`
+          : undefined,
+      }}
     >
       {/* Accent top border */}
       <div 
         className="absolute top-0 left-0 right-0 h-[2px] opacity-60 group-hover:opacity-100 transition-opacity"
         style={{ background: config.color }}
       />
+
 
       <div className="flex items-start justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0 flex-1">
@@ -107,8 +120,7 @@ export default function ResourceCard({
         {/* Badges */}
         <div className="flex items-center gap-1.5 flex-shrink-0">
           {isNew && (
-            <span className="inline-flex items-center gap-0.5 text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
-              <Sparkles className="w-2.5 h-2.5" />
+            <span className="inline-flex items-center text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
               New
             </span>
           )}
@@ -126,6 +138,7 @@ export default function ResourceCard({
           )}
         </div>
       </div>
+
 
       {/* File info */}
       <p className="text-[10px] font-semibold text-muted uppercase tracking-wider mt-auto">

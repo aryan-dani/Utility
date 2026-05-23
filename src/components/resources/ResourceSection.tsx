@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { ResourceItem } from '@/lib/dataFetcher';
+import { motion } from 'framer-motion';
 import ResourceCard from './ResourceCard';
 
 interface ResourceSectionProps {
@@ -69,15 +70,22 @@ export default function ResourceSection({
           isExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
         }`}
       >
-        {items.map((item) => (
-          <ResourceCard 
-            key={item.id} 
-            item={item} 
-            onOpenResource={onOpenResource} 
-            onSummarize={onSummarize}
-          />
+        {items.map((item, index) => (
+          <motion.div
+            key={item.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.25), ease: 'easeOut' }}
+          >
+            <ResourceCard 
+              item={item} 
+              onOpenResource={onOpenResource} 
+              onSummarize={onSummarize}
+            />
+          </motion.div>
         ))}
       </div>
     </div>
   );
 }
+

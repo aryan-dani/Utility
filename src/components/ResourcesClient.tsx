@@ -5,6 +5,7 @@ import { ResourceCategory, ResourceItem } from '@/lib/dataFetcher';
 import { useAcademicStore } from '@/store/academicStore';
 import { isSubjectMatch } from '@/lib/subjectMatcher';
 import { createClient } from '@/lib/supabase';
+import { motion } from 'framer-motion';
 import {
   HardDrive,
   BookOpenCheck,
@@ -259,7 +260,7 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
                 {filteredSubjectNames.length}
               </span>
             </div>
-            <div className="flex flex-col max-h-[65vh] overflow-y-auto custom-scrollbar p-2 gap-0.5">
+            <div className="flex flex-col max-h-[65vh] overflow-y-auto custom-scrollbar p-2 gap-0.5 relative">
               {filteredSubjectNames.map((subjectName) => {
                 const isActive = selectedSubject === subjectName;
                 const subjectResources = subjectsMap[subjectName] ?? [];
@@ -270,15 +271,22 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
                       setSelectedSubject(subjectName);
                       setSelectedFilter('all');
                     }}
-                    className={`group flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors text-sm rounded-lg ${
+                    className={`group flex items-center gap-2.5 px-3 py-2.5 text-left transition-colors text-sm rounded-lg relative ${
                       isActive
-                        ? 'bg-foreground text-background font-medium shadow-sm'
+                        ? 'text-background font-medium shadow-sm'
                         : 'text-muted hover:text-foreground hover:bg-surface/60'
                     }`}
                   >
-                    <Folder className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-background' : 'text-muted group-hover:text-foreground'}`} />
-                    <span className="flex-1 truncate text-[13px]">{subjectName}</span>
-                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold transition-colors ${isActive ? 'bg-background/20 text-background' : 'text-muted'}`}>
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeSubject"
+                        className="absolute inset-0 bg-foreground rounded-lg -z-10"
+                        transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                      />
+                    )}
+                    <Folder className={`w-4 h-4 flex-shrink-0 z-10 ${isActive ? 'text-background' : 'text-muted group-hover:text-foreground'}`} />
+                    <span className="flex-1 truncate text-[13px] z-10">{subjectName}</span>
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold transition-colors z-10 ${isActive ? 'bg-background/20 text-background' : 'text-muted'}`}>
                       {subjectResources.length}
                     </span>
                   </button>
@@ -306,7 +314,7 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
                   </div>
 
                   {/* Compact filter pills — scrollable on mobile */}
-                  <div className="flex gap-1.5 overflow-x-auto pb-1 -mb-1 scrollbar-none">
+                  <div className="flex gap-1.5 overflow-x-auto pb-1 -mb-1 scrollbar-none relative">
                     {RESOURCE_FILTERS.map(({ value, label, Icon }) => {
                       const count = filterCounts[value] ?? 0;
                       const active = selectedFilter === value;
@@ -315,15 +323,22 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
                         <button
                           key={value}
                           onClick={() => setSelectedFilter(value)}
-                          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+                          className={`inline-flex items-center gap-1.5 rounded-lg border px-2.5 py-1 text-[11px] font-medium transition-all whitespace-nowrap flex-shrink-0 relative ${
                             active
-                              ? 'border-foreground bg-foreground text-background shadow-sm'
+                              ? 'border-transparent text-background shadow-sm'
                               : 'border-border bg-surface/50 text-muted hover:border-border-strong hover:text-foreground'
                           }`}
                         >
-                          <Icon className={`w-3 h-3 ${active ? 'text-background' : 'text-muted'}`} />
-                          {label}
-                          <span className={`text-[9px] font-bold ${active ? 'text-background/70' : 'text-muted'}`}>
+                          {active && (
+                            <motion.div
+                              layoutId="activeFilter"
+                              className="absolute inset-0 bg-foreground rounded-lg -z-10"
+                              transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                            />
+                          )}
+                          <Icon className={`w-3 h-3 z-10 ${active ? 'text-background' : 'text-muted'}`} />
+                          <span className="z-10">{label}</span>
+                          <span className={`text-[9px] font-bold z-10 ${active ? 'text-background/70' : 'text-muted'}`}>
                             {count}
                           </span>
                         </button>
