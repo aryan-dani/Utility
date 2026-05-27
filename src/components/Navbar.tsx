@@ -1,8 +1,15 @@
-'use client';
-import React, { useState, useEffect, useRef, Suspense, useCallback, useMemo } from 'react';
-import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
-import { useTheme } from 'next-themes';
+"use client";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  Suspense,
+  useCallback,
+  useMemo,
+} from "react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useTheme } from "next-themes";
 import {
   BookOpen,
   FileText,
@@ -22,27 +29,47 @@ import {
   Users,
   LayoutGrid,
   Layers,
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { useAcademicStore, Branch, Semester } from '../store/academicStore';
-import { createClient } from '@/lib/supabase';
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { useAcademicStore, Branch, Semester } from "../store/academicStore";
+import { createClient } from "@/lib/supabase";
 
 const PRIMARY_LINKS = [
-  { href: '/syllabus', label: 'Syllabus', Icon: BookOpen },
-  { href: '/resources', label: 'Resources', Icon: FileText },
-  { href: '/ask', label: 'Ask AI', Icon: Brain },
+  { href: "/syllabus", label: "Syllabus", Icon: BookOpen },
+  { href: "/resources", label: "Resources", Icon: FileText },
+  { href: "/ask", label: "Ask AI", Icon: Brain },
 ];
 
 const SECONDARY_LINKS = [
-  { href: '/srs', label: 'SRS Flashcards', Icon: Layers, desc: 'Spaced repetition card reviewer' },
-  { href: '/community', label: 'Community', Icon: Users, desc: 'Collaborate and connect with peers' },
-  { href: '/gpa', label: 'GPA Calculator', Icon: ShieldCheck, desc: 'Plan and project your semester GPA' },
-  { href: '/planner', label: 'Study Planner', Icon: CalendarCheck, desc: 'Monthly planner with prompts & collaboration' },
+  {
+    href: "/srs",
+    label: "SRS Flashcards",
+    Icon: Layers,
+    desc: "Spaced repetition card reviewer",
+  },
+  {
+    href: "/community",
+    label: "Community",
+    Icon: Users,
+    desc: "Collaborate and connect with peers",
+  },
+  {
+    href: "/gpa",
+    label: "GPA Calculator",
+    Icon: ShieldCheck,
+    desc: "Plan and project your semester GPA",
+  },
+  {
+    href: "/planner",
+    label: "Study Planner",
+    Icon: CalendarCheck,
+    desc: "Monthly planner with prompts & collaboration",
+  },
 ];
 
 const BRANCH_OPTIONS = [
-  { value: 'AIDS', label: 'AIDS' },
-  { value: 'CSE', label: 'CSE' },
+  { value: "AIDS", label: "AIDS" },
+  { value: "CSE", label: "CSE" },
 ];
 
 const SEMESTER_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8].map((sem) => ({
@@ -68,12 +95,15 @@ function CustomSelect<T extends string | number>({
 
   useEffect(() => {
     function handleClick(e: MouseEvent) {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(e.target as Node)
+      ) {
         setIsOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   const selectedOption = options.find((o) => o.value === value);
@@ -82,11 +112,15 @@ function CustomSelect<T extends string | number>({
     <div ref={containerRef} className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:text-foreground focus:outline-none ${isOpen ? 'bg-surface text-foreground shadow-xs border border-border/80' : 'text-muted hover:bg-surface/50 border border-transparent'}`}
+        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all hover:text-foreground focus:outline-none ${isOpen ? "bg-surface text-foreground shadow-xs border border-border/80" : "text-muted hover:bg-surface/50 border border-transparent"}`}
       >
         {Icon && <Icon className="w-3.5 h-3.5 text-muted shrink-0" />}
-        <span className="text-foreground font-semibold">{selectedOption?.label || label}</span>
-        <ChevronDown className={`w-3 h-3 text-muted transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+        <span className="text-foreground font-semibold">
+          {selectedOption?.label || label}
+        </span>
+        <ChevronDown
+          className={`w-3 h-3 text-muted transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
+        />
       </button>
 
       <AnimatePresence>
@@ -95,7 +129,7 @@ function CustomSelect<T extends string | number>({
             initial={{ opacity: 0, y: 4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.95 }}
-            transition={{ duration: 0.1, ease: 'easeOut' }}
+            transition={{ duration: 0.1, ease: "easeOut" }}
             className="absolute right-0 top-full mt-2 min-w-[130px] bg-card border border-border rounded-2xl shadow-popover overflow-hidden z-[100] backdrop-blur-xl p-1.5 flex flex-col gap-0.5"
           >
             {options.map((opt) => (
@@ -107,8 +141,8 @@ function CustomSelect<T extends string | number>({
                 }}
                 className={`w-full flex items-center gap-2 px-3 py-2 text-xs font-medium rounded-xl transition-colors text-left ${
                   value === opt.value
-                    ? 'bg-primary text-primary-foreground font-semibold shadow-xs'
-                    : 'text-muted hover:bg-surface hover:text-foreground'
+                    ? "bg-primary text-primary-foreground font-semibold shadow-xs"
+                    : "text-muted hover:bg-surface hover:text-foreground"
                 }`}
               >
                 {opt.label}
@@ -135,13 +169,13 @@ function ThemeToggle() {
         setOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleClick);
-    return () => document.removeEventListener('mousedown', handleClick);
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
   if (!mounted) return <div className="w-8 h-8" />;
 
-  const Icon = theme === 'dark' ? Moon : theme === 'light' ? Sun : Monitor;
+  const Icon = theme === "dark" ? Moon : theme === "light" ? Sun : Monitor;
 
   return (
     <div ref={ref} className="relative">
@@ -160,14 +194,14 @@ function ThemeToggle() {
             initial={{ opacity: 0, y: 4, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.95 }}
-            transition={{ duration: 0.1, ease: 'easeOut' }}
+            transition={{ duration: 0.1, ease: "easeOut" }}
             className="absolute right-0 top-full mt-2 w-36 bg-card border border-border rounded-2xl shadow-popover overflow-hidden z-50 backdrop-blur-xl p-1.5 flex flex-col gap-0.5"
           >
             {(
               [
-                { value: 'light', label: 'Light', Icon: Sun },
-                { value: 'dark', label: 'Dark', Icon: Moon },
-                { value: 'system', label: 'System', Icon: Monitor },
+                { value: "light", label: "Light", Icon: Sun },
+                { value: "dark", label: "Dark", Icon: Moon },
+                { value: "system", label: "System", Icon: Monitor },
               ] as const
             ).map(({ value: val, label, Icon: OptionIcon }) => (
               <button
@@ -178,8 +212,8 @@ function ThemeToggle() {
                 }}
                 className={`flex items-center gap-2.5 px-3 py-2 text-xs font-medium rounded-xl transition-colors ${
                   theme === val
-                    ? 'bg-surface text-foreground font-semibold shadow-xs border border-border/60'
-                    : 'text-muted hover:bg-surface hover:text-foreground'
+                    ? "bg-surface text-foreground font-semibold shadow-xs border border-border/60"
+                    : "text-muted hover:bg-surface hover:text-foreground"
                 }`}
               >
                 <OptionIcon className="w-3.5 h-3.5" />
@@ -197,24 +231,35 @@ function NavbarInner() {
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { searchQuery, setBranch, setSemester, setSearchQuery, setCommandPaletteOpen } = useAcademicStore();
+  const {
+    searchQuery,
+    setBranch,
+    setSemester,
+    setSearchQuery,
+    setAiSearchQuery,
+    setCommandPaletteOpen,
+  } = useAcademicStore();
 
   const [mobileOpen, setMobileOpen] = useState(false);
   const [appsOpen, setAppsOpen] = useState(false);
   const [user, setUser] = useState<{ email: string | undefined } | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [isMac, setIsMac] = useState(true);
-  
+
   const searchRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const appsRef = useRef<HTMLDivElement>(null);
   const supabase = useMemo(() => createClient(), []);
 
-  const branch = (searchParams.get('branch') as Branch) || 'AIDS';
-  const semester = Number(searchParams.get('semester') || '4') as Semester;
+  const branch = (searchParams.get("branch") as Branch) || "AIDS";
+  const semester = Number(searchParams.get("semester") || "4") as Semester;
 
   useEffect(() => {
-    setIsMac(typeof navigator !== 'undefined' && (navigator.userAgent.includes('Mac') || navigator.platform.includes('Mac')));
+    setIsMac(
+      typeof navigator !== "undefined" &&
+        (navigator.userAgent.includes("Mac") ||
+          navigator.platform.includes("Mac")),
+    );
   }, []);
 
   useEffect(() => {
@@ -226,20 +271,25 @@ function NavbarInner() {
     supabase.auth.getUser().then(({ data }) => {
       setUser(data.user ? { email: data.user.email } : null);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ? { email: session.user.email } : null);
-    });
+    const { data: listener } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user ? { email: session.user.email } : null);
+      },
+    );
     return () => listener.subscription.unsubscribe();
   }, []);
 
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (userMenuRef.current && !userMenuRef.current.contains(e.target as Node)) {
+      if (
+        userMenuRef.current &&
+        !userMenuRef.current.contains(e.target as Node)
+      ) {
         setUserMenuOpen(false);
       }
     }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   useEffect(() => {
@@ -248,18 +298,18 @@ function NavbarInner() {
         setAppsOpen(false);
       }
     }
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, []);
 
   const updateUrl = useCallback(
     (newBranch: string, newSem: number) => {
       const params = new URLSearchParams(searchParams.toString());
-      params.set('branch', newBranch);
-      params.set('semester', newSem.toString());
+      params.set("branch", newBranch);
+      params.set("semester", newSem.toString());
       router.push(`${pathname}?${params.toString()}`);
     },
-    [pathname, router, searchParams]
+    [pathname, router, searchParams],
   );
 
   useEffect(() => {
@@ -269,18 +319,18 @@ function NavbarInner() {
 
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+      if ((e.ctrlKey || e.metaKey) && e.key === "k") {
         e.preventDefault();
         setCommandPaletteOpen(true);
       }
     };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
   }, [setCommandPaletteOpen]);
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value);
-    if (value && pathname !== '/resources' && pathname !== '/syllabus') {
+    if (value && pathname !== "/resources" && pathname !== "/syllabus") {
       const params = new URLSearchParams(searchParams.toString());
       router.push(`/resources?${params.toString()}`);
     }
@@ -289,16 +339,21 @@ function NavbarInner() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUserMenuOpen(false);
-    window.location.href = '/';
+    window.location.href = "/";
   };
 
   const isActive = (href: string) =>
-    href === '/' ? pathname === '/' : pathname.startsWith(href);
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
 
-  const adminEmails = process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(',').map((e) => e.trim()) ?? [];
-  const isAdmin = user && adminEmails.includes(user.email ?? '');
+  const adminEmails =
+    process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",").map((e) => e.trim()) ?? [];
+  const isAdmin = user && adminEmails.includes(user.email ?? "");
 
-  const showSelectors = pathname === '/resources' || pathname === '/syllabus' || pathname === '/gpa' || pathname.startsWith('/resources');
+  const showSelectors =
+    pathname === "/resources" ||
+    pathname === "/syllabus" ||
+    pathname === "/gpa" ||
+    pathname.startsWith("/resources");
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border h-16 flex items-center">
@@ -306,13 +361,15 @@ function NavbarInner() {
         <div className="flex items-center gap-6">
           <Link
             href="/"
-            onClick={() => setSearchQuery('')}
+            onClick={() => setSearchQuery("")}
             className="text-base font-bold tracking-tight text-foreground flex items-center gap-2.5 shrink-0 group"
           >
             <div className="w-7 h-7 rounded-xl bg-foreground flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
               <BookOpen className="w-3.5 h-3.5 text-background" />
             </div>
-            <span className="font-bold tracking-tight text-foreground">Utility</span>
+            <span className="font-bold tracking-tight text-foreground">
+              Utility
+            </span>
           </Link>
 
           <div className="hidden md:flex items-center gap-1.5">
@@ -323,11 +380,11 @@ function NavbarInner() {
                 <Link
                   key={href}
                   href={finalHref}
-                  onClick={() => setSearchQuery('')}
+                  onClick={() => setSearchQuery("")}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
                     isActive(href)
-                      ? 'bg-surface text-foreground shadow-xs border border-border/80'
-                      : 'text-muted hover:text-foreground hover:bg-surface/40 border border-transparent'
+                      ? "bg-surface text-foreground shadow-xs border border-border/80"
+                      : "text-muted hover:text-foreground hover:bg-surface/40 border border-transparent"
                   }`}
                 >
                   {label}
@@ -339,14 +396,16 @@ function NavbarInner() {
               <button
                 onClick={() => setAppsOpen((o) => !o)}
                 className={`flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide transition-all ${
-                  appsOpen || SECONDARY_LINKS.some(l => isActive(l.href))
-                    ? 'bg-surface text-foreground shadow-xs border border-border/80'
-                    : 'text-muted hover:text-foreground hover:bg-surface/40 border border-transparent'
+                  appsOpen || SECONDARY_LINKS.some((l) => isActive(l.href))
+                    ? "bg-surface text-foreground shadow-xs border border-border/80"
+                    : "text-muted hover:text-foreground hover:bg-surface/40 border border-transparent"
                 }`}
               >
                 <LayoutGrid className="w-3.5 h-3.5 mr-1 text-muted" />
                 <span>Apps</span>
-                <ChevronDown className={`w-3 h-3 text-muted transition-transform duration-200 ${appsOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown
+                  className={`w-3 h-3 text-muted transition-transform duration-200 ${appsOpen ? "rotate-180" : ""}`}
+                />
               </button>
 
               <AnimatePresence>
@@ -355,14 +414,18 @@ function NavbarInner() {
                     initial={{ opacity: 0, y: 4, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                    transition={{ duration: 0.1, ease: 'easeOut' }}
+                    transition={{ duration: 0.1, ease: "easeOut" }}
                     className="absolute left-0 top-full mt-2 w-72 bg-card border border-border rounded-2xl shadow-popover overflow-hidden z-[100] backdrop-blur-xl p-2 grid gap-1"
                   >
                     <div className="px-3 py-2 border-b border-border/60 mb-1">
-                      <p className="text-[10px] uppercase font-extrabold tracking-wider text-muted">Academic Tools</p>
+                      <p className="text-[10px] uppercase font-extrabold tracking-wider text-muted">
+                        Academic Tools
+                      </p>
                     </div>
                     {SECONDARY_LINKS.map(({ href, label, Icon, desc }) => {
-                      const params = new URLSearchParams(searchParams.toString());
+                      const params = new URLSearchParams(
+                        searchParams.toString(),
+                      );
                       const finalHref = `${href}?${params.toString()}`;
                       const active = isActive(href);
                       return (
@@ -370,21 +433,33 @@ function NavbarInner() {
                           key={href}
                           href={finalHref}
                           onClick={() => {
-                            setSearchQuery('');
+                            setSearchQuery("");
                             setAppsOpen(false);
                           }}
                           className={`flex items-start gap-3 p-2.5 rounded-xl transition-all group ${
-                            active ? 'bg-surface border border-border/80 shadow-xs' : 'hover:bg-surface/50 border border-transparent'
+                            active
+                              ? "bg-surface border border-border/80 shadow-xs"
+                              : "hover:bg-surface/50 border border-transparent"
                           }`}
                         >
-                          <div className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 transition-all ${
-                            active ? 'bg-primary/10 border-primary/20 text-primary' : 'bg-surface border-border text-muted group-hover:text-foreground group-hover:border-border-strong'
-                          }`}>
+                          <div
+                            className={`w-9 h-9 rounded-xl border flex items-center justify-center shrink-0 transition-all ${
+                              active
+                                ? "bg-primary/10 border-primary/20 text-primary"
+                                : "bg-surface border-border text-muted group-hover:text-foreground group-hover:border-border-strong"
+                            }`}
+                          >
                             <Icon className="w-4 h-4" />
                           </div>
                           <div>
-                            <p className={`text-xs font-bold leading-tight ${active ? 'text-primary' : 'text-foreground'}`}>{label}</p>
-                            <p className="text-[10px] text-muted mt-0.5 leading-snug">{desc}</p>
+                            <p
+                              className={`text-xs font-bold leading-tight ${active ? "text-primary" : "text-foreground"}`}
+                            >
+                              {label}
+                            </p>
+                            <p className="text-[10px] text-muted mt-0.5 leading-snug">
+                              {desc}
+                            </p>
                           </div>
                         </Link>
                       );
@@ -399,7 +474,7 @@ function NavbarInner() {
         <div className="hidden md:flex items-center gap-2.5">
           {showSelectors && (
             <div className="flex items-center gap-1 bg-surface/30 p-1 border border-border/80 rounded-xl shadow-inner">
-               <CustomSelect
+              <CustomSelect
                 label="Branch"
                 value={branch}
                 options={BRANCH_OPTIONS}
@@ -425,7 +500,7 @@ function NavbarInner() {
               <span className="font-medium">Search...</span>
             </span>
             <kbd className="hidden sm:inline-flex px-1.5 py-0.5 text-[10px] font-bold bg-background border border-border rounded-md shadow-xs text-muted group-hover:border-border-strong transition-colors">
-              {isMac ? '⌘K' : 'Ctrl+K'}
+              {isMac ? "⌘K" : "Ctrl+K"}
             </kbd>
           </button>
 
@@ -440,7 +515,7 @@ function NavbarInner() {
                 className="flex items-center gap-2 px-2.5 py-1.5 rounded-xl text-sm font-medium text-muted hover:text-foreground hover:bg-surface/50 transition-colors"
               >
                 <div className="w-6 h-6 rounded-full bg-surface border border-border flex items-center justify-center text-xs font-bold text-foreground uppercase shadow-xs">
-                  {user.email?.[0] ?? '?'}
+                  {user.email?.[0] ?? "?"}
                 </div>
                 <ChevronDown className="w-3 h-3 text-muted" />
               </button>
@@ -451,12 +526,16 @@ function NavbarInner() {
                     initial={{ opacity: 0, y: 4, scale: 0.95 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 4, scale: 0.95 }}
-                    transition={{ duration: 0.1, ease: 'easeOut' }}
+                    transition={{ duration: 0.1, ease: "easeOut" }}
                     className="absolute right-0 top-full mt-2 w-52 bg-card border border-border rounded-2xl shadow-popover overflow-hidden z-50 backdrop-blur-xl"
                   >
                     <div className="px-4 py-3 border-b border-border bg-surface/30">
-                      <p className="text-[10px] uppercase font-bold tracking-wider text-muted mb-0.5">Signed in as</p>
-                      <p className="text-xs font-semibold text-foreground truncate">{user.email}</p>
+                      <p className="text-[10px] uppercase font-bold tracking-wider text-muted mb-0.5">
+                        Signed in as
+                      </p>
+                      <p className="text-xs font-semibold text-foreground truncate">
+                        {user.email}
+                      </p>
                     </div>
                     <div className="p-1.5 flex flex-col gap-0.5">
                       {isAdmin && (
@@ -498,7 +577,11 @@ function NavbarInner() {
             onClick={() => setMobileOpen((o) => !o)}
             aria-label="Toggle menu"
           >
-            {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {mobileOpen ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
           </button>
         </div>
       </div>
@@ -515,6 +598,12 @@ function NavbarInner() {
               placeholder="Search..."
               value={searchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  setAiSearchQuery(e.currentTarget.value);
+                }
+              }}
               className="w-full pl-9 pr-4 py-2.5 bg-surface border border-border rounded-xl outline-none text-sm focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted shadow-xs"
             />
           </div>
@@ -543,7 +632,9 @@ function NavbarInner() {
           )}
 
           <div className="border-t border-border pt-4 flex flex-col gap-1">
-            <p className="px-3 py-1 text-[10px] uppercase font-extrabold tracking-wider text-muted">Primary</p>
+            <p className="px-3 py-1 text-[10px] uppercase font-extrabold tracking-wider text-muted">
+              Primary
+            </p>
             {PRIMARY_LINKS.map(({ href, label, Icon }) => {
               const params = new URLSearchParams(searchParams.toString());
               const finalHref = `${href}?${params.toString()}`;
@@ -552,13 +643,13 @@ function NavbarInner() {
                   key={href}
                   href={finalHref}
                   onClick={() => {
-                    setSearchQuery('');
+                    setSearchQuery("");
                     setMobileOpen(false);
                   }}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                     isActive(href)
-                      ? 'bg-surface text-foreground font-semibold border border-border/80 shadow-xs'
-                      : 'text-muted hover:text-foreground hover:bg-surface/50 border border-transparent'
+                      ? "bg-surface text-foreground font-semibold border border-border/80 shadow-xs"
+                      : "text-muted hover:text-foreground hover:bg-surface/50 border border-transparent"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -567,7 +658,9 @@ function NavbarInner() {
               );
             })}
 
-            <p className="px-3 pt-3 py-1 text-[10px] uppercase font-extrabold tracking-wider text-muted border-t border-border/50 mt-2">Apps & Tools</p>
+            <p className="px-3 pt-3 py-1 text-[10px] uppercase font-extrabold tracking-wider text-muted border-t border-border/50 mt-2">
+              Apps & Tools
+            </p>
             {SECONDARY_LINKS.map(({ href, label, Icon }) => {
               const params = new URLSearchParams(searchParams.toString());
               const finalHref = `${href}?${params.toString()}`;
@@ -576,13 +669,13 @@ function NavbarInner() {
                   key={href}
                   href={finalHref}
                   onClick={() => {
-                    setSearchQuery('');
+                    setSearchQuery("");
                     setMobileOpen(false);
                   }}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
                     isActive(href)
-                      ? 'bg-surface text-foreground font-semibold border border-border/80 shadow-xs'
-                      : 'text-muted hover:text-foreground hover:bg-surface/50 border border-transparent'
+                      ? "bg-surface text-foreground font-semibold border border-border/80 shadow-xs"
+                      : "text-muted hover:text-foreground hover:bg-surface/50 border border-transparent"
                   }`}
                 >
                   <Icon className="w-4 h-4" />
@@ -614,7 +707,7 @@ function NavbarInner() {
                 </button>
               </div>
             ) : (
-               <Link
+              <Link
                 href="/login"
                 className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-muted hover:text-foreground hover:bg-surface/50"
               >
@@ -630,7 +723,11 @@ function NavbarInner() {
 
 export default function Navbar() {
   return (
-    <Suspense fallback={<div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border h-16" />}>
+    <Suspense
+      fallback={
+        <div className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border h-16" />
+      }
+    >
       <NavbarInner />
     </Suspense>
   );

@@ -1,6 +1,6 @@
-import GPAClient from './GPAClientComponent';
+import GPAClient from "./GPAClientComponent";
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 3600;
 
 export default async function GPAPage() {
   return (

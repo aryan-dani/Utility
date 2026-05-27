@@ -1,11 +1,15 @@
-import { getSubjectsFromDB, getSyllabusFile, getResourcesFromDB } from "@/lib/dataFetcher";
+import {
+  getSubjectsFromDB,
+  getSyllabusFile,
+  getResourcesFromDB,
+} from "@/lib/dataFetcher";
 import { createClient } from "@/lib/supabaseServer";
 import SyllabusClient from "@/components/SyllabusClient";
 import { Branch, Semester } from "@/store/academicStore";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 interface PageProps {
   searchParams: Promise<{
@@ -28,11 +32,11 @@ export default async function SyllabusPage({ searchParams }: PageProps) {
 
   return (
     <Suspense fallback={<SyllabusLoading />}>
-      <SyllabusClient 
-        subjects={subjects} 
-        branch={branch} 
-        semester={semester} 
-        syllabusUrl={syllabusUrl} 
+      <SyllabusClient
+        subjects={subjects}
+        branch={branch}
+        semester={semester}
+        syllabusUrl={syllabusUrl}
         initialResources={resources}
       />
     </Suspense>

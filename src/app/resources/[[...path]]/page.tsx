@@ -5,7 +5,7 @@ import { Branch, Semester } from "@/store/academicStore";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 interface PageProps {
   searchParams: Promise<{
@@ -23,13 +23,25 @@ export default async function ResourcesPage({ searchParams }: PageProps) {
   const resources = await getResourcesFromDB(branch, semester, supabase);
 
   return (
-    <Suspense fallback={<ResourcesLoading branch={branch} semester={semester} />}>
-      <ResourcesClient initialResources={resources} branch={branch} semester={semester} />
+    <Suspense
+      fallback={<ResourcesLoading branch={branch} semester={semester} />}
+    >
+      <ResourcesClient
+        initialResources={resources}
+        branch={branch}
+        semester={semester}
+      />
     </Suspense>
   );
 }
 
-function ResourcesLoading({ branch, semester }: { branch: string; semester: number }) {
+function ResourcesLoading({
+  branch,
+  semester,
+}: {
+  branch: string;
+  semester: number;
+}) {
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 min-h-[80vh]">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-border pb-6">

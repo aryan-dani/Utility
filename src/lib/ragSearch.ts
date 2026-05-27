@@ -1,4 +1,4 @@
-import { createAdminClient } from './supabaseAdmin';
+import { createAdminClient } from "./supabaseAdmin";
 
 export interface RAGSearchResult {
   title: string;
@@ -16,46 +16,52 @@ export interface RAGSearchResult {
  * @param limit The maximum number of results to return
  * @returns Array of formatted search results
  */
-export async function performRAGSearch(query: string, limit: number = 3): Promise<RAGSearchResult[]> {
+export async function performRAGSearch(
+  query: string,
+  limit: number = 3,
+): Promise<RAGSearchResult[]> {
   try {
     const supabase = createAdminClient();
-    
+
     // Try the RPC first (full-text search function)
-    const { data: searchResults, error: rpcError } = await supabase.rpc('search_resource_content', {
-      query_text: query,
-    });
+    const { data: searchResults, error: rpcError } = await supabase.rpc(
+      "search_resource_content",
+      {
+        query_text: query,
+      },
+    );
 
     let finalResults = searchResults;
 
     // Robust Fallback: Use standard ILIKE/textSearch if RPC fails or returns nothing
+    // To save egress, this fallback searches 'resources.title' rather than doing unindexed scans on 'resource_content.content'
     if (rpcError || !finalResults || finalResults.length === 0) {
       const { data: fallbackData } = await supabase
-        .from('resource_content')
-        .select(`
-          resource_id,
-          content,
-          resources!inner (
-            title, 
-            file_url,
-            subjects!inner (
-              name,
-              branch,
-              semester
-            )
+        .from("resources")
+        .select(
+          `
+          id,
+          title, 
+          file_url,
+          subjects!inner (
+            name,
+            branch,
+            semester
           )
-        `)
-        .ilike('content', `%${query}%`)
+        `,
+        )
+        .ilike("title", `%${query}%`)
         .limit(limit);
-      
+
       if (fallbackData) {
-        finalResults = (fallbackData as any[]).map(r => ({
-          resource_id: r.resource_id,
-          title: r.resources.title,
-          file_url: r.resources.file_url,
-          subject_name: r.resources.subjects.name,
-          branch: r.resources.subjects.branch,
-          semester: r.resources.subjects.semester,
-          snippet: r.content.substring(0, 500) + '...'
+        finalResults = (fallbackData as any[]).map((r) => ({
+          resource_id: r.id,
+          title: r.title,
+          file_url: r.file_url,
+          subject_name: r.subjects.name,
+          branch: r.subjects.branch,
+          semester: r.subjects.semester,
+          snippet: `Matched by title: ${r.title}`,
         }));
       }
     }
@@ -68,11 +74,11 @@ export async function performRAGSearch(query: string, limit: number = 3): Promis
         subject_name: r.subject_name,
         branch: r.branch,
         semester: r.semester,
-        snippet: r.snippet || r.content?.substring(0, 500) + '...' || '',
+        snippet: r.snippet || r.content?.substring(0, 500) + "..." || "",
       }));
     }
   } catch (err) {
-    console.error('RAG Search Critical Error:', err);
+    console.error("RAG Search Critical Error:", err);
   }
 
   return [];

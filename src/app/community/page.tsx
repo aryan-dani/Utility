@@ -3,7 +3,7 @@ import CommunityClient from "./CommunityClient";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 3600;
 
 export default async function CommunityPage() {
   const supabase = await createClient();
