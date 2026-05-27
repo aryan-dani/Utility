@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { ResourceCategory, ResourceItem } from '@/lib/dataFetcher';
 import { useAcademicStore } from '@/store/academicStore';
 import { isSubjectMatch } from '@/lib/subjectMatcher';
-import { createClient } from '@/lib/supabase';
 import { motion } from 'framer-motion';
 import {
   HardDrive,
@@ -18,8 +17,6 @@ import {
   Brain,
   CheckCircle2,
   RefreshCw,
-  Wifi,
-  WifiOff,
 } from 'lucide-react';
 import ResourceViewer from './ResourceViewer';
 import SummaryModal from './SummaryModal';
@@ -64,56 +61,7 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
   const [contentResults, setContentResults] = useState<any[]>([]);
   const [isSearchingContent, setIsSearchingContent] = useState(false);
 
-  // ── Realtime state ──
-  const [resources, setResources] = useState<ResourceItem[]>(initialResources);
-  const [realtimeStatus, setRealtimeStatus] = useState<'connected' | 'disconnected' | 'connecting'>('connecting');
-  const [isRefreshing, setIsRefreshing] = useState(false);
-
-  // ── Realtime: Supabase subscription ──
-  const refetchResources = useCallback(async () => {
-    try {
-      setIsRefreshing(true);
-      const res = await fetch(`/api/resources/list?branch=${encodeURIComponent(branch)}&semester=${semester}`);
-      if (!res.ok) throw new Error('Fetch failed');
-      const data = await res.json();
-      if (data.resources) {
-        setResources(data.resources);
-      }
-    } catch (err) {
-      console.error('Failed to refetch resources:', err);
-    } finally {
-      setIsRefreshing(false);
-    }
-  }, [branch, semester]);
-
-  useEffect(() => {
-    const supabase = createClient();
-
-    const channel = supabase
-      .channel('resources-realtime')
-      .on(
-        'postgres_changes',
-        { event: '*', schema: 'public', table: 'resources' },
-        () => {
-          // On any INSERT/UPDATE/DELETE, refetch the full list
-          // This guarantees we get properly joined data with subject names
-          refetchResources();
-        }
-      )
-      .subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
-          setRealtimeStatus('connected');
-        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          setRealtimeStatus('disconnected');
-        } else {
-          setRealtimeStatus('connecting');
-        }
-      });
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [refetchResources]);
+  const resources = initialResources;
 
   // ── Derived data ──
   const subjectsMap = useMemo(
@@ -222,25 +170,6 @@ export default function ResourcesClient({ initialResources, branch, semester }: 
           <p className="text-muted text-sm mt-1">
             {branch} · Semester {semester} · {resources.length} files
           </p>
-        </div>
-        
-        {/* Realtime status indicator */}
-        <div className="flex items-center gap-3">
-          {isRefreshing && (
-            <RefreshCw className="w-3.5 h-3.5 text-muted animate-spin" />
-          )}
-          <div className="flex items-center gap-1.5" title={`Realtime: ${realtimeStatus}`}>
-            {realtimeStatus === 'connected' ? (
-              <Wifi className="w-3.5 h-3.5 text-green-500" />
-            ) : realtimeStatus === 'connecting' ? (
-              <Wifi className="w-3.5 h-3.5 text-muted animate-pulse" />
-            ) : (
-              <WifiOff className="w-3.5 h-3.5 text-red-400" />
-            )}
-            <span className="text-[10px] font-semibold text-muted uppercase tracking-wider">
-              {realtimeStatus === 'connected' ? 'Live' : realtimeStatus === 'connecting' ? 'Connecting…' : 'Offline'}
-            </span>
-          </div>
         </div>
       </div>
 

@@ -6,11 +6,11 @@ import { createClient } from '@/lib/supabaseServer';
 const FEATURES = [
   {
     href: '/planner',
-    label: 'Weekly Planner',
+    label: 'Study Planner',
     number: '01',
     Icon: CalendarCheck,
     description:
-      'Organize your week with a private, local-first task board. Syncs to the cloud.',
+      'Organize your month with natural-language prompts. Share & collaborate with peers.',
   },
   {
     href: '/ask',

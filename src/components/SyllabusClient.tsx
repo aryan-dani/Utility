@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
-import { SubjectItem, ResourceItem, getResourcesFromDB } from '@/lib/dataFetcher';
+import { SubjectItem, ResourceItem } from '@/lib/dataFetcher';
 import { useAcademicStore } from '@/store/academicStore';
 import { 
   BookMarked, 
@@ -27,7 +27,6 @@ import {
   Compass
 } from 'lucide-react';
 import { logActivity } from '@/components/ActivityHeatmap';
-import { createClient } from '@/lib/supabase';
 import { isSubjectMatch } from '@/lib/subjectMatcher';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -36,6 +35,7 @@ interface SyllabusClientProps {
   branch: string;
   semester: number;
   syllabusUrl?: string | null;
+  initialResources: ResourceItem[];
 }
 
 interface ResourceItemExt extends ResourceItem {
@@ -172,12 +172,12 @@ function getModulesForSubject(name: string) {
   ];
 }
 
-export default function SyllabusClient({ subjects, branch, semester, syllabusUrl }: SyllabusClientProps) {
+export default function SyllabusClient({ subjects, branch, semester, syllabusUrl, initialResources }: SyllabusClientProps) {
   const { searchQuery } = useAcademicStore();
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
   const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
   const [mounted, setMounted] = useState(false);
-  const [resources, setResources] = useState<ResourceItemExt[]>([]);
+  const resources = initialResources as ResourceItemExt[];
 
   useEffect(() => {
     try {
@@ -188,13 +188,6 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
     } catch {}
     setMounted(true);
   }, []);
-
-  useEffect(() => {
-    const supabase = createClient();
-    getResourcesFromDB(branch, semester, supabase).then(res => {
-      setResources(res as ResourceItemExt[]);
-    });
-  }, [branch, semester]);
 
   const getMatchingResources = (
     moduleTitle: string,

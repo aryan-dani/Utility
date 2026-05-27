@@ -37,7 +37,7 @@ const SECONDARY_LINKS = [
   { href: '/srs', label: 'SRS Flashcards', Icon: Layers, desc: 'Spaced repetition card reviewer' },
   { href: '/community', label: 'Community', Icon: Users, desc: 'Collaborate and connect with peers' },
   { href: '/gpa', label: 'GPA Calculator', Icon: ShieldCheck, desc: 'Plan and project your semester GPA' },
-  { href: '/planner', label: 'Study Planner', Icon: CalendarCheck, desc: 'Manage your academic schedule' },
+  { href: '/planner', label: 'Study Planner', Icon: CalendarCheck, desc: 'Monthly planner with prompts & collaboration' },
 ];
 
 const BRANCH_OPTIONS = [

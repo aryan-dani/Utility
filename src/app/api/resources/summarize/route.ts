@@ -31,9 +31,15 @@ export async function GET(request: Request) {
 
     const { content, ai_summary, resources } = data as any;
 
-    // Return cached summary instantly if available
     if (ai_summary) {
-      return NextResponse.json({ summary: ai_summary });
+      return NextResponse.json(
+        { summary: ai_summary },
+        {
+          headers: {
+            'Cache-Control': 'public, s-maxage=31536000, stale-while-revalidate=86400',
+          },
+        }
+      );
     }
 
     const title = resources?.title || 'this document';
@@ -65,7 +71,14 @@ export async function GET(request: Request) {
       .update({ ai_summary: text })
       .eq('resource_id', resourceId);
 
-    return NextResponse.json({ summary: text });
+    return NextResponse.json(
+      { summary: text },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=31536000, stale-while-revalidate=86400',
+        },
+      }
+    );
   } catch (err: any) {
     console.error('Summarization error:', err);
     return NextResponse.json({ 

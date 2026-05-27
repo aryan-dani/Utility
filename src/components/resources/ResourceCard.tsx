@@ -60,12 +60,6 @@ export default function ResourceCard({
     }
   };
 
-  const handlePrefetch = () => {
-    if (isPdf) {
-      fetch(item.file_url, { cache: 'force-cache', mode: 'no-cors' }).catch(() => {});
-    }
-  };
-
   const FileIcon = isPdf ? FileText 
     : isPpt ? FileSpreadsheet 
     : item.category === 'writeup' ? PenTool 
@@ -76,10 +70,8 @@ export default function ResourceCard({
       onClick={handleOpen}
       onMouseEnter={() => {
         setIsHovered(true);
-        handlePrefetch();
       }}
       onMouseLeave={() => setIsHovered(false)}
-      onTouchStart={handlePrefetch}
       className="group bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 text-left shadow-sm hover:shadow-md hover:-translate-y-[2px] active:translate-y-0 cursor-pointer relative overflow-hidden"
       style={{ 
         borderColor: isHovered ? config.color : 'var(--border)',
