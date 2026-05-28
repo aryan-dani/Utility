@@ -1,5 +1,5 @@
 import { getResourcesFromDB } from "@/lib/dataFetcher";
-import { createClient } from "@/lib/supabaseServer";
+
 import ResourcesClient from "@/components/ResourcesClient";
 import { Branch, Semester } from "@/store/academicStore";
 import { Suspense } from "react";
@@ -19,8 +19,7 @@ export default async function ResourcesPage({ searchParams }: PageProps) {
   const branch = (params.branch as Branch) || "AIDS";
   const semester = Number(params.semester || "4") as Semester;
 
-  const supabase = await createClient();
-  const resources = await getResourcesFromDB(branch, semester, supabase);
+  const resources = await getResourcesFromDB(branch, semester);
 
   return (
     <Suspense

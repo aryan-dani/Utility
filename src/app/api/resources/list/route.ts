@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getResourcesFromDB } from '@/lib/dataFetcher';
-import { createClient } from '@/lib/supabaseServer';
+
 
 export const dynamic = 'force-dynamic';
 
@@ -10,8 +10,7 @@ export async function GET(request: Request) {
     const branch = searchParams.get('branch') || 'AIDS';
     const semester = Number(searchParams.get('semester') || '4');
 
-    const supabase = await createClient();
-    const resources = await getResourcesFromDB(branch, semester, supabase);
+    const resources = await getResourcesFromDB(branch, semester);
 
     return NextResponse.json({ resources });
   } catch (error: any) {

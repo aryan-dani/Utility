@@ -108,9 +108,8 @@ export const getSubjectsFromDB = unstable_cache(
   async (
     branch: string,
     semester: number,
-    supabaseClient?: SupabaseClient,
   ): Promise<SubjectItem[]> => {
-    const supabase = supabaseClient ?? createBrowserClient();
+    const supabase = createAdminClient();
     const { data, error } = await supabase
       .from("subjects")
       .select("id, name, branch, semester")
@@ -139,9 +138,8 @@ export const getResourcesFromDB = unstable_cache(
   async (
     branch: string,
     semester: number,
-    supabaseClient?: SupabaseClient,
   ): Promise<ResourceItem[]> => {
-    const supabase = supabaseClient ?? createBrowserClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from("resources")
@@ -218,9 +216,8 @@ export const getSyllabusFile = unstable_cache(
   async (
     branch: string,
     semester: number,
-    supabaseClient?: SupabaseClient,
   ): Promise<string | null> => {
-    const supabase = supabaseClient ?? createBrowserClient();
+    const supabase = createAdminClient();
 
     const { data, error } = await supabase
       .from("resources")
