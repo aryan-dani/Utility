@@ -5,15 +5,32 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, X, Check, Trash2, Download, Upload, Cloud, CloudOff, LogIn, ChevronLeft, ChevronRight,
   Share2, Copy, Users, Link2, Globe, Lock, UserPlus, CheckCircle2, Circle,
-  CalendarDays, MoreHorizontal, Minus,
+  CalendarDays, MoreHorizontal, Minus, List, Columns, Calendar, RefreshCw, Tag
 } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase';
 import { logActivity } from '@/components/ActivityHeatmap';
-import { parsePrompt, mergeEntries, type Task, type SubTask } from '@/lib/promptParser';
+import { parsePrompt, mergeEntries } from '@/lib/promptParser';
 import { toast } from 'sonner';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
+
+export type SubTask = {
+  id: string;
+  text: string;
+  done: boolean;
+};
+
+export type Task = {
+  id: string;
+  text: string;
+  done: boolean;
+  subtasks: SubTask[];
+  category?: 'Revision' | 'Exam Prep' | 'Assignment' | 'Project' | 'General';
+  status?: 'todo' | 'in-progress' | 'done';
+  isRecurring?: boolean;
+  recurringDays?: number[];
+};
 
 type PlanData = Record<string, Task[]>; // "2026-05-27" -> Task[]
 
@@ -29,6 +46,14 @@ type Collaborator = {
   id: string;
   user_email: string;
   role: 'editor' | 'viewer';
+};
+
+const CATEGORY_COLORS: Record<string, { bg: string, text: string, border: string }> = {
+  'Exam Prep': { bg: 'bg-red-500/10 dark:bg-red-500/20', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
+  'Assignment': { bg: 'bg-blue-500/10 dark:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/20' },
+  'Project': { bg: 'bg-purple-500/10 dark:bg-purple-500/20', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/20' },
+  'Revision': { bg: 'bg-green-500/10 dark:bg-green-500/20', text: 'text-green-600 dark:text-green-400', border: 'border-green-500/20' },
+  'General': { bg: 'bg-surface', text: 'text-muted', border: 'border-border' },
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
@@ -114,6 +139,9 @@ function TaskItem({
   onToggleSubtask,
   onAddSubtask,
   onDeleteSubtask,
+  onUpdateCategory,
+  onToggleRecurring,
+  onUpdateStatus,
   compact = false,
 }: {
   task: Task;
@@ -123,29 +151,44 @@ function TaskItem({
   onToggleSubtask: (subtaskId: string) => void;
   onAddSubtask: () => void;
   onDeleteSubtask: (subtaskId: string) => void;
+  onUpdateCategory?: (category: any) => void;
+  onToggleRecurring?: () => void;
+  onUpdateStatus?: (status: 'todo' | 'in-progress' | 'done') => void;
   compact?: boolean;
 }) {
   if (compact) {
+    const catColor = CATEGORY_COLORS[task.category || 'General'];
     return (
-      <div className="flex items-center gap-1.5 group/task">
+      <div className="flex items-center gap-1 group/task">
         <button
           onClick={(e) => { e.stopPropagation(); onToggle(); }}
-          className={`flex-shrink-0 w-3.5 h-3.5 rounded-sm border flex items-center justify-center transition-all ${
+          className={`flex-shrink-0 w-3 h-3 rounded-xs border flex items-center justify-center transition-all ${
             task.done
               ? 'bg-foreground border-foreground text-background'
               : 'border-border-strong hover:border-foreground'
           }`}
         >
-          {task.done && <Check className="w-2 h-2" />}
+          {task.done && <Check className="w-1.5 h-1.5" />}
         </button>
-        <span className={`text-[11px] leading-tight truncate ${task.done ? 'line-through text-muted' : 'text-foreground'}`}>
+        <span className={`text-[10px] leading-tight truncate flex-1 ${task.done ? 'line-through text-muted' : 'text-foreground'}`}>
           {task.text}
         </span>
+        {task.category && task.category !== 'General' && (
+          <span className={`w-1 h-1 rounded-full shrink-0 ${
+            task.category === 'Exam Prep' ? 'bg-red-500' :
+            task.category === 'Assignment' ? 'bg-blue-500' :
+            task.category === 'Project' ? 'bg-purple-500' :
+            task.category === 'Revision' ? 'bg-green-500' :
+            'bg-muted'
+          }`} />
+        )}
       </div>
     );
   }
 
   const subtasksDone = task.subtasks.filter(s => s.done).length;
+  const currentCategory = task.category || 'General';
+  const catColor = CATEGORY_COLORS[currentCategory];
 
   return (
     <motion.div
@@ -158,7 +201,6 @@ function TaskItem({
       }`}
     >
       <div className="flex items-start gap-2.5">
-        {/* Checkbox */}
         <button
           onClick={onToggle}
           className={`flex-shrink-0 w-[18px] h-[18px] mt-0.5 rounded-md border-[1.5px] flex items-center justify-center transition-all ${
@@ -170,7 +212,6 @@ function TaskItem({
           {task.done && <Check className="w-2.5 h-2.5" />}
         </button>
 
-        {/* Text */}
         <textarea
           value={task.text}
           onChange={(e) => onUpdate(e.target.value)}
@@ -186,12 +227,52 @@ function TaskItem({
           }}
         />
 
-        {/* Delete */}
         <button
           onClick={onDelete}
           className="opacity-0 group-hover/task:opacity-100 flex-shrink-0 text-muted hover:text-red-500 transition-all mt-0.5"
         >
           <X className="w-3.5 h-3.5" />
+        </button>
+      </div>
+
+      {/* Task properties (Category, Status, Recurring) */}
+      <div className="flex flex-wrap items-center gap-2 mt-2 ml-7">
+        {/* Category Badges dropdown */}
+        <select
+          value={currentCategory}
+          onChange={(e) => onUpdateCategory?.(e.target.value as any)}
+          className={`text-[9px] font-bold px-2 py-0.5 rounded-md border outline-none cursor-pointer ${catColor.bg} ${catColor.text} ${catColor.border}`}
+        >
+          <option value="General">General</option>
+          <option value="Revision">Revision</option>
+          <option value="Exam Prep">Exam Prep</option>
+          <option value="Assignment">Assignment</option>
+          <option value="Project">Project</option>
+        </select>
+
+        {/* Status Dropdown */}
+        <select
+          value={task.status || (task.done ? 'done' : 'todo')}
+          onChange={(e) => onUpdateStatus?.(e.target.value as any)}
+          className="text-[9px] font-bold px-2 py-0.5 rounded-md border border-border bg-surface text-foreground outline-none cursor-pointer"
+        >
+          <option value="todo">To Do</option>
+          <option value="in-progress">In Progress</option>
+          <option value="done">Done</option>
+        </select>
+
+        {/* Recurring button toggle */}
+        <button
+          onClick={onToggleRecurring}
+          className={`flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-md border transition-all ${
+            task.isRecurring
+              ? 'bg-primary/10 border-primary/20 text-primary'
+              : 'bg-surface border-border text-muted hover:text-foreground'
+          }`}
+          title="Repeat weekly on this day of week"
+        >
+          <RefreshCw className={`w-2.5 h-2.5 ${task.isRecurring ? 'animate-spin-slow' : ''}`} />
+          <span>{task.isRecurring ? 'Weekly' : 'One-time'}</span>
         </button>
       </div>
 
@@ -649,6 +730,9 @@ function DayPanel({
   onToggleSubtask,
   onAddSubtask,
   onDeleteSubtask,
+  onUpdateTaskCategory,
+  onToggleTaskRecurring,
+  onUpdateTaskStatus,
 }: {
   date: string;
   tasks: Task[];
@@ -660,6 +744,9 @@ function DayPanel({
   onToggleSubtask: (taskId: string, subtaskId: string) => void;
   onAddSubtask: (taskId: string) => void;
   onDeleteSubtask: (taskId: string, subtaskId: string) => void;
+  onUpdateTaskCategory: (taskId: string, category: any) => void;
+  onToggleTaskRecurring: (taskId: string) => void;
+  onUpdateTaskStatus: (taskId: string, status: 'todo' | 'in-progress' | 'done') => void;
 }) {
   const dateObj = new Date(date + 'T00:00:00');
   const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
@@ -725,6 +812,9 @@ function DayPanel({
                 onToggleSubtask={(subId) => onToggleSubtask(task.id, subId)}
                 onAddSubtask={() => onAddSubtask(task.id)}
                 onDeleteSubtask={(subId) => onDeleteSubtask(task.id, subId)}
+                onUpdateCategory={(cat) => onUpdateTaskCategory(task.id, cat)}
+                onToggleRecurring={() => onToggleTaskRecurring(task.id)}
+                onUpdateStatus={(stat) => onUpdateTaskStatus(task.id, stat)}
               />
             ))}
           </AnimatePresence>
@@ -774,6 +864,9 @@ export default function PlannerClient() {
   const [promptOpen, setPromptOpen] = useState(false);
   const [shareOpen, setShareOpen] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
+  const [plannerView, setPlannerView] = useState<'calendar' | 'list' | 'kanban'>('calendar');
+  const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
+  const [quickAddText, setQuickAddText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = useMemo(() => createClient(), []);
 
@@ -918,10 +1011,10 @@ export default function PlannerClient() {
   }, [planData, planMeta, user, mounted, pushToCloud]);
 
   // ── Task operations ──
-  const addTask = (date: string) => {
+  const addTask = (date: string, text: string = '', category: string = 'General') => {
     setPlanData(prev => ({
       ...prev,
-      [date]: [...(prev[date] || []), { id: generateId(), text: '', done: false, subtasks: [] }],
+      [date]: [...(prev[date] || []), { id: generateId(), text, done: false, subtasks: [], category: category as any, status: 'todo' }],
     }));
   };
 
@@ -932,7 +1025,7 @@ export default function PlannerClient() {
         if (t.id === taskId) {
           const next = !t.done;
           if (next) logActivity('planner_task_completed', 1);
-          return { ...t, done: next };
+          return { ...t, done: next, status: next ? 'done' : 'todo' };
         }
         return t;
       }),
@@ -951,6 +1044,74 @@ export default function PlannerClient() {
       ...prev,
       [date]: (prev[date] || []).map(t => t.id === taskId ? { ...t, text } : t),
     }));
+  };
+
+  const updateTaskCategory = (date: string, taskId: string, category: 'Revision' | 'Exam Prep' | 'Assignment' | 'Project' | 'General') => {
+    setPlanData(prev => ({
+      ...prev,
+      [date]: (prev[date] || []).map(t => t.id === taskId ? { ...t, category } : t),
+    }));
+  };
+
+  const updateTaskStatus = (date: string, taskId: string, status: 'todo' | 'in-progress' | 'done') => {
+    setPlanData(prev => ({
+      ...prev,
+      [date]: (prev[date] || []).map(t => {
+        if (t.id === taskId) {
+          return { ...t, status, done: status === 'done' };
+        }
+        return t;
+      }),
+    }));
+  };
+
+  const toggleTaskRecurring = (date: string, taskId: string) => {
+    setPlanData(prev => {
+      let taskToPropagate: Task | null = null;
+      const updatedDateTasks = (prev[date] || []).map(t => {
+        if (t.id === taskId) {
+          const nextRecurring = !t.isRecurring;
+          if (nextRecurring) {
+            taskToPropagate = { ...t, isRecurring: true };
+          }
+          return { ...t, isRecurring: nextRecurring };
+        }
+        return t;
+      });
+
+      let nextData = { ...prev, [date]: updatedDateTasks };
+
+      if (taskToPropagate) {
+        const startDate = new Date(date + 'T00:00:00');
+        const activeMonth = startDate.getMonth();
+        const activeYear = startDate.getFullYear();
+
+        const tempDate = new Date(startDate);
+        tempDate.setDate(tempDate.getDate() + 7);
+
+        while (tempDate.getMonth() === activeMonth && tempDate.getFullYear() === activeYear) {
+          const isoString = `${tempDate.getFullYear()}-${String(tempDate.getMonth() + 1).padStart(2, '0')}-${String(tempDate.getDate()).padStart(2, '0')}`;
+          const existing = nextData[isoString] || [];
+          if (!existing.some(t => t.text === (taskToPropagate as any).text)) {
+            nextData[isoString] = [
+              ...existing,
+              {
+                ...(taskToPropagate as any),
+                id: generateId(),
+                isRecurring: true,
+                done: false,
+                status: 'todo',
+                subtasks: []
+              }
+            ];
+          }
+          tempDate.setDate(tempDate.getDate() + 7);
+        }
+        toast.success('Task recurring rule propagated through this month');
+      }
+
+      return nextData;
+    });
   };
 
   const toggleSubtask = (date: string, taskId: string, subtaskId: string) => {
@@ -1219,6 +1380,43 @@ export default function PlannerClient() {
             >
               Today
             </button>
+            
+            {/* View Toggles */}
+            <div className="flex items-center bg-surface border border-border rounded-lg p-0.5 ml-2 shrink-0">
+              <button
+                onClick={() => setPlannerView('calendar')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                  plannerView === 'calendar'
+                    ? 'bg-foreground text-background shadow-xs'
+                    : 'text-muted hover:text-foreground'
+                }`}
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Calendar</span>
+              </button>
+              <button
+                onClick={() => setPlannerView('list')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                  plannerView === 'list'
+                    ? 'bg-foreground text-background shadow-xs'
+                    : 'text-muted hover:text-foreground'
+                }`}
+              >
+                <List className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">List</span>
+              </button>
+              <button
+                onClick={() => setPlannerView('kanban')}
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all ${
+                  plannerView === 'kanban'
+                    ? 'bg-foreground text-background shadow-xs'
+                    : 'text-muted hover:text-foreground'
+                }`}
+              >
+                <Columns className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Kanban</span>
+              </button>
+            </div>
           </div>
 
           {/* Progress */}
@@ -1236,83 +1434,375 @@ export default function PlannerClient() {
         </div>
       </div>
 
-      {/* ── Calendar Grid ── */}
-      <div className="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden border border-border shadow-card">
-        {/* Day headers */}
-        {DAY_LABELS.map((d) => (
-          <div key={d} className="bg-surface py-2.5 text-center">
-            <span className="text-[11px] font-bold text-muted uppercase tracking-wider">{d}</span>
-          </div>
-        ))}
+      {/* ── Calendar View ── */}
+      {plannerView === 'calendar' && (
+        <div className="grid grid-cols-7 gap-px bg-border rounded-xl overflow-hidden border border-border shadow-card animate-fade-in">
+          {/* Day headers */}
+          {DAY_LABELS.map((d) => (
+            <div key={d} className="bg-surface py-2.5 text-center">
+              <span className="text-[11px] font-bold text-muted uppercase tracking-wider">{d}</span>
+            </div>
+          ))}
 
-        {/* Day cells */}
-        {calendarDays.map(({ date, dayNum, isCurrentMonth }) => {
-          const tasks = planData[date] || [];
-          const isToday = date === today;
-          const done = tasks.filter(t => t.done).length;
-          const hasOverflow = tasks.length > 3;
+          {/* Day cells */}
+          {calendarDays.map(({ date, dayNum, isCurrentMonth }) => {
+            const tasks = planData[date] || [];
+            const isToday = date === today;
+            const done = tasks.filter(t => t.done).length;
+            const hasOverflow = tasks.length > 3;
 
-          return (
-            <div
-              key={date}
-              onClick={() => setSelectedDate(date)}
-              className={`bg-background min-h-[100px] sm:min-h-[120px] p-1.5 sm:p-2 flex flex-col cursor-pointer transition-all hover:bg-surface/50 group/cell relative ${
-                !isCurrentMonth ? 'opacity-40' : ''
-              }`}
-            >
-              {/* Date number */}
-              <div className="flex items-center justify-between mb-1">
-                <span className={`text-xs font-bold leading-none w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${
-                  isToday
-                    ? 'bg-foreground text-background'
-                    : 'text-foreground group-hover/cell:bg-surface'
-                }`}>
-                  {dayNum}
-                </span>
-                {tasks.length > 0 && (
-                  <span className="text-[9px] font-bold text-muted">
-                    {done}/{tasks.length}
+            return (
+              <div
+                key={date}
+                onClick={() => setSelectedDate(date)}
+                className={`bg-background min-h-[100px] sm:min-h-[120px] p-1.5 sm:p-2 flex flex-col cursor-pointer transition-all hover:bg-surface/50 group/cell relative ${
+                  !isCurrentMonth ? 'opacity-40' : ''
+                }`}
+              >
+                {/* Date number */}
+                <div className="flex items-center justify-between mb-1">
+                  <span className={`text-xs font-bold leading-none w-6 h-6 rounded-lg flex items-center justify-center transition-colors ${
+                    isToday
+                      ? 'bg-foreground text-background'
+                      : 'text-foreground group-hover/cell:bg-surface'
+                  }`}>
+                    {dayNum}
                   </span>
-                )}
-              </div>
-
-              {/* Task preview (compact chips) */}
-              <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
-                {tasks.slice(0, 3).map((task) => (
-                  <TaskItem key={task.id} task={task} compact onToggle={() => toggleTask(date, task.id)} onDelete={() => {}} onUpdate={() => {}} onToggleSubtask={() => {}} onAddSubtask={() => {}} onDeleteSubtask={() => {}} />
-                ))}
-                {hasOverflow && (
-                  <span className="text-[10px] text-muted font-medium flex items-center gap-0.5 mt-0.5">
-                    <MoreHorizontal className="w-3 h-3" />
-                    +{tasks.length - 3} more
-                  </span>
-                )}
-              </div>
-
-              {/* Quick add (visible on hover) */}
-              {isCurrentMonth && tasks.length === 0 && (
-                <div className="opacity-0 group-hover/cell:opacity-100 transition-opacity absolute inset-0 flex items-center justify-center">
-                  <div className="flex items-center gap-1 text-muted">
-                    <Plus className="w-3.5 h-3.5" />
-                  </div>
+                  {tasks.length > 0 && (
+                    <span className="text-[9px] font-bold text-muted">
+                      {done}/{tasks.length}
+                    </span>
+                  )}
                 </div>
-              )}
 
-              {/* Progress mini bar */}
-              {tasks.length > 0 && (
-                <div className="mt-auto pt-1">
-                  <div className="h-0.5 bg-surface rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-foreground transition-all duration-300 rounded-full"
-                      style={{ width: `${(done / tasks.length) * 100}%` }}
+                {/* Task preview (compact chips) */}
+                <div className="flex flex-col gap-0.5 flex-1 overflow-hidden">
+                  {tasks.slice(0, 3).map((task) => (
+                    <TaskItem
+                      key={task.id}
+                      task={task}
+                      compact
+                      onToggle={() => toggleTask(date, task.id)}
+                      onDelete={() => deleteTask(date, task.id)}
+                      onUpdate={(text) => updateTask(date, task.id, text)}
+                      onToggleSubtask={(subId) => toggleSubtask(date, task.id, subId)}
+                      onAddSubtask={() => addSubtask(date, task.id)}
+                      onDeleteSubtask={(subId) => deleteSubtask(date, task.id, subId)}
                     />
+                  ))}
+                  {hasOverflow && (
+                    <span className="text-[10px] text-muted font-medium flex items-center gap-0.5 mt-0.5">
+                      <MoreHorizontal className="w-3 h-3" />
+                      +{tasks.length - 3} more
+                    </span>
+                  )}
+                </div>
+
+                {/* Quick Add Input inside cell */}
+                {isCurrentMonth && (
+                  <div className="mt-1" onClick={(e) => e.stopPropagation()}>
+                    {quickAddDate === date ? (
+                      <input
+                        autoFocus
+                        type="text"
+                        value={quickAddText}
+                        onChange={(e) => setQuickAddText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            if (quickAddText.trim()) {
+                              addTask(date, quickAddText.trim());
+                              toast.success('Task added');
+                            }
+                            setQuickAddDate(null);
+                            setQuickAddText('');
+                          } else if (e.key === 'Escape') {
+                            setQuickAddDate(null);
+                            setQuickAddText('');
+                          }
+                        }}
+                        onBlur={() => {
+                          if (quickAddText.trim()) {
+                            addTask(date, quickAddText.trim());
+                            toast.success('Task added');
+                          }
+                          setQuickAddDate(null);
+                          setQuickAddText('');
+                        }}
+                        placeholder="New task..."
+                        className="w-full bg-surface border border-foreground/15 rounded-md px-1.5 py-0.5 text-[10px] text-foreground placeholder:text-muted/50 outline-none"
+                      />
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setQuickAddDate(date);
+                          setQuickAddText('');
+                        }}
+                        className="opacity-0 group-hover/cell:opacity-100 transition-opacity w-full py-0.5 rounded border border-dashed border-border-strong text-[9px] text-muted hover:text-foreground hover:bg-surface flex items-center justify-center gap-0.5"
+                      >
+                        <Plus className="w-2.5 h-2.5" /> Quick Add
+                      </button>
+                    )}
                   </div>
+                )}
+
+                {/* Progress mini bar */}
+                {tasks.length > 0 && !quickAddDate && (
+                  <div className="mt-auto pt-1">
+                    <div className="h-0.5 bg-surface rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-foreground transition-all duration-300 rounded-full"
+                        style={{ width: `${(done / tasks.length) * 100}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* ── List View ── */}
+      {plannerView === 'list' && (
+        <div className="space-y-4 animate-fade-in">
+          {calendarDays.filter(d => d.isCurrentMonth && (planData[d.date] || []).length > 0).length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 bg-card border border-border rounded-xl">
+              <CalendarDays className="w-12 h-12 text-muted/30 mb-3" />
+              <h3 className="text-sm font-bold text-foreground">No tasks scheduled</h3>
+              <p className="text-xs text-muted mt-1 mb-4">No tasks set for the month of {MONTH_NAMES[month - 1]}.</p>
+              <button
+                onClick={() => {
+                  const todayStr = todayISO();
+                  setSelectedDate(todayStr);
+                  addTask(todayStr);
+                }}
+                className="inline-flex items-center gap-1.5 px-3 py-2 bg-foreground text-background rounded-lg text-xs font-bold hover:opacity-90 transition-opacity"
+              >
+                <Plus className="w-3.5 h-3.5" /> Create Task for Today
+              </button>
+            </div>
+          ) : (
+            <div className="flex flex-col gap-4">
+              {calendarDays
+                .filter(d => d.isCurrentMonth && (planData[d.date] || []).length > 0)
+                .map((day) => {
+                  const tasks = planData[day.date] || [];
+                  const dateObj = new Date(day.date + 'T00:00:00');
+                  const dayName = dateObj.toLocaleDateString('en-US', { weekday: 'long' });
+                  const dayNum = dateObj.getDate();
+                  const monthName = dateObj.toLocaleDateString('en-US', { month: 'short' });
+                  const isToday = day.date === today;
+
+                  return (
+                    <div key={day.date} className="flex flex-col md:flex-row gap-4 bg-card border border-border rounded-xl p-4 shadow-sm hover:border-foreground/10 transition-colors">
+                      {/* Date details */}
+                      <div className="md:w-48 flex-shrink-0 flex items-center md:items-start gap-3 md:flex-col">
+                        <div className={`w-10 h-10 rounded-lg flex flex-col items-center justify-center ${
+                          isToday ? 'bg-foreground text-background' : 'bg-surface border border-border text-foreground'
+                        }`}>
+                          <span className="text-[9px] font-bold uppercase leading-none opacity-85">{dayName.slice(0, 3)}</span>
+                          <span className="text-base font-black leading-none">{dayNum}</span>
+                        </div>
+                        <div>
+                          <h4 className="text-xs font-bold text-foreground">{dayName}</h4>
+                          <p className="text-[10px] text-muted">{monthName} {dayNum}, {year}</p>
+                        </div>
+                        <button
+                          onClick={() => {
+                            setSelectedDate(day.date);
+                            addTask(day.date);
+                          }}
+                          className="ml-auto md:ml-0 inline-flex items-center gap-1 text-[10px] font-bold text-muted hover:text-foreground transition-colors"
+                        >
+                          <Plus className="w-3 h-3" /> Add Task
+                        </button>
+                      </div>
+
+                      {/* Tasks lists */}
+                      <div className="flex-1 space-y-2">
+                        <AnimatePresence>
+                          {tasks.map((task) => (
+                            <TaskItem
+                              key={task.id}
+                              task={task}
+                              onToggle={() => toggleTask(day.date, task.id)}
+                              onDelete={() => deleteTask(day.date, task.id)}
+                              onUpdate={(text) => updateTask(day.date, task.id, text)}
+                              onToggleSubtask={(subId) => toggleSubtask(day.date, task.id, subId)}
+                              onAddSubtask={() => addSubtask(day.date, task.id)}
+                              onDeleteSubtask={(subId) => deleteSubtask(day.date, task.id, subId)}
+                              onUpdateCategory={(cat) => updateTaskCategory(day.date, task.id, cat)}
+                              onToggleRecurring={() => toggleTaskRecurring(day.date, task.id)}
+                              onUpdateStatus={(stat) => updateTaskStatus(day.date, task.id, stat)}
+                            />
+                          ))}
+                        </AnimatePresence>
+                      </div>
+                    </div>
+                  );
+                })}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ── Kanban View ── */}
+      {plannerView === 'kanban' && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-start animate-fade-in">
+          {/* TO DO COLUMN */}
+          <div className="bg-surface/40 border border-border rounded-xl p-4 flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-red-400" />
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">To Do</h3>
+              </div>
+              <span className="text-[10px] font-bold bg-surface border border-border text-muted px-2 py-0.5 rounded-full">
+                {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => !t.done && (t.status === 'todo' || !t.status)).length, 0)}
+              </span>
+            </div>
+            
+            <div className="overflow-y-auto space-y-4 flex-1 max-h-[60vh] pr-1">
+              {calendarDays.filter(d => d.isCurrentMonth).map((day) => {
+                const tasks = (planData[day.date] || []).filter(t => !t.done && (t.status === 'todo' || !t.status));
+                if (tasks.length === 0) return null;
+                const dateObj = new Date(day.date + 'T00:00:00');
+                const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                return (
+                  <div key={day.date} className="space-y-2">
+                    <span className="text-[9px] font-bold bg-surface border border-border text-muted px-1.5 py-0.5 rounded-md">
+                      {dateLabel}
+                    </span>
+                    {tasks.map((task) => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onToggle={() => toggleTask(day.date, task.id)}
+                        onDelete={() => deleteTask(day.date, task.id)}
+                        onUpdate={(text) => updateTask(day.date, task.id, text)}
+                        onToggleSubtask={(subId) => toggleSubtask(day.date, task.id, subId)}
+                        onAddSubtask={() => addSubtask(day.date, task.id)}
+                        onDeleteSubtask={(subId) => deleteSubtask(day.date, task.id, subId)}
+                        onUpdateCategory={(cat) => updateTaskCategory(day.date, task.id, cat)}
+                        onToggleRecurring={() => toggleTaskRecurring(day.date, task.id)}
+                        onUpdateStatus={(stat) => updateTaskStatus(day.date, task.id, stat)}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+              
+              {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => !t.done && (t.status === 'todo' || !t.status)).length, 0) === 0 && (
+                <div className="text-center py-8 text-muted text-xs">
+                  No tasks to do
                 </div>
               )}
             </div>
-          );
-        })}
-      </div>
+          </div>
+
+          {/* IN PROGRESS COLUMN */}
+          <div className="bg-surface/40 border border-border rounded-xl p-4 flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">In Progress</h3>
+              </div>
+              <span className="text-[10px] font-bold bg-surface border border-border text-muted px-2 py-0.5 rounded-full">
+                {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => !t.done && t.status === 'in-progress').length, 0)}
+              </span>
+            </div>
+
+            <div className="overflow-y-auto space-y-4 flex-1 max-h-[60vh] pr-1">
+              {calendarDays.filter(d => d.isCurrentMonth).map((day) => {
+                const tasks = (planData[day.date] || []).filter(t => !t.done && t.status === 'in-progress');
+                if (tasks.length === 0) return null;
+                const dateObj = new Date(day.date + 'T00:00:00');
+                const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                return (
+                  <div key={day.date} className="space-y-2">
+                    <span className="text-[9px] font-bold bg-surface border border-border text-muted px-1.5 py-0.5 rounded-md">
+                      {dateLabel}
+                    </span>
+                    {tasks.map((task) => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onToggle={() => toggleTask(day.date, task.id)}
+                        onDelete={() => deleteTask(day.date, task.id)}
+                        onUpdate={(text) => updateTask(day.date, task.id, text)}
+                        onToggleSubtask={(subId) => toggleSubtask(day.date, task.id, subId)}
+                        onAddSubtask={() => addSubtask(day.date, task.id)}
+                        onDeleteSubtask={(subId) => deleteSubtask(day.date, task.id, subId)}
+                        onUpdateCategory={(cat) => updateTaskCategory(day.date, task.id, cat)}
+                        onToggleRecurring={() => toggleTaskRecurring(day.date, task.id)}
+                        onUpdateStatus={(stat) => updateTaskStatus(day.date, task.id, stat)}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+
+              {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => !t.done && t.status === 'in-progress').length, 0) === 0 && (
+                <div className="text-center py-8 text-muted text-xs">
+                  No tasks in progress
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* DONE COLUMN */}
+          <div className="bg-surface/40 border border-border rounded-xl p-4 flex flex-col max-h-[80vh]">
+            <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Completed</h3>
+              </div>
+              <span className="text-[10px] font-bold bg-surface border border-border text-muted px-2 py-0.5 rounded-full">
+                {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => t.done || t.status === 'done').length, 0)}
+              </span>
+            </div>
+
+            <div className="overflow-y-auto space-y-4 flex-1 max-h-[60vh] pr-1">
+              {calendarDays.filter(d => d.isCurrentMonth).map((day) => {
+                const tasks = (planData[day.date] || []).filter(t => t.done || t.status === 'done');
+                if (tasks.length === 0) return null;
+                const dateObj = new Date(day.date + 'T00:00:00');
+                const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+
+                return (
+                  <div key={day.date} className="space-y-2">
+                    <span className="text-[9px] font-bold bg-surface border border-border text-muted px-1.5 py-0.5 rounded-md">
+                      {dateLabel}
+                    </span>
+                    {tasks.map((task) => (
+                      <TaskItem
+                        key={task.id}
+                        task={task}
+                        onToggle={() => toggleTask(day.date, task.id)}
+                        onDelete={() => deleteTask(day.date, task.id)}
+                        onUpdate={(text) => updateTask(day.date, task.id, text)}
+                        onToggleSubtask={(subId) => toggleSubtask(day.date, task.id, subId)}
+                        onAddSubtask={() => addSubtask(day.date, task.id)}
+                        onDeleteSubtask={(subId) => deleteSubtask(day.date, task.id, subId)}
+                        onUpdateCategory={(cat) => updateTaskCategory(day.date, task.id, cat)}
+                        onToggleRecurring={() => toggleTaskRecurring(day.date, task.id)}
+                        onUpdateStatus={(stat) => updateTaskStatus(day.date, task.id, stat)}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+
+              {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => t.done || t.status === 'done').length, 0) === 0 && (
+                <div className="text-center py-8 text-muted text-xs">
+                  No completed tasks
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ── Day Detail Panel ── */}
       <AnimatePresence>
@@ -1328,6 +1818,9 @@ export default function PlannerClient() {
             onToggleSubtask={(taskId, subId) => toggleSubtask(selectedDate, taskId, subId)}
             onAddSubtask={(taskId) => addSubtask(selectedDate, taskId)}
             onDeleteSubtask={(taskId, subId) => deleteSubtask(selectedDate, taskId, subId)}
+            onUpdateTaskCategory={(taskId, cat) => updateTaskCategory(selectedDate, taskId, cat)}
+            onToggleTaskRecurring={(taskId) => toggleTaskRecurring(selectedDate, taskId)}
+            onUpdateTaskStatus={(taskId, stat) => updateTaskStatus(selectedDate, taskId, stat)}
           />
         )}
       </AnimatePresence>

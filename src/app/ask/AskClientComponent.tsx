@@ -21,7 +21,8 @@ import {
   ChevronLeft, 
   ChevronRight,
   BookOpen,
-  Plus
+  Plus,
+  Mic
 } from 'lucide-react';
 import { useAcademicStore } from '@/store/academicStore';
 import { createClient } from '@/lib/supabase';
@@ -205,6 +206,13 @@ function AddToSrsButton({ cards, defaultName }: { cards: Flashcard[]; defaultNam
   );
 }
 
+export interface ChatSession {
+  id: string;
+  title: string;
+  messages: any[];
+  createdAt: string;
+}
+
 export default function AskClient() {
   const { branch, semester } = useAcademicStore();
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -212,6 +220,19 @@ export default function AskClient() {
 
   const supabase = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
+
+  // Grounded Document Chat States
+  const [resources, setResources] = useState<any[]>([]);
+  const [selectedResourceId, setSelectedResourceId] = useState<string>('all');
+
+  // Speech Recognition States
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef<any>(null);
+
+  // Chat History / Sessions States
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Chat refs & state
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -248,10 +269,65 @@ export default function AskClient() {
       });
   }, [branch, semester]);
 
+  // Fetch resources for grounded chat selector
+  useEffect(() => {
+    fetch(`/api/resources/list?branch=${branch}&semester=${semester}`)
+      .then(res => res.json())
+      .then(data => {
+        if (data.resources) setResources(data.resources);
+      })
+      .catch(err => console.error('Error loading resources for Ask AI:', err));
+  }, [branch, semester]);
+
+  // Initialize Speech Recognition
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+      if (SpeechRecognition) {
+        const rec = new SpeechRecognition();
+        rec.continuous = false;
+        rec.interimResults = false;
+        rec.lang = 'en-US';
+
+        rec.onstart = () => setIsListening(true);
+        rec.onend = () => setIsListening(false);
+        rec.onresult = (event: any) => {
+          const transcript = event.results[0][0].transcript;
+          if (transcript) {
+            setInput(prev => (prev ? prev + ' ' : '') + transcript);
+            toast.success("Voice transcribed successfully!");
+          }
+        };
+        rec.onerror = (e: any) => {
+          console.error("Speech recognition error", e);
+          setIsListening(false);
+        };
+        recognitionRef.current = rec;
+      }
+    }
+  }, []);
+
+  const toggleListening = () => {
+    if (!recognitionRef.current) {
+      toast.error("Web Speech API is not supported in this browser.");
+      return;
+    }
+    if (isListening) {
+      recognitionRef.current.stop();
+    } else {
+      recognitionRef.current.start();
+    }
+  };
+
   const chatHelpers = (useChat as any)({
     api: '/api/chat',
     body: {
-      context: { branch, semester, subjects },
+      context: { 
+        branch, 
+        semester, 
+        subjects, 
+        resourceId: selectedResourceId !== 'all' ? selectedResourceId : undefined 
+      },
     },
   });
   const { 
@@ -263,6 +339,127 @@ export default function AskClient() {
 
   const [input, setInput] = useState('');
   const isLoading = status === 'streaming' || status === 'loading';
+
+  // Load chat sessions on mount
+  useEffect(() => {
+    const saved = localStorage.getItem('utility_chat_sessions');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        setSessions(parsed);
+        if (parsed.length > 0) {
+          setActiveSessionId(parsed[0].id);
+          setMessages(parsed[0].messages);
+        } else {
+          const initialId = Math.random().toString(36).slice(2, 11);
+          const initialSession = {
+            id: initialId,
+            title: 'New Chat',
+            messages: [],
+            createdAt: new Date().toISOString()
+          };
+          setSessions([initialSession]);
+          setActiveSessionId(initialId);
+        }
+      } catch (e) {
+        console.error('Failed to parse chat sessions', e);
+      }
+    } else {
+      const initialId = Math.random().toString(36).slice(2, 11);
+      const initialSession = {
+        id: initialId,
+        title: 'New Chat',
+        messages: [],
+        createdAt: new Date().toISOString()
+      };
+      setSessions([initialSession]);
+      setActiveSessionId(initialId);
+    }
+  }, []);
+
+  // Save sessions helper
+  const saveSessions = (updated: ChatSession[]) => {
+    setSessions(updated);
+    localStorage.setItem('utility_chat_sessions', JSON.stringify(updated));
+  };
+
+  // Sync current messages back to active session
+  useEffect(() => {
+    if (!activeSessionId) return;
+    const session = sessions.find(s => s.id === activeSessionId);
+    if (!session) return;
+    
+    if (JSON.stringify(session.messages) !== JSON.stringify(messages)) {
+      const updated = sessions.map(s => {
+        if (s.id === activeSessionId) {
+          let title = s.title;
+          if (s.title === 'New Chat' && messages.length > 0) {
+            const firstUserMsg = messages.find((m: any) => m.role === 'user');
+            if (firstUserMsg) {
+              const content = firstUserMsg.content || '';
+              title = content.slice(0, 30) + (content.length > 30 ? '...' : '');
+            }
+          }
+          return { ...s, messages, title };
+        }
+        return s;
+      });
+      saveSessions(updated);
+    }
+  }, [messages, activeSessionId, sessions]);
+
+  const handleNewChat = () => {
+    const newId = Math.random().toString(36).slice(2, 11);
+    const newSession: ChatSession = {
+      id: newId,
+      title: 'New Chat',
+      messages: [],
+      createdAt: new Date().toISOString()
+    };
+    saveSessions([newSession, ...sessions]);
+    setActiveSessionId(newId);
+    setMessages([]);
+  };
+
+  const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = sessions.filter(s => s.id !== sessionId);
+    saveSessions(updated);
+    if (activeSessionId === sessionId) {
+      if (updated.length > 0) {
+        setActiveSessionId(updated[0].id);
+        setMessages(updated[0].messages);
+      } else {
+        const newId = Math.random().toString(36).slice(2, 11);
+        const newSession = {
+          id: newId,
+          title: 'New Chat',
+          messages: [],
+          createdAt: new Date().toISOString()
+        };
+        saveSessions([newSession]);
+        setActiveSessionId(newId);
+        setMessages([]);
+      }
+    }
+  };
+
+  const handleRenameSession = (sessionId: string, currentTitle: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const newTitle = prompt('Rename Chat:', currentTitle);
+    if (newTitle && newTitle.trim()) {
+      const updated = sessions.map(s => s.id === sessionId ? { ...s, title: newTitle.trim() } : s);
+      saveSessions(updated);
+    }
+  };
+
+  const handleSwitchSession = (sessionId: string) => {
+    const session = sessions.find(s => s.id === sessionId);
+    if (session) {
+      setActiveSessionId(sessionId);
+      setMessages(session.messages);
+    }
+  };
 
   useEffect(() => {
     const tab = searchParams.get('tab');
@@ -497,139 +694,247 @@ export default function AskClient() {
 
       {/* Tab 1: Chat Assistant */}
       {activeTab === 'chat' && (
-        <>
-          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 relative">
-            {messages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                <div className="w-16 h-16 rounded-2xl bg-surface border border-border flex items-center justify-center mb-6 shadow-sm">
-                  <Brain className="w-8 h-8 text-foreground" />
-                </div>
-                <h1 className="text-2xl font-bold text-foreground mb-10 tracking-tight">Academic AI Assistant</h1>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
-                  {randomPrompts.map((prompt) => (
-                    <button
-                      key={prompt}
-                      onClick={() => handleSuggestion(prompt)}
-                      className="text-left px-3.5 py-2.5 rounded-xl border border-border bg-card hover:bg-surface text-sm text-muted hover:text-foreground transition-colors leading-snug shadow-xs"
-                    >
-                      {prompt}
-                    </button>
-                  ))}
-                </div>
+        <div className="flex-1 flex overflow-hidden w-full relative">
+          
+          {/* Chat Sessions Collapsible Sidebar */}
+          {sidebarOpen && (
+            <div className="w-64 border-r border-border bg-surface flex flex-col shrink-0">
+              <div className="p-3.5 border-b border-border flex items-center justify-between">
+                <span className="text-[10px] uppercase font-bold text-muted tracking-wider">Chat History</span>
+                <button
+                  onClick={handleNewChat}
+                  className="p-1 rounded-lg border border-border bg-card hover:bg-surface-hover text-muted hover:text-foreground transition-all flex items-center justify-center"
+                  title="New Chat"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                </button>
               </div>
-            ) : (
-              <div className="space-y-6">
-                {messages.map((m: any) => (
-                  <div
-                    key={m.id}
-                    className={`flex gap-3 group ${m.role === 'user' ? 'justify-end' : ''}`}
-                  >
-                    {m.role === 'assistant' && (
-                      <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-                        <Bot className="w-3.5 h-3.5 text-foreground" />
-                      </div>
-                    )}
-
+              <div className="flex-1 overflow-y-auto p-2 space-y-1">
+                {sessions.map(s => {
+                  const isActive = s.id === activeSessionId;
+                  return (
                     <div
-                      className={`max-w-[85%] ${
-                        m.role === 'user'
-                          ? 'bg-foreground text-background rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm'
-                          : 'flex-1 min-w-0'
+                      key={s.id}
+                      onClick={() => handleSwitchSession(s.id)}
+                      className={`group/session w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                        isActive 
+                          ? 'bg-foreground text-background font-semibold shadow-xs' 
+                          : 'text-muted hover:text-foreground hover:bg-surface-hover'
                       }`}
                     >
-                      {m.role === 'user' ? (
-                        <p className="text-sm whitespace-pre-wrap">{getMessageContent(m)}</p>
-                      ) : (
-                        <div className="relative">
-                          <MessageContent content={getMessageContent(m)} />
-                          <div className="mt-2">
-                            <CopyButton text={getMessageContent(m)} />
+                      <span className="truncate max-w-[130px]">{s.title}</span>
+                      <div className="flex items-center gap-1.5 opacity-0 group-hover/session:opacity-100 transition-opacity shrink-0">
+                        <button
+                          onClick={(e) => handleRenameSession(s.id, s.title, e)}
+                          className={`p-1 rounded-md hover:bg-surface-hover transition-colors ${isActive ? 'text-background hover:text-foreground' : 'text-muted hover:text-foreground'}`}
+                          title="Rename Chat"
+                        >
+                          <Plus className="w-3 h-3 rotate-45" />
+                        </button>
+                        <button
+                          onClick={(e) => handleDeleteSession(s.id, e)}
+                          className={`p-1 rounded-md hover:bg-surface-hover transition-colors ${isActive ? 'text-background hover:text-red-500' : 'text-muted hover:text-red-500'}`}
+                          title="Delete Chat"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Main Chat Area */}
+          <div className="flex-1 flex flex-col overflow-hidden bg-background">
+            
+            {/* Top Toolbar: Sidebar toggle & grounded document selector */}
+            <div className="flex items-center justify-between border-b border-border px-4 py-2.5 bg-surface/30 shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-1.5 rounded-lg border border-border bg-card hover:bg-surface text-muted hover:text-foreground transition-all flex items-center justify-center"
+                  title={sidebarOpen ? "Hide chat history" : "Show chat history"}
+                >
+                  <ChevronLeft className={`w-3.5 h-3.5 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} />
+                </button>
+                
+                <div className="h-4 w-px bg-border mx-1" />
+
+                {/* Grounded Document Selector */}
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase font-bold text-muted select-none">AI Focus:</span>
+                  <select
+                    value={selectedResourceId}
+                    onChange={(e) => setSelectedResourceId(e.target.value)}
+                    className="text-xs font-semibold bg-card border border-border rounded-lg px-2 py-1 text-foreground outline-none cursor-pointer max-w-[240px] truncate hover:border-border-strong transition-colors"
+                  >
+                    <option value="all">🌐 Entire Library (RAG Search)</option>
+                    {resources.map((res) => (
+                      <option key={res.id} value={res.id}>
+                        📄 {res.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {selectedResourceId !== 'all' && (
+                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                  Grounded Chat Mode
+                </span>
+              )}
+            </div>
+
+            <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 relative">
+              {messages.length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                  <div className="w-16 h-16 rounded-2xl bg-surface border border-border flex items-center justify-center mb-6 shadow-sm">
+                    <Brain className="w-8 h-8 text-foreground" />
+                  </div>
+                  <h1 className="text-2xl font-bold text-foreground mb-10 tracking-tight">Academic AI Assistant</h1>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 w-full max-w-lg">
+                    {randomPrompts.map((prompt) => (
+                      <button
+                        key={prompt}
+                        onClick={() => handleSuggestion(prompt)}
+                        className="text-left px-3.5 py-2.5 rounded-xl border border-border bg-card hover:bg-surface text-sm text-muted hover:text-foreground transition-colors leading-snug shadow-xs"
+                      >
+                        {prompt}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {messages.map((m: any) => (
+                    <div
+                      key={m.id}
+                      className={`flex gap-3 group ${m.role === 'user' ? 'justify-end' : ''}`}
+                    >
+                      {m.role === 'assistant' && (
+                        <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                          <Bot className="w-3.5 h-3.5 text-foreground" />
+                        </div>
+                      )}
+
+                      <div
+                        className={`max-w-[85%] ${
+                          m.role === 'user'
+                            ? 'bg-foreground text-background rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm'
+                            : 'flex-1 min-w-0'
+                        }`}
+                      >
+                        {m.role === 'user' ? (
+                          <p className="text-sm whitespace-pre-wrap">{getMessageContent(m)}</p>
+                        ) : (
+                          <div className="relative">
+                            <MessageContent content={getMessageContent(m)} />
+                            <div className="mt-2">
+                              <CopyButton text={getMessageContent(m)} />
+                            </div>
                           </div>
+                        )}
+                      </div>
+
+                      {m.role === 'user' && (
+                        <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
+                          <User className="w-3.5 h-3.5 text-background" />
                         </div>
                       )}
                     </div>
+                  ))}
 
-                    {m.role === 'user' && (
-                      <div className="w-7 h-7 rounded-lg bg-foreground flex items-center justify-center shrink-0 mt-0.5 shadow-xs">
-                        <User className="w-3.5 h-3.5 text-background" />
+                  {isLoading && messages[messages.length - 1]?.role === 'user' && (
+                    <div className="flex gap-3">
+                      <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center shrink-0 shadow-xs">
+                        <Bot className="w-3.5 h-3.5 text-foreground" />
                       </div>
-                    )}
-                  </div>
-                ))}
-
-                {isLoading && messages[messages.length - 1]?.role === 'user' && (
-                  <div className="flex gap-3">
-                    <div className="w-7 h-7 rounded-lg bg-surface border border-border flex items-center justify-center shrink-0 shadow-xs">
-                      <Bot className="w-3.5 h-3.5 text-foreground" />
+                      <div className="flex items-center gap-1.5 py-2">
+                        <div className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce [animation-delay:0ms]" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce [animation-delay:150ms]" />
+                        <div className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce [animation-delay:300ms]" />
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 py-2">
-                      <div className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce [animation-delay:0ms]" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce [animation-delay:150ms]" />
-                      <div className="w-1.5 h-1.5 rounded-full bg-muted animate-bounce [animation-delay:300ms]" />
-                    </div>
-                  </div>
-                )}
-
-                <div ref={messagesEndRef} />
-              </div>
-            )}
-
-            {showScrollDown && (
-              <button
-                onClick={scrollToBottom}
-                className="fixed bottom-24 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-card border border-border shadow-popover flex items-center justify-center text-muted hover:text-foreground transition-colors z-10"
-              >
-                <ArrowDown className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-
-          <div className="border-t border-border bg-background px-4 sm:px-6 py-4 shrink-0">
-            {messages.length > 0 && (
-              <div className="flex items-center mb-2">
-                <button
-                  onClick={() => setMessages([])}
-                  className="inline-flex items-center gap-1.5 text-[11px] text-muted hover:text-foreground transition-colors"
-                >
-                  <Trash2 className="w-3 h-3" />
-                  Clear chat
-                </button>
-              </div>
-            )}
-
-            <form id="chat-form" onSubmit={handleSubmit} className="relative group">
-              <div className="flex items-end gap-2 bg-surface border border-border rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all shadow-sm group-hover:border-border-strong">
-                <textarea
-                  ref={inputRef}
-                  value={input || ''}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  onInput={handleTextareaInput}
-                  placeholder="Type your question..."
-                  rows={1}
-                  className="flex-1 bg-transparent border-0 rounded-xl pl-3 pr-2 py-2.5 text-sm outline-none text-foreground placeholder:text-muted resize-none overflow-hidden"
-                  disabled={isLoading}
-                />
-                <button
-                  type="submit"
-                  disabled={isLoading || !(input || '').trim()}
-                  className="flex-shrink-0 w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition-all shadow-sm mb-0.5 mr-0.5"
-                >
-                  {isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : (
-                    <Send className="w-4 h-4" />
                   )}
-                </button>
-              </div>
-            </form>
 
-            <p className="text-[10px] text-muted mt-2 text-center">
-              Powered by Groq · Llama 3.3 70B — Responses may not always be accurate
-            </p>
+                  <div ref={messagesEndRef} />
+                </div>
+              )}
+
+              {showScrollDown && (
+                <button
+                  onClick={scrollToBottom}
+                  className="fixed bottom-24 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full bg-card border border-border shadow-popover flex items-center justify-center text-muted hover:text-foreground transition-colors z-10"
+                >
+                  <ArrowDown className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
+            <div className="border-t border-border bg-background px-4 sm:px-6 py-4 shrink-0">
+              {messages.length > 0 && (
+                <div className="flex items-center mb-2">
+                  <button
+                    onClick={() => setMessages([])}
+                    className="inline-flex items-center gap-1.5 text-[11px] text-muted hover:text-foreground transition-colors"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Clear chat
+                  </button>
+                </div>
+              )}
+
+              <form id="chat-form" onSubmit={handleSubmit} className="relative group">
+                <div className="flex items-end gap-2 bg-surface border border-border rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all shadow-sm group-hover:border-border-strong">
+                  <textarea
+                    ref={inputRef}
+                    value={input || ''}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    onInput={handleTextareaInput}
+                    placeholder={selectedResourceId !== 'all' ? "Ask about this document..." : "Type your question..."}
+                    rows={1}
+                    className="flex-1 bg-transparent border-0 rounded-xl pl-3 pr-2 py-2.5 text-sm outline-none text-foreground placeholder:text-muted resize-none overflow-hidden font-medium"
+                    disabled={isLoading}
+                  />
+                  
+                  {/* Speech to Text Microphone button */}
+                  <button
+                    type="button"
+                    onClick={toggleListening}
+                    className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                      isListening
+                        ? 'bg-red-500 text-white animate-pulse'
+                        : 'bg-card text-muted hover:text-foreground border border-border hover:bg-surface'
+                    }`}
+                    title={isListening ? "Listening... click to stop" : "Start Voice Query"}
+                  >
+                    <Mic className="w-4 h-4" />
+                  </button>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || !(input || '').trim()}
+                    className="flex-shrink-0 w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition-all shadow-sm mb-0.5 mr-0.5"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                  </button>
+                </div>
+              </form>
+
+              <p className="text-[10px] text-muted mt-2 text-center">
+                Powered by Groq · Llama 3.3 70B — Responses may not always be accurate
+              </p>
+            </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Tab 2: Flashcards */}

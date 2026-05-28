@@ -19,6 +19,7 @@ export interface RAGSearchResult {
 export async function performRAGSearch(
   query: string,
   limit: number = 3,
+  resourceId?: string,
 ): Promise<RAGSearchResult[]> {
   try {
     const supabase = createAdminClient();
@@ -32,11 +33,14 @@ export async function performRAGSearch(
     );
 
     let finalResults = searchResults;
+    if (resourceId && finalResults) {
+      finalResults = finalResults.filter((r: any) => r.resource_id === resourceId);
+    }
 
     // Robust Fallback: Use standard ILIKE/textSearch if RPC fails or returns nothing
     // To save egress, this fallback searches 'resources.title' rather than doing unindexed scans on 'resource_content.content'
     if (rpcError || !finalResults || finalResults.length === 0) {
-      const { data: fallbackData } = await supabase
+      let queryBuilder = supabase
         .from("resources")
         .select(
           `
@@ -50,8 +54,13 @@ export async function performRAGSearch(
           )
         `,
         )
-        .ilike("title", `%${query}%`)
-        .limit(limit);
+        .ilike("title", `%${query}%`);
+
+      if (resourceId) {
+        queryBuilder = queryBuilder.eq("id", resourceId);
+      }
+
+      const { data: fallbackData } = await queryBuilder.limit(limit);
 
       if (fallbackData) {
         finalResults = (fallbackData as any[]).map((r) => ({

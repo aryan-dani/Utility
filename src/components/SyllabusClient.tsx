@@ -24,11 +24,14 @@ import {
   CheckCircle2, 
   ChevronRight,
   GraduationCap,
-  Compass
+  Compass,
+  Calendar
 } from 'lucide-react';
 import { logActivity } from '@/components/ActivityHeatmap';
 import { isSubjectMatch } from '@/lib/subjectMatcher';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createClient } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 interface SyllabusClientProps {
   subjects: SubjectItem[];
@@ -175,9 +178,16 @@ function getModulesForSubject(name: string) {
 export default function SyllabusClient({ subjects, branch, semester, syllabusUrl, initialResources }: SyllabusClientProps) {
   const { searchQuery } = useAcademicStore();
   const [expandedSubject, setExpandedSubject] = useState<string | null>(null);
-  const [progressMap, setProgressMap] = useState<Record<string, boolean>>({});
+  const [progressMap, setProgressMap] = useState<Record<string, boolean | string>>({});
   const [mounted, setMounted] = useState(false);
   const resources = initialResources as ResourceItemExt[];
+
+  // Scheduler Modal State
+  const [plannerModalOpen, setPlannerModalOpen] = useState(false);
+  const [schedulingModule, setSchedulingModule] = useState<{ subjectName: string; moduleTitle: string } | null>(null);
+  const [scheduleDate, setScheduleDate] = useState(new Date().toISOString().split('T')[0]);
+  const [scheduleCategory, setScheduleCategory] = useState('Revision');
+  const [scheduleTitle, setScheduleTitle] = useState('');
 
   useEffect(() => {
     try {
@@ -232,19 +242,98 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
       .slice(0, 3);
   };
 
-  const toggleModule = (subjectId: string, moduleIdx: number) => {
+  const updateModuleStatus = (subjectId: string, moduleIdx: number, status: 'not-started' | 'in-progress' | 'mastered') => {
     const key = `${subjectId}_${moduleIdx}`;
     setProgressMap((prev) => {
-      const nextState = !prev[key];
-      const updated = { ...prev, [key]: nextState };
+      const updated = { ...prev, [key]: status };
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
       } catch {}
-      if (nextState) {
+      if (status === 'mastered') {
         logActivity('syllabus_module_completed', 1);
       }
       return updated;
     });
+  };
+
+  const handleScheduleTask = async () => {
+    if (!schedulingModule) return;
+
+    const dateParts = scheduleDate.split('-');
+    const year = parseInt(dateParts[0]);
+    const month = parseInt(dateParts[1]);
+
+    const taskText = scheduleTitle || `Study: ${schedulingModule.subjectName} - ${schedulingModule.moduleTitle}`;
+    
+    const newTask = {
+      id: Math.random().toString(36).slice(2, 11),
+      text: taskText,
+      done: false,
+      subtasks: [],
+      category: scheduleCategory
+    };
+
+    const key = `utility_planner_v2_${year}_${month}`;
+    let planData: Record<string, any[]> = {};
+    let planMeta = { title: 'Study Plan', month, year, is_public: false };
+
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        planData = parsed.data || {};
+        planMeta = parsed.meta || planMeta;
+      }
+    } catch (e) {
+      console.error(e);
+    }
+
+    if (!planData[scheduleDate]) {
+      planData[scheduleDate] = [];
+    }
+    planData[scheduleDate].push(newTask);
+
+    localStorage.setItem(key, JSON.stringify({ data: planData, meta: planMeta }));
+    toast.success(`Scheduled task on ${scheduleDate}!`);
+
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      try {
+        const { data: existing, error: fetchErr } = await supabase
+          .from('planner_plans')
+          .select('id')
+          .eq('owner_id', user.id)
+          .eq('month', month)
+          .eq('year', year)
+          .single();
+
+        if (existing) {
+          await supabase
+            .from('planner_plans')
+            .update({ data: planData, updated_at: new Date().toISOString() })
+            .eq('id', existing.id);
+        } else {
+          await supabase
+            .from('planner_plans')
+            .insert({
+              owner_id: user.id,
+              owner_email: user.email,
+              title: planMeta.title,
+              month,
+              year,
+              data: planData,
+              is_public: false
+            });
+        }
+        toast.success('Synced to Cloud Planner');
+      } catch (err) {
+        console.error('Supabase sync error:', err);
+      }
+    }
+
+    setPlannerModalOpen(false);
+    setSchedulingModule(null);
   };
 
   // Merge DB subjects with official syllabus subjects if AIDS Sem 4
@@ -293,13 +382,18 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
   const completedModules = useMemo(() => {
     if (filtered.length === 0) return 0;
     return filtered.reduce((acc, sub) => {
-      const subDone = sub.modules.filter((_, idx) => progressMap[`${sub.id}_${idx}`]).length;
+      const subDone = sub.modules.reduce((sum, _, idx) => {
+        const val = progressMap[`${sub.id}_${idx}`];
+        if (val === 'mastered' || val === true) return sum + 1;
+        if (val === 'in-progress') return sum + 0.5;
+        return sum;
+      }, 0);
       return acc + subDone;
     }, 0);
   }, [filtered, progressMap]);
 
   const overallPercentage = totalModules > 0 ? Math.round((completedModules / totalModules) * 100) : 0;
-  const estimatedHoursLeft = (totalModules - completedModules) * 3;
+  const estimatedHoursLeft = Math.max(0, Math.round((totalModules - completedModules) * 3));
 
   const getSubjectIcon = (name: string) => {
     const n = name.toLowerCase();
@@ -398,7 +492,14 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
         <AnimatePresence mode="popLayout">
           {filtered.map((subject, i) => {
             const isExpanded = expandedSubject === subject.id;
-            const subCompleted = subject.modules.filter((_, idx) => progressMap[`${subject.id}_${idx}`]).length;
+            const subCompleted = subject.modules.reduce((sum, _, idx) => {
+              const val = progressMap[`${subject.id}_${idx}`];
+              if (val === 'mastered' || val === true) return sum + 1;
+              if (val === 'in-progress') return sum + 0.5;
+              return sum;
+            }, 0);
+            const masteredCount = subject.modules.filter((_, idx) => progressMap[`${subject.id}_${idx}`] === 'mastered' || progressMap[`${subject.id}_${idx}`] === true).length;
+            const inProgressCount = subject.modules.filter((_, idx) => progressMap[`${subject.id}_${idx}`] === 'in-progress').length;
             const subPercentage = subject.modules.length > 0 ? Math.round((subCompleted / subject.modules.length) * 100) : 0;
             const SubjectIcon = getSubjectIcon(subject.name);
 
@@ -453,7 +554,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                     <div className="flex items-center gap-3">
                       <div className="text-right">
                         <span className="text-sm font-extrabold text-foreground block leading-tight">{subPercentage}%</span>
-                        <span className="text-[10px] text-muted-foreground font-bold">{subCompleted} / {subject.modules.length} Completed</span>
+                        <span className="text-[10px] text-muted-foreground font-bold">{masteredCount} Mastered {inProgressCount > 0 && `· ${inProgressCount} IP`}</span>
                       </div>
                       
                       {/* Apple Watch Style SVG Progress Ring */}
@@ -508,29 +609,47 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
 
                         <div className="space-y-3.5">
                           {subject.modules.map((mod, modIdx) => {
-                            const isDone = progressMap[`${subject.id}_${modIdx}`];
+                            const currentVal = progressMap[`${subject.id}_${modIdx}`];
+                            const isDone = currentVal === 'mastered' || currentVal === true;
+                            const isInProgress = currentVal === 'in-progress';
                             const matches = getMatchingResources(mod.title, mod.desc, subject.name);
 
                             return (
                               <div
                                 key={modIdx}
-                                onClick={() => toggleModule(subject.id, modIdx)}
-                                className={`flex flex-col p-5 rounded-2xl border transition-all cursor-pointer relative overflow-hidden group ${
+                                className={`flex flex-col p-5 rounded-2xl border transition-all relative overflow-hidden group ${
                                   isDone
-                                    ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/25 hover:border-emerald-500/40 text-emerald-600 dark:text-emerald-400'
+                                    ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.03)]'
+                                    : isInProgress
+                                    ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/25 text-amber-600 dark:text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.03)]'
                                     : 'bg-card border-border/80 hover:border-border-strong hover:scale-[1.005] hover:shadow-xs text-foreground'
                                 }`}
                               >
                                 <div className="flex items-start gap-4 z-10">
-                                  <div
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      const next = isDone
+                                        ? 'not-started'
+                                        : isInProgress
+                                        ? 'mastered'
+                                        : 'in-progress';
+                                      updateModuleStatus(subject.id, modIdx, next);
+                                    }}
                                     className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 transition-all ${
                                       isDone 
                                         ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' 
-                                        : 'bg-surface border-border group-hover:border-border-strong'
+                                        : isInProgress
+                                        ? 'bg-amber-500 border-amber-500 text-white shadow-xs'
+                                        : 'bg-surface border-border hover:border-border-strong text-transparent'
                                     }`}
                                   >
-                                    {isDone && <Check className="w-4 h-4 stroke-[3]" />}
-                                  </div>
+                                    {isDone ? (
+                                      <Check className="w-4 h-4 stroke-[3]" />
+                                    ) : isInProgress ? (
+                                      <span className="text-[10px] font-black leading-none">-</span>
+                                    ) : null}
+                                  </button>
 
                                   <div className="min-w-0 flex-1 space-y-1">
                                     <h5 className={`text-base font-bold leading-snug tracking-tight ${isDone ? 'line-through opacity-75' : ''}`}>
@@ -564,32 +683,69 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                                   </div>
                                 )}
 
-                                {/* Premium quick launch actions */}
+                                {/* Status Selector Pills & Actions */}
                                 <div 
-                                  className="mt-4 pt-3.5 border-t border-border/40 flex flex-wrap gap-2 pl-10 z-10" 
+                                  className="mt-4 pt-3.5 border-t border-border/40 flex flex-wrap items-center justify-between gap-3 pl-10 z-10" 
                                   onClick={(e) => e.stopPropagation()}
                                 >
-                                  <a
-                                    href={`/ask?tab=chat&prompt=${encodeURIComponent(`Create a detailed study guide explaining this syllabus topic: "${subject.name} - ${mod.title}". Focus on: ${mod.desc}`)}`}
-                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs hover:scale-[1.01]"
-                                  >
-                                    <Brain className="w-3.5 h-3.5 text-primary shrink-0" />
-                                    Study Guide
-                                  </a>
-                                  <a
-                                    href={`/ask?tab=flashcards&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}`}
-                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs hover:scale-[1.01]"
-                                  >
-                                    <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
-                                    Flashcards
-                                  </a>
-                                  <a
-                                    href={`/ask?tab=quiz&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}`}
-                                    className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs hover:scale-[1.01]"
-                                  >
-                                    <HelpCircle className="w-3.5 h-3.5 text-primary shrink-0" />
-                                    Take Quiz
-                                  </a>
+                                  <div className="flex items-center gap-1.5 bg-surface/50 border border-border/40 p-0.5 rounded-xl">
+                                    {(['not-started', 'in-progress', 'mastered'] as const).map((s) => {
+                                      const active = s === 'mastered' ? isDone : (s === 'in-progress' ? isInProgress : (!isDone && !isInProgress));
+                                      return (
+                                        <button
+                                          key={s}
+                                          onClick={() => updateModuleStatus(subject.id, modIdx, s)}
+                                          className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all ${
+                                            active
+                                              ? s === 'mastered'
+                                                ? 'bg-emerald-600 text-white shadow-xs'
+                                                : s === 'in-progress'
+                                                ? 'bg-amber-500 text-white shadow-xs'
+                                                : 'bg-muted text-background'
+                                              : 'text-muted hover:text-foreground'
+                                          }`}
+                                        >
+                                          {s === 'not-started' ? 'To Do' : s === 'in-progress' ? 'In Progress' : 'Mastered'}
+                                        </button>
+                                      );
+                                    })}
+                                  </div>
+
+                                  <div className="flex flex-wrap gap-2">
+                                    <button
+                                      onClick={() => {
+                                        setSchedulingModule({ subjectName: subject.name, moduleTitle: mod.title });
+                                        setScheduleTitle(`Study: ${subject.name} - ${mod.title}`);
+                                        setPlannerModalOpen(true);
+                                      }}
+                                      className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs"
+                                      title="Schedule in Planner"
+                                    >
+                                      <Calendar className="w-3.5 h-3.5 text-primary shrink-0" />
+                                      Schedule
+                                    </button>
+                                    <a
+                                      href={`/ask?tab=chat&prompt=${encodeURIComponent(`Create a detailed study guide explaining this syllabus topic: "${subject.name} - ${mod.title}". Focus on: ${mod.desc}`)}`}
+                                      className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs"
+                                    >
+                                      <Brain className="w-3.5 h-3.5 text-primary shrink-0" />
+                                      Guide
+                                    </a>
+                                    <a
+                                      href={`/ask?tab=flashcards&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}&auto=true`}
+                                      className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs"
+                                    >
+                                      <Layers className="w-3.5 h-3.5 text-primary shrink-0" />
+                                      Cards
+                                    </a>
+                                    <a
+                                      href={`/ask?tab=quiz&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}&auto=true`}
+                                      className="inline-flex items-center gap-1.5 text-xs font-bold text-muted-foreground hover:text-primary bg-surface hover:bg-surface-hover border border-border hover:border-primary/30 px-3.5 py-2 rounded-xl transition-all shadow-3xs"
+                                    >
+                                      <HelpCircle className="w-3.5 h-3.5 text-primary shrink-0" />
+                                      Quiz
+                                    </a>
+                                  </div>
                                 </div>
                               </div>
                             );
@@ -643,6 +799,92 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
           </a>
         </div>
       )}
+      {/* Add to Planner Scheduler Modal */}
+      <AnimatePresence>
+        {plannerModalOpen && schedulingModule && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="w-full max-w-md bg-card border border-border rounded-3xl shadow-popover overflow-hidden"
+            >
+              <div className="px-6 py-4 border-b border-border flex justify-between items-center">
+                <h3 className="font-bold text-foreground text-sm flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-primary" />
+                  Schedule Study Session
+                </h3>
+                <button
+                  onClick={() => {
+                    setPlannerModalOpen(false);
+                    setSchedulingModule(null);
+                  }}
+                  className="text-muted hover:text-foreground text-sm font-semibold"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Task Title</label>
+                  <input
+                    type="text"
+                    value={scheduleTitle}
+                    onChange={(e) => setScheduleTitle(e.target.value)}
+                    className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-foreground font-medium"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Date</label>
+                    <input
+                      type="date"
+                      value={scheduleDate}
+                      onChange={(e) => setScheduleDate(e.target.value)}
+                      className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-foreground"
+                    />
+                  </div>
+
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Category</label>
+                    <select
+                      value={scheduleCategory}
+                      onChange={(e) => setScheduleCategory(e.target.value)}
+                      className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-xs font-semibold text-foreground outline-none focus:ring-1 focus:ring-foreground"
+                    >
+                      <option value="Revision">Revision</option>
+                      <option value="Exam Prep">Exam Prep</option>
+                      <option value="Assignment">Assignment</option>
+                      <option value="Project">Project</option>
+                      <option value="General">General</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-4 bg-surface border-t border-border flex justify-end gap-2">
+                <button
+                  onClick={() => {
+                    setPlannerModalOpen(false);
+                    setSchedulingModule(null);
+                  }}
+                  className="px-4 py-2 border border-border hover:bg-surface-hover text-xs font-semibold rounded-xl text-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleScheduleTask}
+                  className="px-4 py-2 bg-foreground text-background hover:opacity-90 text-xs font-bold rounded-xl shadow-md"
+                >
+                  Schedule Task
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

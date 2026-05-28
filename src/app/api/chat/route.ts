@@ -10,6 +10,7 @@ const chatSchema = z.object({
     branch: z.string().optional(),
     semester: z.number().optional(),
     subjects: z.array(z.string()).optional(),
+    resourceId: z.string().optional(),
   }).optional(),
 });
 
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
   const branch = context?.branch || 'AIDS';
   const semester = context?.semester || 4;
   const subjects = context?.subjects || [];
+  const resourceId = context?.resourceId;
 
   const cleanPrompt = lastMessage.trim().toLowerCase();
 
@@ -74,7 +76,7 @@ export async function POST(req: Request) {
 
   // Only search if there's a substantial query left
   if (cleanQuery.length > 2) {
-    const finalResults = await performRAGSearch(cleanQuery, 5);
+    const finalResults = await performRAGSearch(cleanQuery, 5, resourceId);
     snippets = finalResults.map((r: any) => `[SOURCE: ${r.title} | SUBJECT: ${r.subject_name}]: ${r.snippet}`);
   }
 

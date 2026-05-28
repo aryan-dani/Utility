@@ -10,6 +10,7 @@ export interface Flashcard {
   box: number; // 1 to 5
   nextReviewDate: string; // YYYY-MM-DD
   lastReviewedDate?: string;
+  starred?: boolean;
 }
 
 export interface Deck {
@@ -31,6 +32,7 @@ interface SRSState {
   deleteCard: (cardId: string) => void;
   addMultipleCards: (deckId: string, items: { question: string; answer: string }[]) => void;
   gradeCard: (cardId: string, gotIt: boolean) => void;
+  toggleStarCard: (cardId: string) => void;
   syncToCloud: () => Promise<void>;
   pullFromCloud: () => Promise<void>;
 }
@@ -167,6 +169,15 @@ export const useSRSStore = create<SRSState>((set, get) => ({
     // Log review activity to heatmap
     logActivity('srs_flashcard_reviewed', 1);
 
+    get().syncToCloud().catch(console.error);
+  },
+
+  toggleStarCard: (cardId) => {
+    const nextCards = get().cards.map((c) =>
+      c.id === cardId ? { ...c, starred: !c.starred } : c
+    );
+    set({ cards: nextCards });
+    localStorage.setItem(CARDS_KEY, JSON.stringify(nextCards));
     get().syncToCloud().catch(console.error);
   },
 

@@ -19,10 +19,15 @@ import {
   HelpCircle,
   FolderOpen,
   Trophy,
-  Award
+  Award,
+  Star,
+  Volume2,
+  Download,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createClient } from '@/lib/supabase';
+import { toast } from 'sonner';
 
 function getTodayString() {
   return new Date().toISOString().split('T')[0];
@@ -38,7 +43,9 @@ export default function SrsClient() {
     deleteDeck, 
     addCard, 
     deleteCard, 
-    gradeCard 
+    gradeCard,
+    toggleStarCard,
+    addMultipleCards
   } = useSRSStore();
 
   const [view, setView] = useState<'dashboard' | 'review' | 'manage' | 'session-complete'>('dashboard');
@@ -57,9 +64,58 @@ export default function SrsClient() {
   const [isFlipped, setIsFlipped] = useState(false);
   const [reviewSummary, setReviewSummary] = useState<{ gotIt: number; forgot: number } | null>(null);
   const [forgottenCards, setForgottenCards] = useState<Flashcard[]>([]);
+  const [isStarredOnlyReview, setIsStarredOnlyReview] = useState(false);
+  const srsFileInputRef = useRef<HTMLInputElement>(null);
 
   // Auth Status
   const [user, setUser] = useState<{ email?: string } | null>(null);
+
+  const speakText = (text: string) => {
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+      const utterance = new SpeechSynthesisUtterance(text);
+      window.speechSynthesis.speak(utterance);
+    }
+  };
+
+  const exportDeck = (deck: Deck) => {
+    const deckCards = cards.filter(c => c.deckId === deck.id);
+    const payload = {
+      version: 'utility-srs-v1',
+      deckName: deck.name,
+      cards: deckCards.map(c => ({ question: c.question, answer: c.answer }))
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `deck-${deck.name.toLowerCase().replace(/\s+/g, '-')}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success('Deck exported successfully');
+  };
+
+  const handleImportDeck = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        if (data.deckName && Array.isArray(data.cards)) {
+          const newD = createDeck(data.deckName);
+          addMultipleCards(newD.id, data.cards);
+          toast.success(`Imported deck "${data.deckName}" with ${data.cards.length} cards`);
+        } else {
+          toast.error('Invalid deck format. File must contain deckName and cards array.');
+        }
+      } catch {
+        toast.error('Failed to parse JSON file.');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   useEffect(() => {
     initStore();
@@ -93,13 +149,21 @@ export default function SrsClient() {
   }, [deckStats, selectedDeckId]);
 
   // Start Review Session
-  const startReview = (deckId: string) => {
+  const startReview = (deckId: string, starredOnly = false) => {
     const today = getTodayString();
-    const due = cards.filter(c => c.deckId === deckId && c.nextReviewDate <= today);
-    if (due.length === 0) return;
+    const activeCards = cards.filter(c => c.deckId === deckId);
+    const queue = starredOnly 
+      ? activeCards.filter(c => c.starred) 
+      : activeCards.filter(c => c.nextReviewDate <= today);
+      
+    if (queue.length === 0) {
+      if (starredOnly) toast.error("No starred cards in this deck.");
+      return;
+    }
     
+    setIsStarredOnlyReview(starredOnly);
     // Shuffle queue
-    const shuffled = [...due].sort(() => Math.random() - 0.5);
+    const shuffled = [...queue].sort(() => Math.random() - 0.5);
     setReviewQueue(shuffled);
     setCurrentIndex(0);
     setIsFlipped(false);
@@ -159,7 +223,7 @@ export default function SrsClient() {
 
   const restartFullSession = () => {
     if (!selectedDeckId) return;
-    startReview(selectedDeckId);
+    startReview(selectedDeckId, isStarredOnlyReview);
   };
 
   const backToDashboard = () => {
@@ -231,13 +295,32 @@ export default function SrsClient() {
               </p>
             </div>
             
-            <button
-              onClick={() => setShowCreateDeckModal(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-semibold text-background bg-foreground hover:bg-foreground/90 rounded-xl px-4 py-2.5 transition-all shadow-sm"
-            >
-              <Plus className="w-4 h-4" />
-              Create Deck
-            </button>
+            <div className="flex items-center gap-2">
+              {/* Import button */}
+              <button
+                onClick={() => srsFileInputRef.current?.click()}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold border border-border bg-surface hover:bg-surface-hover rounded-xl px-4 py-2.5 transition-all text-foreground"
+                title="Import Deck from JSON"
+              >
+                <Upload className="w-4 h-4" />
+                Import Deck
+              </button>
+              <input
+                ref={srsFileInputRef}
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={handleImportDeck}
+              />
+              
+              <button
+                onClick={() => setShowCreateDeckModal(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-background bg-foreground hover:bg-foreground/90 rounded-xl px-4 py-2.5 transition-all shadow-sm"
+              >
+                <Plus className="w-4 h-4" />
+                Create Deck
+              </button>
+            </div>
           </div>
 
           {/* Review Finished Notification Banner */}
@@ -309,24 +392,33 @@ export default function SrsClient() {
                       <div className="p-2 bg-surface rounded-xl border border-border/80 text-muted group-hover:text-primary transition-colors">
                         <BookOpen className="w-4 h-4" />
                       </div>
-                      <button
-                        onClick={() => {
-                          if (confirm(`Delete deck "${deck.name}"? All cards will be deleted permanently.`)) {
-                            deleteDeck(deck.id);
-                          }
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-1.5 text-muted hover:text-red-500 rounded-lg transition-all"
-                        title="Delete Deck"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => exportDeck(deck)}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 text-muted hover:text-foreground rounded-lg transition-all"
+                          title="Export Deck to JSON"
+                        >
+                          <Download className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (confirm(`Delete deck "${deck.name}"? All cards will be deleted permanently.`)) {
+                              deleteDeck(deck.id);
+                            }
+                          }}
+                          className="opacity-0 group-hover:opacity-100 p-1.5 text-muted hover:text-red-500 rounded-lg transition-all"
+                          title="Delete Deck"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     </div>
 
                     <h3 className="text-sm font-bold text-foreground truncate">{deck.name}</h3>
                     
-                    <div className="flex items-center gap-4 mt-6 text-[10px] font-bold text-muted uppercase select-none">
+                    <div className="flex items-center gap-4 mt-4 text-[10px] font-bold text-muted uppercase select-none">
                       <span className="flex items-center gap-1">
-                        <Layers className="w-3.5 h-3.5 text-muted" />
+                        <Layers className="w-3.5 h-3.5" />
                         {total} {total === 1 ? 'Card' : 'Cards'}
                       </span>
                       <span>•</span>
@@ -335,31 +427,81 @@ export default function SrsClient() {
                         {due} Due
                       </span>
                     </div>
+
+                    {/* Leitner Box visual distribution spectrum chart */}
+                    {total > 0 && (() => {
+                      const dist = [0, 0, 0, 0, 0];
+                      const deckCards = cards.filter(c => c.deckId === deck.id);
+                      deckCards.forEach(c => {
+                        const b = Math.max(1, Math.min(c.box, 5));
+                        dist[b - 1]++;
+                      });
+                      const colors = [
+                        'bg-red-500/80 dark:bg-red-600/80',
+                        'bg-orange-400/80 dark:bg-orange-500/80',
+                        'bg-amber-400/80 dark:bg-amber-500/80',
+                        'bg-emerald-400/80 dark:bg-emerald-500/80',
+                        'bg-green-500/80 dark:bg-green-600/80'
+                      ];
+                      return (
+                        <div className="mt-4 space-y-1">
+                          <div className="flex justify-between items-center text-[9px] text-muted font-bold uppercase select-none">
+                            <span>Leitner Boxes (1-5)</span>
+                            <span>{deckCards.filter(c => c.starred).length} ⭐</span>
+                          </div>
+                          <div className="h-1.5 w-full flex rounded-full overflow-hidden bg-surface border border-border">
+                            {dist.map((count, idx) => {
+                              if (count === 0) return null;
+                              return (
+                                <div
+                                  key={idx}
+                                  style={{ width: `${(count / total) * 100}%` }}
+                                  className={`${colors[idx]} transition-all duration-300`}
+                                  title={`Box ${idx + 1}: ${count} card(s)`}
+                                />
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </div>
 
-                  <div className="flex items-center gap-2 mt-6 pt-4 border-t border-border/60">
-                    <button
-                      onClick={() => startReview(deck.id)}
-                      disabled={due === 0}
-                      className={`flex-1 text-center font-bold text-xs rounded-xl py-2.5 transition-all ${
-                        due > 0 
-                          ? 'bg-foreground text-background hover:bg-foreground/90 shadow-sm'
-                          : 'bg-surface text-muted cursor-not-allowed border border-border/60'
-                      }`}
-                    >
-                      {due > 0 ? `Review (${due})` : 'All Reviewed'}
-                    </button>
-                    
-                    <button
-                      onClick={() => {
-                        setSelectedDeckId(deck.id);
-                        setView('manage');
-                      }}
-                      className="px-3 py-2.5 font-bold text-xs border border-border text-muted hover:text-foreground hover:bg-surface rounded-xl transition-all"
-                      title="Manage Deck"
-                    >
-                      Edit
-                    </button>
+                  <div className="flex flex-col gap-2 mt-5 pt-3 border-t border-border/60">
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => startReview(deck.id)}
+                        disabled={due === 0}
+                        className={`flex-1 text-center font-bold text-xs rounded-xl py-2.5 transition-all ${
+                          due > 0 
+                            ? 'bg-foreground text-background hover:bg-foreground/90 shadow-sm'
+                            : 'bg-surface text-muted cursor-not-allowed border border-border/60'
+                        }`}
+                      >
+                        {due > 0 ? `Review (${due})` : 'All Reviewed'}
+                      </button>
+                      
+                      <button
+                        onClick={() => {
+                          setSelectedDeckId(deck.id);
+                          setView('manage');
+                        }}
+                        className="px-3 py-2.5 font-bold text-xs border border-border text-muted hover:text-foreground hover:bg-surface rounded-xl transition-all"
+                        title="Manage Deck"
+                      >
+                        Edit
+                      </button>
+                    </div>
+
+                    {cards.filter(c => c.deckId === deck.id && c.starred).length > 0 && (
+                      <button
+                        onClick={() => startReview(deck.id, true)}
+                        className="w-full text-center font-bold text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 rounded-lg py-1.5 transition-all flex items-center justify-center gap-1"
+                      >
+                        <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                        Review Starred ({cards.filter(c => c.deckId === deck.id && c.starred).length})
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -407,9 +549,33 @@ export default function SrsClient() {
               
               {/* Front Side (Question) */}
               <div className="absolute inset-0 w-full h-full bg-card border border-border rounded-3xl p-8 flex flex-col justify-between shadow-lg [backface-visibility:hidden] group-hover:border-foreground/20">
-                <span className="text-[10px] font-bold text-muted uppercase tracking-widest flex items-center gap-1">
-                  <HelpCircle className="w-3.5 h-3.5" /> Question
-                </span>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-muted uppercase tracking-widest flex items-center gap-1">
+                    <HelpCircle className="w-3.5 h-3.5" /> Question
+                  </span>
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => speakText(reviewQueue[currentIndex].question)}
+                      className="p-1.5 text-muted hover:text-foreground rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
+                      title="Speak Question"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        toggleStarCard(reviewQueue[currentIndex].id);
+                        // Also update item in reviewQueue so star state updates in active review state
+                        const updated = [...reviewQueue];
+                        updated[currentIndex].starred = !updated[currentIndex].starred;
+                        setReviewQueue(updated);
+                      }}
+                      className="p-1.5 text-muted hover:text-amber-500 rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
+                      title="Star Card"
+                    >
+                      <Star className={`w-3.5 h-3.5 ${reviewQueue[currentIndex].starred ? 'fill-amber-500 text-amber-500' : ''}`} />
+                    </button>
+                  </div>
+                </div>
                 
                 <div className="flex-1 flex items-center justify-center text-center">
                   <p className="text-lg font-bold text-foreground leading-relaxed max-w-md">
@@ -424,9 +590,32 @@ export default function SrsClient() {
 
               {/* Back Side (Answer) */}
               <div className="absolute inset-0 w-full h-full bg-card border border-border rounded-3xl p-8 flex flex-col justify-between shadow-lg [backface-visibility:hidden] [transform:rotateY(180deg)] group-hover:border-foreground/20">
-                <span className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
-                  <Check className="w-3.5 h-3.5" /> Answer
-                </span>
+                <div className="flex justify-between items-center">
+                  <span className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
+                    <Check className="w-3.5 h-3.5" /> Answer
+                  </span>
+                  <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => speakText(reviewQueue[currentIndex].answer)}
+                      className="p-1.5 text-muted hover:text-foreground rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
+                      title="Speak Answer"
+                    >
+                      <Volume2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        toggleStarCard(reviewQueue[currentIndex].id);
+                        const updated = [...reviewQueue];
+                        updated[currentIndex].starred = !updated[currentIndex].starred;
+                        setReviewQueue(updated);
+                      }}
+                      className="p-1.5 text-muted hover:text-amber-500 rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
+                      title="Star Card"
+                    >
+                      <Star className={`w-3.5 h-3.5 ${reviewQueue[currentIndex].starred ? 'fill-amber-500 text-amber-500' : ''}`} />
+                    </button>
+                  </div>
+                </div>
 
                 <div className="flex-1 flex items-center justify-center text-center">
                   <p className="text-base font-semibold text-foreground/90 leading-relaxed max-w-md whitespace-pre-wrap">
@@ -566,13 +755,22 @@ export default function SrsClient() {
                           </div>
                         </div>
                         
-                        <button
-                          onClick={() => deleteCard(card.id)}
-                          className="p-2 text-muted hover:text-red-500 rounded-lg hover:bg-destructive/10 transition-all shrink-0"
-                          title="Delete Card"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1 shrink-0">
+                          <button
+                            onClick={() => toggleStarCard(card.id)}
+                            className="p-2 text-muted hover:text-amber-500 rounded-lg transition-all"
+                            title="Star Card"
+                          >
+                            <Star className={`w-3.5 h-3.5 ${card.starred ? 'fill-amber-500 text-amber-500' : ''}`} />
+                          </button>
+                          <button
+                            onClick={() => deleteCard(card.id)}
+                            className="p-2 text-muted hover:text-red-500 rounded-lg hover:bg-destructive/10 transition-all"
+                            title="Delete Card"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </div>
                     ))
                   )}
