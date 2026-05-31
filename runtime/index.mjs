@@ -9,7 +9,7 @@ import { executeSQL, formatTable } from "./lib/sql.mjs";
 import { getTableSchema } from "./lib/introspection.mjs";
 import { listBuckets, listAllFiles, buildFileTree } from "./lib/storage.mjs";
 import { extractFromStorage, summarize } from "./lib/pdf.mjs";
-import syncProject from "./tools/sync.mjs";
+import syncProject from "./tools/sync-drive.mjs";
 import indexContent from "./tools/index-content.mjs";
 
 const helpText = `
