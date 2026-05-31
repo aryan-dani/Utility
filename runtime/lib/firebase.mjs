@@ -30,11 +30,18 @@ function loadEnv() {
 
 const env = loadEnv();
 
+function cleanPrivateKey(key) {
+  if (!key) return undefined;
+  let cleaned = key.trim();
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  return cleaned.replace(/\\n/g, "\n");
+}
+
 const projectId = env["FIREBASE_PROJECT_ID"] || env["NEXT_PUBLIC_FIREBASE_PROJECT_ID"];
 const clientEmail = env["FIREBASE_CLIENT_EMAIL"];
-const privateKey = env["FIREBASE_PRIVATE_KEY"]
-  ? env["FIREBASE_PRIVATE_KEY"].replace(/\\n/g, "\n")
-  : undefined;
+const privateKey = cleanPrivateKey(env["FIREBASE_PRIVATE_KEY"]);
 const storageBucket = env["NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET"];
 
 if (admin.apps.length === 0) {

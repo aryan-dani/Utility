@@ -1,10 +1,17 @@
 import * as admin from "firebase-admin";
 
+function cleanPrivateKey(key: string | undefined): string | undefined {
+  if (!key) return undefined;
+  let cleaned = key.trim();
+  if ((cleaned.startsWith('"') && cleaned.endsWith('"')) || (cleaned.startsWith("'") && cleaned.endsWith("'"))) {
+    cleaned = cleaned.slice(1, -1);
+  }
+  return cleaned.replace(/\\n/g, "\n");
+}
+
 const projectId = process.env.FIREBASE_PROJECT_ID || process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID;
 const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
-const privateKey = process.env.FIREBASE_PRIVATE_KEY
-  ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
-  : undefined;
+const privateKey = cleanPrivateKey(process.env.FIREBASE_PRIVATE_KEY);
 
 export function hasFirebaseCredentials() {
   return !!(projectId && clientEmail && privateKey && !privateKey.includes("YOUR_PRIVATE_KEY_HERE"));
