@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { CalendarCheck, BookOpen, FileText, ArrowRight, Brain, ShieldCheck, Layers } from 'lucide-react';
 import { FadeIn, ScaleButton } from '@/components/Animations';
-import { createClient } from '@/lib/supabaseServer';
+import AuthButtons from './AuthButtons';
 
 const FEATURES = [
   {
@@ -56,20 +56,12 @@ const FEATURES = [
 
 import ActivityHeatmap from '@/components/ActivityHeatmap';
 
-export default async function Home() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  const isLoggedIn = Boolean(user);
-
+export default function Home() {
   return (
     <div className="flex-1 w-full flex flex-col">
       {/* Hero */}
       <section className="w-full max-w-7xl mx-auto px-6 pt-20 pb-28 flex flex-col items-center justify-center text-center">
         <FadeIn>
-
-
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.08] mb-6 text-foreground max-w-4xl mx-auto">
             Everything for your
             <br />
@@ -80,28 +72,7 @@ export default async function Home() {
             A structured, premium workspace for accessing syllabi, course materials, and managing your weekly schedule.
           </p>
 
-          {isLoggedIn ? (
-            <div className="flex flex-wrap gap-3 justify-center">
-              <Link href="/planner">
-                <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-foreground text-background rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity shadow-card">
-                  Open Planner <ArrowRight className="w-4 h-4" />
-                </ScaleButton>
-              </Link>
-              <Link href="/resources">
-                <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-surface border border-border text-foreground rounded-lg text-sm font-medium hover:bg-surface-hover transition-colors">
-                  Browse Resources
-                </ScaleButton>
-              </Link>
-            </div>
-          ) : (
-            <div className="flex justify-center">
-              <Link href="/login">
-                <ScaleButton className="inline-flex items-center gap-2 px-6 py-2.5 bg-foreground text-background rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity shadow-card">
-                  Get Started <ArrowRight className="w-4 h-4" />
-                </ScaleButton>
-              </Link>
-            </div>
-          )}
+          <AuthButtons />
         </FadeIn>
       </section>
 
@@ -140,7 +111,7 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Activity Heatmap */}
+    {/* Activity Heatmap */}
       <section className="w-full max-w-7xl mx-auto px-6 py-10">
         <ActivityHeatmap />
       </section>

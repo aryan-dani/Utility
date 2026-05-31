@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { auth } from '@/lib/firebase';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, GithubAuthProvider } from 'firebase/auth';
 import Link from 'next/link';
@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const redirectTo = searchParams.get('redirectTo') || '/planner';
 
@@ -23,11 +24,11 @@ export default function LoginPage() {
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        window.location.href = redirectTo;
+        router.push(redirectTo);
       }
     });
     return () => unsubscribe();
-  }, [redirectTo]);
+  }, [redirectTo, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,7 +39,7 @@ export default function LoginPage() {
       await signInWithEmailAndPassword(auth, email, password);
       // Wait a brief moment for ID token cookie sync to trigger
       setTimeout(() => {
-        window.location.href = redirectTo;
+        router.push(redirectTo);
       }, 500);
     } catch (err: any) {
       setError(err.message);
@@ -54,7 +55,7 @@ export default function LoginPage() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       setTimeout(() => {
-        window.location.href = redirectTo;
+        router.push(redirectTo);
       }, 500);
     } catch (err: any) {
       setError(err.message);
@@ -70,7 +71,7 @@ export default function LoginPage() {
       const provider = new GithubAuthProvider();
       await signInWithPopup(auth, provider);
       setTimeout(() => {
-        window.location.href = redirectTo;
+        router.push(redirectTo);
       }, 500);
     } catch (err: any) {
       setError(err.message);

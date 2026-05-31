@@ -398,6 +398,21 @@ function NavbarInner() {
               );
             })}
 
+            {isAdmin && (
+              <Link
+                href="/admin"
+                onClick={() => setSearchQuery("")}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide flex items-center gap-1.5 transition-all ${
+                  isActive("/admin")
+                    ? "bg-indigo-500/10 text-indigo-500 shadow-xs border border-indigo-500/20"
+                    : "text-indigo-400/70 hover:text-indigo-500 hover:bg-indigo-500/10 border border-transparent"
+                }`}
+              >
+                <ShieldCheck className="w-3.5 h-3.5" />
+                Admin
+              </Link>
+            )}
+
             <div ref={appsRef} className="relative">
               <button
                 onClick={() => setAppsOpen((o) => !o)}
@@ -544,16 +559,6 @@ function NavbarInner() {
                       </p>
                     </div>
                     <div className="p-1.5 flex flex-col gap-0.5">
-                      {isAdmin && (
-                        <Link
-                          href="/admin"
-                          onClick={() => setUserMenuOpen(false)}
-                          className="flex items-center gap-2.5 w-full px-3 py-2 text-xs font-medium text-muted hover:bg-surface hover:text-foreground rounded-xl transition-colors"
-                        >
-                          <ShieldCheck className="w-3.5 h-3.5" />
-                          Admin Dashboard
-                        </Link>
-                      )}
                       <button
                         onClick={handleLogout}
                         className="flex items-center gap-2.5 w-full px-3 py-2 text-xs font-medium text-destructive hover:bg-destructive/10 rounded-xl transition-colors"

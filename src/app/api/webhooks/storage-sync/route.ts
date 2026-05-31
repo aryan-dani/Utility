@@ -9,17 +9,13 @@ async function handleSync(request: Request) {
   try {
     const authHeader = request.headers.get('authorization');
     const cronSecret = process.env.CRON_SECRET;
-    const supabaseSecret = process.env.SUPABASE_WEBHOOK_SECRET;
 
     let isAuthorized = false;
     // If no secrets are set, let it pass (development / local testing)
-    if (!cronSecret && !supabaseSecret) {
+    if (!cronSecret) {
       isAuthorized = true;
     } else {
       if (cronSecret && authHeader === `Bearer ${cronSecret}`) {
-        isAuthorized = true;
-      }
-      if (supabaseSecret && (authHeader === `Bearer ${supabaseSecret}` || authHeader === supabaseSecret)) {
         isAuthorized = true;
       }
     }

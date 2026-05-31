@@ -28,20 +28,8 @@ export default async function indexContent() {
       indexedMap = new Map(indexed.map(i => [i.resource_id, i.last_indexed]));
       console.log(`✅ ${indexedMap.size} resources already indexed.`);
     } catch (e) {
-      console.warn(`⚠️  Could not fetch indexed IDs (resource_content table might not exist yet).`);
-      console.log(`👉 Please run the following SQL in your Supabase dashboard first:\n`);
-      console.log(`
-CREATE TABLE IF NOT EXISTS resource_content (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  resource_id UUID REFERENCES resources(id) ON DELETE CASCADE UNIQUE,
-  content TEXT NOT NULL,
-  ai_summary TEXT,
-  pages INTEGER,
-  last_indexed TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
-CREATE INDEX IF NOT EXISTS idx_resource_content_fts ON resource_content USING GIN (to_tsvector('english', content));
-      `);
+      console.warn(`⚠️  Could not fetch indexed IDs from Firebase.`);
+      console.log(`👉 Please ensure your Firebase Firestore settings allow access to the 'resource_content' collection.\n`);
       return;
     }
 
@@ -97,6 +85,7 @@ CREATE INDEX IF NOT EXISTS idx_resource_content_fts ON resource_content USING GI
         const cleanText = text.replace(/\u0000/g, '').replace(/\\u0000/g, '').replace(/\x00/g, '');
 
         await upsert("resource_content", {
+          id: res.id,
           resource_id: res.id,
           content: cleanText,
           pages: pages,

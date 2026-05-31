@@ -15,7 +15,11 @@ interface ResourceViewerProps {
   onClose: () => void;
 }
 
-function getFileExtension(url: string) {
+function getFileExtension(title: string, url: string) {
+  if (title && title.includes('.')) {
+    const ext = title.split('.').pop()?.toLowerCase();
+    if (ext) return ext;
+  }
   try {
     const pathname = new URL(url).pathname;
     return pathname.split('.').pop()?.toLowerCase() ?? '';
@@ -25,7 +29,12 @@ function getFileExtension(url: string) {
 }
 
 function getViewerUrl(resource: ResourceItem) {
-  const extension = getFileExtension(resource.file_url);
+  // If it's a native Google Drive preview link, we can just use it directly
+  if (resource.file_url.includes('drive.google.com/file/d/')) {
+    return resource.file_url;
+  }
+
+  const extension = getFileExtension(resource.title, resource.file_url);
 
   if (extension === 'pdf') {
     return resource.file_url;
@@ -39,7 +48,7 @@ function getViewerUrl(resource: ResourceItem) {
 }
 
 export default function ResourceViewer({ resource, onClose }: ResourceViewerProps) {
-  const extension = getFileExtension(resource.file_url);
+  const extension = getFileExtension(resource.title, resource.file_url);
   const isPdf = extension === 'pdf';
   const isPresentation = extension === 'ppt' || extension === 'pptx';
   const viewerUrl = useMemo(() => getViewerUrl(resource), [resource]);

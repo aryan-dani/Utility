@@ -70,7 +70,14 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
     
     setIsDeleting(deckId);
     try {
-      const res = await fetch(`/api/community-decks/${deckId}`, { method: 'DELETE' });
+      const user = auth.currentUser;
+      const idToken = user ? await user.getIdToken() : '';
+      const res = await fetch(`/api/community-decks/${deckId}`, { 
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
       if (!res.ok) {
         const data = await res.json();
         throw new Error(data.error || 'Failed to delete');

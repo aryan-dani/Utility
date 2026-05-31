@@ -1,11 +1,10 @@
 'use client';
 
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { auth, db, storage } from '@/lib/firebase';
+import { useState, useEffect, useCallback } from 'react';
+import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
-import { Trash, Edit2, Check, X, File as FileIcon, LogOut, ShieldCheck, ArrowLeft, Loader2, ChevronDown, Plus, LayoutDashboard } from 'lucide-react';
+import { collection, query, where, getDocs, doc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { Trash, Edit2, Check, X, File as FileIcon, LogOut, ShieldCheck, ArrowLeft, Loader2, ChevronDown, CheckCircle2, CloudFog, ExternalLink, HardDrive } from 'lucide-react';
 import Link from 'next/link';
 
 interface Subject {
@@ -29,19 +28,11 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function AdminClient() {
-  const [tab, setTab] = useState<'upload' | 'manage'>('upload');
+  const [tab, setTab] = useState<'drive' | 'manage'>('drive');
   const [branch, setBranch] = useState('AIDS');
   const [semester, setSemester] = useState('4');
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [userEmail, setUserEmail] = useState<string | null>(null);
-
-  // Upload State
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [title, setTitle] = useState('');
-  const [file, setFile] = useState<File | null>(null);
-  const [uploading, setUploading] = useState(false);
-  const [isDragActive, setIsDragActive] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Manage State
   const [resources, setResources] = useState<Resource[]>([]);
@@ -62,7 +53,7 @@ export default function AdminClient() {
 
   const handleLogout = async () => {
     await signOut(auth);
-    window.location.href = '/';
+    router.push('/');
   };
 
   const handleSyncDrive = async () => {
@@ -98,23 +89,16 @@ export default function AdminClient() {
         semester: Number(doc.data().semester || 0)
       }));
 
-      // Sort alphabetically by name
       data.sort((a, b) => a.name.localeCompare(b.name));
-
-      const filtered = data.filter(
-        (sub) => !(branch === 'AIDS' && sub.name.toUpperCase() === 'DBMS'),
-      );
-      setSubjects(filtered);
-      setSelectedSubject(filtered.length > 0 ? filtered[0].id : '');
+      setSubjects(data);
     } catch (err) {
-      console.error("Error fetching subjects in admin:", err);
+      console.error("Error fetching subjects:", err);
     }
   }, [branch, semester]);
 
   const fetchResources = useCallback(async () => {
     setLoadingResources(true);
     try {
-      // 1. Fetch matching subjects to get their IDs and Names
       const subjectsSnapshot = await getDocs(query(
         collection(db, 'subjects'),
         where('branch', '==', branch),
@@ -127,15 +111,11 @@ export default function AdminClient() {
         return;
       }
 
-      const subjectsMap = new Map<string, string>();
       const subjectIds: string[] = [];
-
       subjectsSnapshot.docs.forEach(doc => {
-        subjectsMap.set(doc.id, doc.data().name || "");
         subjectIds.push(doc.id);
       });
 
-      // 2. Fetch resources for these subjects
       const resourcesList: Resource[] = [];
       const chunkSize = 30;
 
@@ -146,11 +126,10 @@ export default function AdminClient() {
 
         if (snapshot.empty) continue;
 
-        // Query indexed content check (limit array filter to matching resources)
         const resourceDocIds = snapshot.docs.map(d => d.id);
         const rcSnapshot = await getDocs(query(
           collection(db, 'resource_content'),
-          where('resource_id', 'in', resourceDocIds.slice(0, 30)) // Firestore limit is 30 for 'in'
+          where('resource_id', 'in', resourceDocIds.slice(0, 30))
         ));
         const indexedResourceIds = new Set(rcSnapshot.docs.map(doc => doc.data().resource_id));
 
@@ -168,7 +147,7 @@ export default function AdminClient() {
 
       setResources(resourcesList);
     } catch (err) {
-      console.error("Error fetching resources in admin:", err);
+      console.error("Error fetching resources:", err);
     }
     setLoadingResources(false);
   }, [branch, semester]);
@@ -181,102 +160,11 @@ export default function AdminClient() {
     if (tab === 'manage') fetchResources();
   }, [tab, fetchResources]);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0] || null;
-    setFile(selectedFile);
-    if (selectedFile && !title) {
-      setTitle(selectedFile.name.split('.').slice(0, -1).join('.'));
-    }
-  };
-
-  const handleDrag = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === 'dragenter' || e.type === 'dragover') {
-      setIsDragActive(true);
-    } else if (e.type === 'dragleave') {
-      setIsDragActive(false);
-    }
-  };
-
-  const handleDrop = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setIsDragActive(false);
-
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      const droppedFile = e.dataTransfer.files[0];
-      setFile(droppedFile);
-      if (!title) {
-        setTitle(droppedFile.name.split('.').slice(0, -1).join('.'));
-      }
-    }
-  };
-
-  const handleUpload = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!file || !selectedSubject || !title) return;
-    setUploading(true);
-    setMessage('');
-
+  const handleDelete = async (id: string) => {
+    if (!confirm('Warning: If this file still exists in Google Drive, it will be recreated on the next sync. Make sure to delete it from Drive first. Continue with local db deletion?')) return;
     try {
-      const subj = subjects.find((s) => s.id === selectedSubject);
-      const subjectName = subj ? subj.name : 'Uncategorized';
-      const fileExt = file.name.split('.').pop();
-      const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '_');
-      const filePath = `${branch}/Sem_${semester}/${subjectName}/${cleanTitle}_${Math.floor(Math.random() * 1000)}.${fileExt}`;
-
-      // Firebase Storage upload
-      const storageRef = ref(storage, `course-content/${filePath}`);
-      await uploadBytes(storageRef, file);
-      const publicUrl = await getDownloadURL(storageRef);
-
-      // Firestore insert
-      const newResourceRef = doc(collection(db, 'resources'));
-      await setDoc(newResourceRef, {
-        subject_id: selectedSubject,
-        title,
-        file_url: publicUrl,
-        created_at: new Date().toISOString()
-      });
-
-      // Trigger RAG indexing webhook in the background
-      fetch('/api/webhooks/storage-sync', { method: 'POST' }).catch((err) => {
-        console.warn('Failed to auto-trigger indexing pipeline:', err);
-      });
-
-      setMessage('✓ File uploaded, linked and queued for AI indexing.');
-      setTitle('');
-      setFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    } catch (error: unknown) {
-      setMessage(`Error: ${getErrorMessage(error)}`);
-    } finally {
-      setUploading(false);
-    }
-  };
-
-  const handleDelete = async (id: string, fileUrl: string) => {
-    if (!confirm('Permanently delete this file?')) return;
-    try {
-      // Firebase Storage delete
-      if (fileUrl.includes('/course-content/')) {
-        const decodedUrl = decodeURIComponent(fileUrl);
-        const pathStartIdx = decodedUrl.indexOf('/o/');
-        if (pathStartIdx !== -1) {
-          const pathEndIdx = decodedUrl.indexOf('?');
-          const storagePath = decodedUrl.substring(pathStartIdx + 3, pathEndIdx !== -1 ? pathEndIdx : undefined);
-          const fileRef = ref(storage, storagePath);
-          await deleteObject(fileRef).catch(err => {
-            console.warn("Storage object delete failed (might not exist):", err);
-          });
-        }
-      }
-
-      // Firestore delete
       await deleteDoc(doc(db, 'resources', id));
 
-      // Also delete matching resource_content documents if any
       const rcSnapshot = await getDocs(query(
         collection(db, 'resource_content'),
         where('resource_id', '==', id)
@@ -286,7 +174,7 @@ export default function AdminClient() {
       }
 
       setResources((prev) => prev.filter((r) => r.id !== id));
-      setMessage('✓ File deleted successfully.');
+      setMessage('✓ File deleted successfully from local database.');
     } catch (error: unknown) {
       alert(`Error deleting: ${getErrorMessage(error)}`);
     }
@@ -315,364 +203,230 @@ export default function AdminClient() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8 min-h-[80vh]">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-10 gap-6 pb-8 border-b border-border">
-        <div>
-          <div className="flex items-center gap-2 mb-2">
-            <Link 
-              href="/" 
-              className="w-8 h-8 rounded-lg bg-surface border border-border flex items-center justify-center text-muted hover:text-foreground transition-all hover:bg-surface-hover"
-            >
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-            <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-primary/10 text-primary text-[10px] font-bold uppercase tracking-wider">
-              <ShieldCheck className="w-3 h-3" />
-              <span>Admin Access</span>
-            </div>
-          </div>
-          <h1 className="text-3xl font-bold text-foreground tracking-tight">Dashboard</h1>
-          {userEmail && <p className="text-sm text-muted mt-1 font-medium">{userEmail}</p>}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-4">
-          {/* Tab switcher */}
-          <div className="flex p-1 bg-surface border border-border rounded-xl text-sm shadow-sm">
-            {(['upload', 'manage'] as const).map((t) => (
-              <button
-                key={t}
-                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all ${
-                  tab === t 
-                    ? 'bg-foreground text-background shadow-md scale-[1.02]' 
-                    : 'text-muted hover:text-foreground hover:bg-surface-hover'
-                }`}
-                onClick={() => {
-                  setTab(t);
-                  setMessage('');
-                  setEditingId(null);
-                }}
-              >
-                {t === 'upload' ? <Plus className="w-4 h-4" /> : <LayoutDashboard className="w-4 h-4" />}
-                {t === 'upload' ? 'Upload' : 'Manage'}
-              </button>
-            ))}
-          </div>
-
-          <button
-            onClick={handleSyncDrive}
-            disabled={syncingDrive}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-muted hover:text-foreground border border-border rounded-xl hover:bg-surface-hover transition-all disabled:opacity-50"
-          >
-            {syncingDrive ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-                <span>Syncing...</span>
-              </>
-            ) : (
-              <>
-                <svg className="w-4 h-4 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
-                </svg>
-                <span>Sync Drive</span>
-              </>
-            )}
-          </button>
-
-          <button
-            onClick={handleLogout}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-muted hover:text-red-500 border border-border rounded-xl hover:bg-red-500/5 transition-all"
-          >
-            <LogOut className="w-4 h-4" />
-            <span>Sign out</span>
-          </button>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8 bg-surface-hover/50 p-5 rounded-2xl border border-border shadow-sm">
-        <div className="relative">
-          <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">Branch</label>
-          <div className="relative group">
-            <select
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-              className="appearance-none w-full bg-background border border-border rounded-xl pl-4 pr-10 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all group-hover:border-border-strong"
-            >
-              <option value="AIDS">AIDS</option>
-              <option value="CSE">CSE</option>
-            </select>
-            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
-              <ChevronDown className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-        <div className="relative">
-          <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">Semester</label>
-          <div className="relative group">
-            <select
-              value={semester}
-              onChange={(e) => setSemester(e.target.value)}
-              className="appearance-none w-full bg-background border border-border rounded-xl pl-4 pr-10 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all group-hover:border-border-strong"
-            >
-              {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
-                <option key={sem} value={sem}>
-                  Semester {sem}
-                </option>
-              ))}
-            </select>
-            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
-              <ChevronDown className="w-4 h-4" />
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Message */}
-      {message && (
-        <div
-          className={`mb-5 p-3.5 rounded-lg text-sm border bg-surface border-border text-foreground`}
+    <div className="flex w-full min-h-[85vh] bg-background">
+      {/* Sidebar */}
+      <div className="w-64 border-r border-border bg-card p-6 flex-col hidden md:flex">
+        <Link 
+          href="/" 
+          className="flex items-center gap-2 mb-8 text-muted hover:text-foreground transition-colors"
         >
-          {message}
+          <ArrowLeft className="w-4 h-4" />
+          <span className="text-sm font-semibold tracking-tight">Return Home</span>
+        </Link>
+        <div className="flex items-center gap-2 mb-8">
+          <ShieldCheck className="w-5 h-5 text-indigo-500" />
+          <h2 className="text-xl font-bold tracking-tight text-foreground">Admin</h2>
         </div>
-      )}
+        
+        <nav className="flex-1 space-y-2">
+          <button
+            onClick={() => setTab('drive')}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              tab === 'drive' 
+                ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' 
+                : 'text-muted hover:text-foreground hover:bg-surface border border-transparent'
+            }`}
+          >
+            <CloudFog className="w-4 h-4" />
+            Drive Manager
+          </button>
+          
+          <button
+            onClick={() => setTab('manage')}
+            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              tab === 'manage' 
+                ? 'bg-indigo-500/10 text-indigo-500 border border-indigo-500/20' 
+                : 'text-muted hover:text-foreground hover:bg-surface border border-transparent'
+            }`}
+          >
+            <HardDrive className="w-4 h-4" />
+            File Manager
+          </button>
+        </nav>
 
-      {/* Upload Tab */}
-      {tab === 'upload' && (
-        <form onSubmit={handleUpload} className="space-y-5 bg-card p-6 rounded-xl border border-border">
-          <div>
-            <label className="block text-xs font-semibold text-foreground mb-2">Resource File</label>
-            <div
-              onDragEnter={handleDrag}
-              onDragOver={handleDrag}
-              onDragLeave={handleDrag}
-              onDrop={handleDrop}
-              onClick={() => fileInputRef.current?.click()}
-              className={`border-2 border-dashed rounded-2xl p-8 flex flex-col items-center justify-center gap-3 transition-all cursor-pointer ${
-                isDragActive
-                  ? 'border-primary bg-primary/5 text-primary scale-[1.01]'
-                  : file
-                  ? 'border-emerald-500/50 bg-emerald-500/5 text-foreground'
-                  : 'border-border bg-surface hover:bg-surface-hover hover:border-border-strong text-muted'
-              }`}
-            >
-              <input
-                ref={fileInputRef}
-                type="file"
-                className="hidden"
-                onChange={handleFileChange}
-              />
-              
-              {file ? (
-                <div className="flex flex-col items-center text-center">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-500 mb-2">
-                    <FileIcon className="w-6 h-6" />
-                  </div>
-                  <p className="text-sm font-bold text-foreground max-w-[280px] truncate">{file.name}</p>
-                  <p className="text-xs text-muted-foreground mt-1">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
-                  <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-wider bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full mt-3">
-                    Ready to Upload
-                  </span>
+        <div className="mt-8 pt-6 border-t border-border">
+           {userEmail && <p className="text-xs text-muted font-medium mb-3 truncate px-1">{userEmail}</p>}
+           <button
+             onClick={handleLogout}
+             className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-destructive border border-transparent hover:border-destructive/20 rounded-xl hover:bg-destructive/5 transition-all"
+           >
+             <LogOut className="w-3.5 h-3.5" />
+             <span>Sign out</span>
+           </button>
+        </div>
+      </div>
+
+      {/* Main Content */}
+      <div className="flex-1 flex flex-col p-6 sm:p-10 max-w-5xl mx-auto w-full">
+        <div className="md:hidden flex items-center gap-3 mb-6 pb-6 border-b border-border">
+          <Link href="/" className="p-2 rounded-lg bg-surface border border-border text-muted"><ArrowLeft className="w-4 h-4" /></Link>
+          <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2"><ShieldCheck className="w-5 h-5 text-indigo-500" /> Admin</h2>
+          
+          <div className="ml-auto flex items-center gap-2">
+             <button onClick={() => setTab('drive')} className={`p-2 rounded-lg ${tab === 'drive' ? 'bg-indigo-500/10 text-indigo-500' : 'text-muted'} `}><CloudFog className="w-4 h-4" /></button>
+             <button onClick={() => setTab('manage')} className={`p-2 rounded-lg ${tab === 'manage' ? 'bg-indigo-500/10 text-indigo-500' : 'text-muted'} `}><HardDrive className="w-4 h-4" /></button>
+          </div>
+        </div>
+
+        {/* Global Message */}
+        {message && (
+          <div className="mb-6 p-4 rounded-xl text-sm font-medium border bg-indigo-500/10 border-indigo-500/30 text-indigo-500 flex items-start gap-3">
+             <CheckCircle2 className="w-5 h-5 shrink-0" />
+             <p>{message}</p>
+          </div>
+        )}
+
+        {tab === 'drive' && (
+          <div className="flex flex-col gap-6 animate-fade-in">
+             <div className="bg-card border border-border rounded-2xl p-8 shadow-sm">
+                <div className="flex items-center gap-3 mb-4">
+                  <CloudFog className="w-6 h-6 text-foreground" />
+                  <h3 className="text-xl font-bold tracking-tight text-foreground">Google Drive Integration</h3>
+                </div>
+                <p className="text-sm text-muted mb-8 max-w-2xl leading-relaxed">
+                  Utility uses Google Drive as the single source of truth. Do not upload files here. Instead, upload your PDFs, DOCs, and PPTs into the Google Drive folder. Once uploaded, click "Sync Now" to ingest them into Firebase and start AI indexing.
+                </p>
+
+                <div className="flex flex-col sm:flex-row gap-4">
+                   <a 
+                     href="https://drive.google.com" // Provide a proper URL in env var later if needed
+                     target="_blank" rel="noopener noreferrer"
+                     className="flex items-center justify-center gap-2 bg-foreground text-background font-semibold text-sm px-6 py-3 rounded-xl hover:opacity-90 transition-opacity"
+                   >
+                     <span>Open Google Drive</span>
+                     <ExternalLink className="w-4 h-4" />
+                   </a>
+                   <button 
+                     onClick={handleSyncDrive}
+                     disabled={syncingDrive}
+                     className="flex items-center justify-center gap-2 bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 font-semibold text-sm px-6 py-3 rounded-xl hover:bg-indigo-500/20 transition-all disabled:opacity-50"
+                   >
+                     {syncingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <HardDrive className="w-4 h-4" />}
+                     <span>{syncingDrive ? 'Syncing...' : 'Sync Now'}</span>
+                   </button>
+                </div>
+             </div>
+          </div>
+        )}
+
+        {tab === 'manage' && (
+          <div className="flex flex-col gap-6 animate-fade-in flex-1">
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface/50 p-5 rounded-2xl border border-border shadow-sm">
+               <div className="relative">
+                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">Branch</label>
+                 <div className="relative group">
+                   <select
+                     value={branch}
+                     onChange={(e) => setBranch(e.target.value)}
+                     className="appearance-none w-full bg-background border border-border rounded-xl pl-4 pr-10 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                   >
+                     <option value="AIDS">AIDS</option>
+                     <option value="CSE">CSE</option>
+                   </select>
+                   <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-muted pointer-events-none" />
+                 </div>
+               </div>
+               <div className="relative">
+                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">Semester</label>
+                 <div className="relative group">
+                   <select
+                     value={semester}
+                     onChange={(e) => setSemester(e.target.value)}
+                     className="appearance-none w-full bg-background border border-border rounded-xl pl-4 pr-10 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                   >
+                     {[1, 2, 3, 4, 5, 6, 7, 8].map((sem) => (
+                       <option key={sem} value={sem}>Semester {sem}</option>
+                     ))}
+                   </select>
+                   <ChevronDown className="absolute right-4 top-3.5 w-4 h-4 text-muted pointer-events-none" />
+                 </div>
+               </div>
+             </div>
+
+            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex-1 flex flex-col">
+              {loadingResources ? (
+                <div className="p-12 flex items-center justify-center flex-1">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted" />
+                </div>
+              ) : resources.length === 0 ? (
+                <div className="p-12 text-center text-muted text-sm flex-1">
+                  No files found for this branch and semester.
                 </div>
               ) : (
-                <div className="flex flex-col items-center text-center animate-fade-in">
-                  <div className="w-12 h-12 rounded-xl bg-surface border border-border flex items-center justify-center text-muted-foreground mb-2">
-                    <Plus className="w-6 h-6" />
-                  </div>
-                  <p className="text-sm font-bold text-foreground">Drag and drop file here</p>
-                  <p className="text-xs text-muted-foreground mt-1">or click to browse files</p>
-                  <p className="text-[10px] text-muted-foreground mt-3 font-mono">Supports PDF, PPT, DOC, etc.</p>
+                <div className="divide-y divide-border overflow-y-auto max-h-[500px]">
+                  {resources.map((resource) => {
+                    const subject = subjects.find((s) => s.id === resource.subject_id);
+                    const isEditing = editingId === resource.id;
+                    return (
+                      <div key={resource.id} className="p-4 flex items-center justify-between hover:bg-surface/30 transition-all">
+                        <div className="flex-1 mr-4 min-w-0">
+                          {isEditing ? (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                              <input
+                                type="text"
+                                value={editTitle}
+                                onChange={(e) => setEditTitle(e.target.value)}
+                                className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium outline-none focus:border-primary text-foreground"
+                                placeholder="Resource Title"
+                              />
+                              <div className="relative">
+                                <select
+                                   value={editSubjectId}
+                                   onChange={(e) => setEditSubjectId(e.target.value)}
+                                   className="appearance-none w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium outline-none focus:border-primary text-foreground pr-8"
+                                >
+                                  {subjects.map((sub) => (
+                                    <option key={sub.id} value={sub.id}>{sub.name}</option>
+                                  ))}
+                                </select>
+                                <ChevronDown className="absolute right-2.5 top-2.5 w-4 h-4 text-muted pointer-events-none" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3">
+                              <FileIcon className="w-4 h-4 text-indigo-500 shrink-0" />
+                              <div className="min-w-0">
+                                <h3 className="font-bold text-foreground text-sm tracking-tight truncate">{resource.title}</h3>
+                                <div className="flex items-center flex-wrap gap-2 mt-1">
+                                  <span className="text-[10px] font-bold uppercase tracking-widest text-muted">{subject?.name || 'Uncategorized'}</span>
+                                  {resource.is_indexed ? (
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-1">
+                                      <span className="w-1 h-1 rounded-full bg-emerald-500"></span>Indexed
+                                    </span>
+                                  ) : (
+                                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1 animate-pulse">
+                                      <span className="w-1 h-1 rounded-full bg-amber-500"></span>Indexing...
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center gap-1 shrink-0">
+                          {isEditing ? (
+                            <>
+                              <button onClick={() => saveEdit(resource.id)} className="p-1.5 bg-foreground text-background rounded-lg hover:opacity-90" title="Save"><Check className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => setEditingId(null)} className="p-1.5 bg-surface border border-border text-muted hover:text-foreground rounded-lg" title="Cancel"><X className="w-3.5 h-3.5" /></button>
+                            </>
+                          ) : (
+                            <>
+                              <a href={resource.file_url} target="_blank" rel="noopener noreferrer" className="p-1.5 text-muted hover:text-foreground hover:bg-surface rounded-lg"><ExternalLink className="w-3.5 h-3.5" /></a>
+                              <button onClick={() => startEdit(resource)} className="p-1.5 text-muted hover:text-foreground hover:bg-surface rounded-lg"><Edit2 className="w-3.5 h-3.5" /></button>
+                              <button onClick={() => handleDelete(resource.id)} className="p-1.5 text-muted hover:text-destructive hover:bg-destructive/10 rounded-lg"><Trash className="w-3.5 h-3.5" /></button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
           </div>
-          <div>
-            <label className="block text-xs font-medium text-foreground mb-1.5">Title</label>
-            <input
-              type="text"
-              required
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Auto-filled from filename"
-              className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-1 focus:ring-primary text-foreground placeholder:text-muted"
-            />
-          </div>
-          <div>
-            <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">Subject</label>
-            <div className="relative group">
-              <select
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="appearance-none w-full bg-background border border-border rounded-xl pl-4 pr-10 py-3 text-sm font-semibold outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all group-hover:border-border-strong disabled:opacity-50"
-                required
-                disabled={subjects.length === 0}
-              >
-                {subjects.length === 0 ? (
-                  <option value="">No subjects found</option>
-                ) : (
-                  subjects.map((sub) => (
-                    <option key={sub.id} value={sub.id}>
-                      {sub.name}
-                    </option>
-                  ))
-                )}
-              </select>
-              <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
-                <ChevronDown className="w-4 h-4" />
-              </div>
-            </div>
-          </div>
-          <button
-            type="submit"
-            disabled={uploading || !selectedSubject}
-            className="w-full bg-foreground text-background py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
-          >
-            {uploading ? (
-              <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                Uploading…
-              </>
-            ) : (
-              'Upload & Publish'
-            )}
-          </button>
-        </form>
-      )}
-
-      {/* Manage Tab */}
-      {tab === 'manage' && (
-        <div className="bg-card rounded-xl border border-border overflow-hidden">
-          {loadingResources ? (
-            <div className="p-12 flex items-center justify-center">
-              <Loader2 className="w-5 h-5 animate-spin text-muted" />
-            </div>
-          ) : resources.length === 0 ? (
-            <div className="p-12 text-center text-muted text-sm">
-              No files found for this branch and semester.
-            </div>
-          ) : (
-            <div className="divide-y divide-border">
-              {resources.map((resource) => {
-                const subject = subjects.find((s) => s.id === resource.subject_id);
-                const isEditing = editingId === resource.id;
-                return (
-                  <div
-                    key={resource.id}
-                    className="p-5 flex items-center justify-between hover:bg-surface/50 transition-all border-b border-border/50 last:border-0"
-                  >
-                    <div className="flex-1 mr-6 min-w-0">
-                      {isEditing ? (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-surface p-3 rounded-xl border border-border">
-                          <input
-                            type="text"
-                            value={editTitle}
-                            onChange={(e) => setEditTitle(e.target.value)}
-                            className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                            placeholder="Resource Title"
-                          />
-                          <div className="relative group">
-                            <select
-                               value={editSubjectId}
-                               onChange={(e) => setEditSubjectId(e.target.value)}
-                               className="appearance-none w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
-                            >
-                              {subjects.map((sub) => (
-                                <option key={sub.id} value={sub.id}>
-                                  {sub.name}
-                                </option>
-                              ))}
-                            </select>
-                            <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none text-muted">
-                              <ChevronDown className="w-3.5 h-3.5" />
-                            </div>
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center shrink-0 shadow-sm">
-                            <FileIcon className="w-5 h-5 text-muted" />
-                          </div>
-                          <div className="min-w-0">
-                            <h3 className="font-bold text-foreground text-sm tracking-tight truncate">
-                              {resource.title}
-                            </h3>
-                            <div className="flex items-center flex-wrap gap-2 mt-1">
-                              <span className="text-[10px] font-bold uppercase tracking-widest text-primary bg-primary/10 px-1.5 py-0.5 rounded">
-                                {subject?.name || 'Uncategorized'}
-                              </span>
-                              <span className="text-[10px] text-muted font-mono uppercase tracking-tighter">
-                                ID: {resource.id.slice(0, 8)}
-                              </span>
-                              {resource.is_indexed ? (
-                                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded flex items-center gap-1">
-                                  <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
-                                  Indexed
-                                </span>
-                              ) : (
-                                <span className="text-[9px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded flex items-center gap-1 animate-pulse">
-                                  <span className="w-1 h-1 rounded-full bg-amber-500"></span>
-                                  Indexing...
-                                </span>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      {isEditing ? (
-                        <div className="flex items-center gap-1.5">
-                          <button
-                            onClick={() => saveEdit(resource.id)}
-                            className="w-9 h-9 flex items-center justify-center bg-foreground text-background rounded-xl hover:opacity-90 transition-all shadow-sm"
-                            title="Save Changes"
-                          >
-                            <Check className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => setEditingId(null)}
-                            className="w-9 h-9 flex items-center justify-center bg-surface border border-border text-muted hover:text-foreground rounded-xl transition-all"
-                            title="Cancel"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-                      ) : (
-                        <>
-                          <a
-                            href={resource.file_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="px-3 py-1.5 text-[10px] font-bold tracking-widest uppercase bg-surface border border-border rounded-lg text-muted hover:text-foreground hover:bg-surface-hover transition-all"
-                          >
-                            View File
-                          </a>
-                          <div className="flex items-center gap-1 ml-2 border-l border-border pl-2">
-                            <button
-                              onClick={() => startEdit(resource)}
-                              className="p-2 text-muted hover:text-foreground hover:bg-surface rounded-lg transition-all"
-                              title="Edit Resource"
-                            >
-                              <Edit2 className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(resource.id, resource.file_url)}
-                              className="p-2 text-muted hover:text-red-500 hover:bg-red-500/5 rounded-lg transition-all"
-                              title="Delete Resource"
-                            >
-                              <Trash className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }

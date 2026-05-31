@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { ArrowLeft, BookOpen, Loader2 } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { signInWithPopup, GoogleAuthProvider, GithubAuthProvider } from 'firebase/auth';
@@ -12,17 +12,18 @@ export default function SignupPage() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const searchParams = useSearchParams();
+  const router = useRouter();
 
   const redirectTo = searchParams.get('redirectTo') || '/planner';
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
       if (user) {
-        window.location.href = redirectTo;
+        router.push(redirectTo);
       }
     });
     return () => unsubscribe();
-  }, [redirectTo]);
+  }, [redirectTo, router]);
 
   const handleGoogleSignup = async () => {
     setGoogleLoading(true);
@@ -32,7 +33,7 @@ export default function SignupPage() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       setTimeout(() => {
-        window.location.href = redirectTo;
+        router.push(redirectTo);
       }, 500);
     } catch (err: any) {
       setError(err.message);
@@ -48,7 +49,7 @@ export default function SignupPage() {
       const provider = new GithubAuthProvider();
       await signInWithPopup(auth, provider);
       setTimeout(() => {
-        window.location.href = redirectTo;
+        router.push(redirectTo);
       }, 500);
     } catch (err: any) {
       setError(err.message);

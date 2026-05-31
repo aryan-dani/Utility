@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@/lib/supabaseServer';
-import { adminDb } from '@/lib/firebaseAdmin';
+import { adminDb, adminAuth } from '@/lib/firebaseAdmin';
 
 export async function DELETE(
   request: Request,
@@ -13,14 +12,20 @@ export async function DELETE(
       return NextResponse.json({ error: 'Deck ID is required' }, { status: 400 });
     }
 
-    const supabase = await createClient();
-    const { data: userData, error: authError } = await supabase.auth.getUser();
-
-    if (authError || !userData?.user) {
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const userEmailPrefix = userData.user.email?.split('@')[0];
+    const token = authHeader.split('Bearer ')[1];
+    let decodedToken;
+    try {
+      decodedToken = await adminAuth().verifyIdToken(token);
+    } catch (e) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const userEmailPrefix = decodedToken.email?.split('@')[0];
 
     if (!userEmailPrefix) {
       return NextResponse.json({ error: 'Valid email required' }, { status: 401 });

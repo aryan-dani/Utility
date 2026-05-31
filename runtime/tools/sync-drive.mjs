@@ -167,9 +167,9 @@ async function syncDrive() {
       }, { merge: true });
       liveSubjectIds.add(subjectId);
 
-      // 2. Sync Resource to Firestore (public Drive webViewLink or direct download link)
-      // Direct download link: https://drive.google.com/uc?export=download&id=FILE_ID
-      const fileUrl = `https://drive.google.com/uc?export=download&id=${file.id}`;
+      // 2. Sync Resource to Firestore 
+      // Instead of forcing a download, use the Google Drive preview link so it opens nicely in an iframe
+      const fileUrl = `https://drive.google.com/file/d/${file.id}/preview`;
       const resourceId = generateId(file.path);
       const resourceRef = db.collection("resources").doc(resourceId);
       
