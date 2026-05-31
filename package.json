@@ -39,5 +39,8 @@
     "postcss": "^8.5.14",
     "tailwindcss": "^3.4.19",
     "typescript": "^5"
+  },
+  "overrides": {
+    "uuid": "^11.0.3"
   }
 }
