@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
-import { ScaleButton } from '@/components/Animations';
-import { auth } from '@/lib/firebase';
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { ArrowRight } from "lucide-react";
+import { ScaleButton } from "@/components/Animations";
+import { auth } from "@/lib/firebase";
 
 export default function AuthButtons() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);

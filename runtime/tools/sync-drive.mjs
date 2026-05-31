@@ -30,7 +30,10 @@ function loadEnv() {
     if (eqIdx === -1) continue;
     const key = trimmed.slice(0, eqIdx).trim();
     let value = trimmed.slice(eqIdx + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+    if (
+      (value.startsWith('"') && value.endsWith('"')) ||
+      (value.startsWith("'") && value.endsWith("'"))
+    ) {
       value = value.slice(1, -1);
     }
     parsed[key] = value;
@@ -58,13 +61,15 @@ function getDrive() {
     : undefined;
 
   if (!clientEmail || !privateKey) {
-    throw new Error("❌ Missing FIREBASE_CLIENT_EMAIL or FIREBASE_PRIVATE_KEY in environment variables.");
+    throw new Error(
+      "❌ Missing FIREBASE_CLIENT_EMAIL or FIREBASE_PRIVATE_KEY in environment variables.",
+    );
   }
 
   const auth = new google.auth.JWT({
     email: clientEmail,
     key: privateKey,
-    scopes: ["https://www.googleapis.com/auth/drive.readonly"]
+    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
   });
   driveInstance = google.drive({ version: "v3", auth });
   return driveInstance;
@@ -81,12 +86,14 @@ async function retrieveAllFiles(folderId, currentPath = "") {
       q: `'${folderId}' in parents and trashed = false`,
       fields: "nextPageToken, files(id, name, mimeType, modifiedTime)",
       pageSize: 100,
-      pageToken: pageToken
+      pageToken: pageToken,
     });
 
     const files = res.data.files || [];
     for (const file of files) {
-      const relativePath = currentPath ? `${currentPath}/${file.name}` : file.name;
+      const relativePath = currentPath
+        ? `${currentPath}/${file.name}`
+        : file.name;
       if (file.mimeType === "application/vnd.google-apps.folder") {
         const subFiles = await retrieveAllFiles(file.id, relativePath);
         filesList.push(...subFiles);
@@ -95,7 +102,7 @@ async function retrieveAllFiles(folderId, currentPath = "") {
           id: file.id,
           name: file.name,
           path: relativePath,
-          updatedAt: file.modifiedTime
+          updatedAt: file.modifiedTime,
         });
       }
     }
@@ -113,12 +120,20 @@ async function syncDrive() {
   try {
     const driveFolderId = env["GOOGLE_DRIVE_FOLDER_ID"];
     if (!driveFolderId) {
-      throw new Error("❌ Missing GOOGLE_DRIVE_FOLDER_ID in environment variables.");
+      throw new Error(
+        "❌ Missing GOOGLE_DRIVE_FOLDER_ID in environment variables.",
+      );
     }
     const files = await retrieveAllFiles(driveFolderId);
     console.log(`📦 Found ${files.length} files in Google Drive folder.\n`);
 
-    const stats = { subjects: 0, resources: 0, skipped: 0, deletedResources: 0, deletedSubjects: 0 };
+    const stats = {
+      subjects: 0,
+      resources: 0,
+      skipped: 0,
+      deletedResources: 0,
+      deletedSubjects: 0,
+    };
     const liveSubjectIds = new Set();
     const liveResourceIds = new Set();
 
@@ -152,50 +167,70 @@ async function syncDrive() {
       }
 
       // Clean subject name
-      subjectName = subjectName.replace(/_/g, " ")
+      subjectName = subjectName
+        .replace(/_/g, " ")
         .split(" ")
-        .map(w => w.charAt(0).toUpperCase() + w.slice(1))
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
         .join(" ");
 
       // 1. Sync Subject to Firestore
-      const subjectId = generateId(`subject-${branch}-${semester}-${subjectName.toLowerCase()}`);
+      const subjectId = generateId(
+        `subject-${branch}-${semester}-${subjectName.toLowerCase()}`,
+      );
       const subjectRef = db.collection("subjects").doc(subjectId);
-      await subjectRef.set({
-        name: subjectName,
-        branch: branch,
-        semester: semester
-      }, { merge: true });
+      await subjectRef.set(
+        {
+          name: subjectName,
+          branch: branch,
+          semester: semester,
+        },
+        { merge: true },
+      );
       liveSubjectIds.add(subjectId);
 
-      // 2. Sync Resource to Firestore 
+      // 2. Sync Resource to Firestore
       // Instead of forcing a download, use the Google Drive preview link so it opens nicely in an iframe
       const fileUrl = `https://drive.google.com/file/d/${file.id}/preview`;
       const resourceId = generateId(file.path);
       const resourceRef = db.collection("resources").doc(resourceId);
-      
+
       let category = "other";
       if (parts.length >= 2) {
         const catSegment = parts[1].toLowerCase();
         if (catSegment.includes("notes")) category = "notes";
-        else if (catSegment.includes("ppt") || catSegment.includes("presentation")) category = "ppt";
+        else if (
+          catSegment.includes("ppt") ||
+          catSegment.includes("presentation")
+        )
+          category = "ppt";
         else if (catSegment.includes("pyq")) category = "pyq";
-        else if (catSegment.includes("qb") || catSegment.includes("question_bank")) {
-          category = fileName.toLowerCase().includes("solved") ? "solved-question-bank" : "question-bank";
+        else if (
+          catSegment.includes("qb") ||
+          catSegment.includes("question_bank")
+        ) {
+          category = fileName.toLowerCase().includes("solved")
+            ? "solved-question-bank"
+            : "question-bank";
         } else if (catSegment.includes("writeup")) category = "writeup";
       }
 
-      await resourceRef.set({
-        title: fileName,
-        file_url: fileUrl,
-        subject_id: subjectId,
-        category: category,
-        created_at: file.updatedAt || new Date().toISOString()
-      }, { merge: true });
-      
+      await resourceRef.set(
+        {
+          title: fileName,
+          file_url: fileUrl,
+          subject_id: subjectId,
+          category: category,
+          created_at: file.updatedAt || new Date().toISOString(),
+        },
+        { merge: true },
+      );
+
       liveResourceIds.add(resourceId);
       stats.resources++;
 
-      console.log(`  ✅ Synced: ${fileName.substring(0, 30).padEnd(30)} [${subjectName}]`);
+      console.log(
+        `  ✅ Synced: ${fileName.substring(0, 30).padEnd(30)} [${subjectName}]`,
+      );
     }
 
     // 3. Cleanup Stale Data
@@ -204,14 +239,16 @@ async function syncDrive() {
     // Fetch all current resources in Firestore
     const allResourcesSnap = await db.collection("resources").get();
     const staleResourceIds = [];
-    allResourcesSnap.forEach(doc => {
+    allResourcesSnap.forEach((doc) => {
       if (!liveResourceIds.has(doc.id)) {
         staleResourceIds.push(doc.id);
       }
     });
 
     if (staleResourceIds.length > 0) {
-      console.log(`  🗑️ Deleting ${staleResourceIds.length} stale resources...`);
+      console.log(
+        `  🗑️ Deleting ${staleResourceIds.length} stale resources...`,
+      );
       const batch = db.batch();
       for (const id of staleResourceIds) {
         batch.delete(db.collection("resources").doc(id));
@@ -225,7 +262,7 @@ async function syncDrive() {
     // Fetch all current subjects in Firestore
     const allSubjectsSnap = await db.collection("subjects").get();
     const staleSubjectIds = [];
-    allSubjectsSnap.forEach(doc => {
+    allSubjectsSnap.forEach((doc) => {
       if (!liveSubjectIds.has(doc.id)) {
         staleSubjectIds.push(doc.id);
       }
@@ -247,7 +284,6 @@ async function syncDrive() {
     console.log(`   - Subjects Synced: ${liveSubjectIds.size}`);
     console.log(`   - Subjects Deleted: ${stats.deletedSubjects}`);
     console.log(`   - Files Skipped: ${stats.skipped}\n`);
-
   } catch (error) {
     console.error(`\n❌ Sync failed: ${error.message}`);
     if (error.stack) console.error(error.stack);

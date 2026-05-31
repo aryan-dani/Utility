@@ -1,14 +1,14 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo } from "react";
 import {
   Download,
   ExternalLink,
   FileSpreadsheet,
   FileText,
   X,
-} from 'lucide-react';
-import { ResourceItem } from '@/lib/dataFetcher';
+} from "lucide-react";
+import { ResourceItem } from "@/lib/dataFetcher";
 
 interface ResourceViewerProps {
   resource: ResourceItem;
@@ -16,55 +16,60 @@ interface ResourceViewerProps {
 }
 
 function getFileExtension(title: string, url: string) {
-  if (title && title.includes('.')) {
-    const ext = title.split('.').pop()?.toLowerCase();
+  if (title && title.includes(".")) {
+    const ext = title.split(".").pop()?.toLowerCase();
     if (ext) return ext;
   }
   try {
     const pathname = new URL(url).pathname;
-    return pathname.split('.').pop()?.toLowerCase() ?? '';
+    return pathname.split(".").pop()?.toLowerCase() ?? "";
   } catch {
-    return url.split('?')[0].split('#')[0].split('.').pop()?.toLowerCase() ?? '';
+    return (
+      url.split("?")[0].split("#")[0].split(".").pop()?.toLowerCase() ?? ""
+    );
   }
 }
 
 function getViewerUrl(resource: ResourceItem) {
   // If it's a native Google Drive preview link, we can just use it directly
-  if (resource.file_url.includes('drive.google.com/file/d/')) {
+  if (resource.file_url.includes("drive.google.com/file/d/")) {
     return resource.file_url;
   }
 
   const extension = getFileExtension(resource.title, resource.file_url);
 
-  if (extension === 'pdf') {
+  if (extension === "pdf") {
     return resource.file_url;
   }
 
-  if (extension === 'ppt' || extension === 'pptx') {
+  if (extension === "ppt" || extension === "pptx") {
     return `https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(resource.file_url)}`;
   }
 
   return resource.file_url;
 }
 
-export default function ResourceViewer({ resource, onClose }: ResourceViewerProps) {
+export default function ResourceViewer({
+  resource,
+  onClose,
+}: ResourceViewerProps) {
   const extension = getFileExtension(resource.title, resource.file_url);
-  const isPdf = extension === 'pdf';
-  const isPresentation = extension === 'ppt' || extension === 'pptx';
+  const isPdf = extension === "pdf";
+  const isPresentation = extension === "ppt" || extension === "pptx";
   const viewerUrl = useMemo(() => getViewerUrl(resource), [resource]);
   const FileIcon = isPresentation ? FileSpreadsheet : FileText;
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
+      if (event.key === "Escape") onClose();
     }
 
-    document.body.style.overflow = 'hidden';
-    window.addEventListener('keydown', handleKeyDown);
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      document.body.style.overflow = '';
-      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = "";
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
 
@@ -77,9 +82,12 @@ export default function ResourceViewer({ resource, onClose }: ResourceViewerProp
               <FileIcon className="h-4 w-4 text-foreground" />
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-semibold text-foreground">{resource.title}</h2>
+              <h2 className="truncate text-sm font-semibold text-foreground">
+                {resource.title}
+              </h2>
               <p className="text-xs uppercase tracking-wide text-muted">
-                {isPdf ? 'PDF' : isPresentation ? 'Presentation' : 'File'} viewer
+                {isPdf ? "PDF" : isPresentation ? "Presentation" : "File"}{" "}
+                viewer
               </p>
             </div>
           </div>
