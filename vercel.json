@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/webhooks/storage-sync",
+      "schedule": "*/30 * * * *"
+    }
+  ]
+}

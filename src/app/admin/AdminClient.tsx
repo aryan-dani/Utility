@@ -51,6 +51,7 @@ export default function AdminClient() {
   const [editSubjectId, setEditSubjectId] = useState('');
 
   const [message, setMessage] = useState('');
+  const [syncingDrive, setSyncingDrive] = useState(false);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -62,6 +63,24 @@ export default function AdminClient() {
   const handleLogout = async () => {
     await signOut(auth);
     window.location.href = '/';
+  };
+
+  const handleSyncDrive = async () => {
+    setSyncingDrive(true);
+    setMessage('');
+    try {
+      const response = await fetch('/api/webhooks/storage-sync', { method: 'POST' });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        setMessage('✓ Google Drive sync and indexing triggered in the background. It will take a few minutes to process.');
+      } else {
+        setMessage(`Error syncing: ${data.error || 'Failed to trigger sync'}`);
+      }
+    } catch (err) {
+      setMessage(`Error syncing: ${getErrorMessage(err)}`);
+    } finally {
+      setSyncingDrive(false);
+    }
   };
 
   const fetchSubjects = useCallback(async () => {
@@ -338,6 +357,26 @@ export default function AdminClient() {
               </button>
             ))}
           </div>
+
+          <button
+            onClick={handleSyncDrive}
+            disabled={syncingDrive}
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-muted hover:text-foreground border border-border rounded-xl hover:bg-surface-hover transition-all disabled:opacity-50"
+          >
+            {syncingDrive ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span>Syncing...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4 text-muted" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38l5.67-5.67" />
+                </svg>
+                <span>Sync Drive</span>
+              </>
+            )}
+          </button>
 
           <button
             onClick={handleLogout}
