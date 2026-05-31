@@ -6,6 +6,10 @@ const privateKey = process.env.FIREBASE_PRIVATE_KEY
   ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, "\n")
   : undefined;
 
+export function hasFirebaseCredentials() {
+  return !!(projectId && clientEmail && privateKey && !privateKey.includes("YOUR_PRIVATE_KEY_HERE"));
+}
+
 export function getFirebaseAdmin() {
   if (admin.apps.length > 0) {
     return admin;
@@ -13,7 +17,7 @@ export function getFirebaseAdmin() {
 
   // If environment variables are missing or placeholders (e.g. during build),
   // initialize with application default credentials or placeholder.
-  if (projectId && clientEmail && privateKey && !privateKey.includes("YOUR_PRIVATE_KEY_HERE")) {
+  if (hasFirebaseCredentials()) {
     admin.initializeApp({
       credential: admin.credential.cert({
         projectId,
