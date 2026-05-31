@@ -40,19 +40,6 @@ function loadEnv() {
 
 const env = loadEnv();
 
-const clientEmail = env["FIREBASE_CLIENT_EMAIL"];
-const privateKey = env["FIREBASE_PRIVATE_KEY"]
-  ? env["FIREBASE_PRIVATE_KEY"].replace(/\\n/g, "\n")
-  : undefined;
-const driveFolderId = env["GOOGLE_DRIVE_FOLDER_ID"];
-
-if (!clientEmail || !privateKey) {
-  throw new Error("❌ Missing FIREBASE_CLIENT_EMAIL or FIREBASE_PRIVATE_KEY in .env.local");
-}
-if (!driveFolderId) {
-  throw new Error("❌ Missing GOOGLE_DRIVE_FOLDER_ID in .env.local");
-}
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function generateId(input) {
@@ -60,18 +47,34 @@ function generateId(input) {
   return `${hash.substring(0, 8)}-${hash.substring(8, 12)}-4${hash.substring(12, 15)}-a${hash.substring(15, 18)}-${hash.substring(18, 30)}`;
 }
 
-// Authenticate Google Drive API
-const auth = new google.auth.JWT({
-  email: clientEmail,
-  key: privateKey,
-  scopes: ["https://www.googleapis.com/auth/drive.readonly"]
-});
-const drive = google.drive({ version: "v3", auth });
+let driveInstance = null;
+
+function getDrive() {
+  if (driveInstance) return driveInstance;
+
+  const clientEmail = env["FIREBASE_CLIENT_EMAIL"];
+  const privateKey = env["FIREBASE_PRIVATE_KEY"]
+    ? env["FIREBASE_PRIVATE_KEY"].replace(/\\n/g, "\n")
+    : undefined;
+
+  if (!clientEmail || !privateKey) {
+    throw new Error("❌ Missing FIREBASE_CLIENT_EMAIL or FIREBASE_PRIVATE_KEY in environment variables.");
+  }
+
+  const auth = new google.auth.JWT({
+    email: clientEmail,
+    key: privateKey,
+    scopes: ["https://www.googleapis.com/auth/drive.readonly"]
+  });
+  driveInstance = google.drive({ version: "v3", auth });
+  return driveInstance;
+}
 
 /** Recursively retrieve all files from a Google Drive folder */
 async function retrieveAllFiles(folderId, currentPath = "") {
   const filesList = [];
   let pageToken = null;
+  const drive = getDrive();
 
   do {
     const res = await drive.files.list({
@@ -108,6 +111,10 @@ async function syncDrive() {
   console.log(`\n🚀 Starting Google Drive Sync...\n`);
 
   try {
+    const driveFolderId = env["GOOGLE_DRIVE_FOLDER_ID"];
+    if (!driveFolderId) {
+      throw new Error("❌ Missing GOOGLE_DRIVE_FOLDER_ID in environment variables.");
+    }
     const files = await retrieveAllFiles(driveFolderId);
     console.log(`📦 Found ${files.length} files in Google Drive folder.\n`);
 

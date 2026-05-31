@@ -55,10 +55,17 @@ const oAuthClientId = env["GOOGLE_CLIENT_ID"];
 const oAuthClientSecret = env["GOOGLE_CLIENT_SECRET"];
 const oAuthRefreshToken = env["GOOGLE_REFRESH_TOKEN"];
 
-// Supabase Config (Fallbacks to hardcoded values from scripts/download-supabase.js)
-const SUPABASE_URL = env["NEXT_PUBLIC_SUPABASE_URL"] || env["SUPABASE_URL"] || "https://ojdoyjerfdbdhqueachg.supabase.co";
-const SERVICE_ROLE_KEY = env["SUPABASE_SERVICE_ROLE_KEY"] || env["SERVICE_ROLE_KEY"] || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9qZG95amVyZmRiZGhxdWVhY2hnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc3ODU5OTc1NCwiZXhwIjoyMDk0MTc1NzU0fQ.fDbfQWenEcMSmAe-biOD-_CJN9GPSAygooW_eKJmq6w";
+// Supabase Config
+const SUPABASE_URL = env["NEXT_PUBLIC_SUPABASE_URL"] || env["SUPABASE_URL"];
+const SERVICE_ROLE_KEY = env["SUPABASE_SERVICE_ROLE_KEY"] || env["SERVICE_ROLE_KEY"];
 const BUCKET = env["SUPABASE_BUCKET"] || "course-content";
+
+if (!SUPABASE_URL) {
+  throw new Error("❌ Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL in .env.local");
+}
+if (!SERVICE_ROLE_KEY) {
+  throw new Error("❌ Missing SUPABASE_SERVICE_ROLE_KEY or SERVICE_ROLE_KEY in .env.local");
+}
 
 if (!driveFolderId) {
   throw new Error("❌ Missing GOOGLE_DRIVE_FOLDER_ID in .env.local");
