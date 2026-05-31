@@ -47,11 +47,12 @@ export default function ResourceCard({
 }: ResourceCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const extension = getFileExtension(item.title, item.file_url);
-  const isPdf = extension === 'pdf';
+  const isDrivePreview = item.file_url.includes('drive.google.com/file/d/');
+  const isPdf = extension === 'pdf' || (isDrivePreview && !extension); // Default to PDF styling for generic drive files if no ext
   const isPpt = extension === 'ppt' || extension === 'pptx';
   const isDoc = extension === 'doc' || extension === 'docx';
-  const opensInViewer = isPdf || isPpt;
-  const isSummarizable = isPdf || isPpt || isDoc;
+  const opensInViewer = isPdf || isPpt || isDrivePreview;
+  const isSummarizable = isPdf || isPpt || isDoc || isDrivePreview;
   const isSolved = item.category === 'solved-question-bank';
   const isNew = isNewResource(item.created_at);
   const config = CATEGORY_CONFIG[item.category] || CATEGORY_CONFIG['other'];
