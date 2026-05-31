@@ -29,6 +29,7 @@ import {
   HardDrive,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 
 interface Subject {
   id: string;
@@ -51,6 +52,7 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function AdminClient() {
+  const router = useRouter();
   const [tab, setTab] = useState<"drive" | "manage">("drive");
   const [branch, setBranch] = useState("AIDS");
   const [semester, setSemester] = useState("4");
