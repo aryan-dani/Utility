@@ -1,6 +1,6 @@
 import { groq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
-import { createAdminClient } from '@/lib/supabaseAdmin';
+import { adminDb } from '@/lib/firebaseAdmin';
 import { performRAGSearch } from '@/lib/ragSearch';
 import { z } from 'zod';
 
@@ -12,8 +12,6 @@ const studySchema = z.object({
     semester: z.number().optional(),
   }).optional(),
 });
-
-export const runtime = 'edge';
 
 export async function POST(req: Request) {
   try {
@@ -39,21 +37,24 @@ export async function POST(req: Request) {
 
     // Semantic Caching Interceptor
     try {
-      const supabase = createAdminClient();
-      const { data: cached } = await supabase
-        .from('semantic_cache')
-        .select('response')
-        .eq('prompt', cacheKey)
-        .single();
+      const db = adminDb();
+      const cachedSnapshot = await db
+        .collection('semantic_cache')
+        .where('prompt', '==', cacheKey)
+        .limit(1)
+        .get();
 
-      if (cached && cached.response) {
-        return new Response(cached.response, {
-          status: 200,
-          headers: {
-            'Content-Type': 'application/json',
-            'X-Semantic-Cache': 'HIT',
-          },
-        });
+      if (!cachedSnapshot.empty) {
+        const cached = cachedSnapshot.docs[0].data();
+        if (cached && cached.response) {
+          return new Response(cached.response, {
+            status: 200,
+            headers: {
+              'Content-Type': 'application/json',
+              'X-Semantic-Cache': 'HIT',
+            },
+          });
+        }
       }
     } catch (err) {
       console.warn('Study semantic cache check error:', err);
@@ -122,10 +123,11 @@ CRITICAL INSTRUCTION: You MUST output ONLY a block of valid JSON matching the ex
 
     // Save to Semantic Cache
     try {
-      const supabase = createAdminClient();
-      await supabase.from('semantic_cache').insert({
+      const db = adminDb();
+      await db.collection('semantic_cache').add({
         prompt: cacheKey,
         response: JSON.stringify(data),
+        created_at: new Date().toISOString()
       });
     } catch (err) {
       console.warn('Study semantic cache insert error:', err);

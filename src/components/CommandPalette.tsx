@@ -25,7 +25,8 @@ import {
   Users,
 } from 'lucide-react';
 import { useAcademicStore } from '../store/academicStore';
-import { createClient } from '../lib/supabase';
+import { db } from '../lib/firebase';
+import { collection, query as firestoreQuery, where, getDocs } from 'firebase/firestore';
 
 interface CommandItem {
   id: string;
@@ -48,20 +49,22 @@ export default function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastInteraction = useRef<'key' | 'mouse'>('key');
-  const supabaseClient = useRef(createClient());
-
   // Fetch dynamic subjects for the current branch & semester
   useEffect(() => {
-    supabaseClient.current
-      .from('subjects')
-      .select('id, name')
-      .eq('branch', branch)
-      .eq('semester', semester)
-      .order('name')
-      .then(({ data, error }) => {
-        if (!error && data) {
-          setDynamicSubjects(data.filter(s => s.name.toUpperCase() !== 'SYLLABUS'));
-        }
+    const q = firestoreQuery(
+      collection(db, 'subjects'),
+      where('branch', '==', branch),
+      where('semester', '==', semester)
+    );
+
+    getDocs(q)
+      .then((snapshot) => {
+        const data = snapshot.docs.map(doc => ({ id: doc.id, name: doc.data().name as string }));
+        data.sort((a, b) => a.name.localeCompare(b.name));
+        setDynamicSubjects(data.filter(s => s.name.toUpperCase() !== 'SYLLABUS'));
+      })
+      .catch((error) => {
+        console.error("Error fetching subjects in CommandPalette:", error);
       });
   }, [branch, semester]);
 

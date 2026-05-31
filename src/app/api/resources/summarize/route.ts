@@ -1,9 +1,7 @@
 import { groq } from '@ai-sdk/groq';
 import { generateText } from 'ai';
-import { createAdminClient } from '@/lib/supabaseAdmin';
+import { adminDb } from '@/lib/firebaseAdmin';
 import { NextResponse } from 'next/server';
-
-export const runtime = 'edge';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -14,22 +12,26 @@ export async function GET(request: Request) {
   }
 
   try {
-    const supabase = createAdminClient();
+    const db = adminDb();
     
     // 1. Fetch content and any cached summary from the index
-    const { data, error } = await supabase
-      .from('resource_content')
-      .select('content, ai_summary, resources(title)')
-      .eq('resource_id', resourceId)
-      .single();
+    const contentSnapshot = await db
+      .collection('resource_content')
+      .where('resource_id', '==', resourceId)
+      .limit(1)
+      .get();
 
-    if (error || !data) {
+    if (contentSnapshot.empty) {
       return NextResponse.json({ 
         error: 'Resource content not found. This document might still be indexing.' 
       }, { status: 404 });
     }
 
-    const { content, ai_summary, resources } = data as any;
+    const docRef = contentSnapshot.docs[0].ref;
+    const data = contentSnapshot.docs[0].data();
+    const content = data.content || '';
+    const ai_summary = data.ai_summary;
+    const title = data.title || 'this document';
 
     if (ai_summary) {
       return NextResponse.json(
@@ -41,8 +43,6 @@ export async function GET(request: Request) {
         }
       );
     }
-
-    const title = resources?.title || 'this document';
 
     // 2. Prepare content for AI (limit to ~6k chars / ~1.5k tokens to prevent Groq rate limits)
     const contextContent = content.substring(0, 6000); 
@@ -66,10 +66,7 @@ export async function GET(request: Request) {
     });
 
     // 4. Cache the summary asynchronously so future requests are instant
-    await supabase
-      .from('resource_content')
-      .update({ ai_summary: text })
-      .eq('resource_id', resourceId);
+    await docRef.update({ ai_summary: text });
 
     return NextResponse.json(
       { summary: text },

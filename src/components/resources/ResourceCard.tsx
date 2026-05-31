@@ -10,7 +10,11 @@ interface ResourceCardProps {
   onSummarize: (item: ResourceItem) => void;
 }
 
-function getFileExtension(url: string) {
+function getFileExtension(title: string, url: string) {
+  if (title && title.includes('.')) {
+    const ext = title.split('.').pop()?.toLowerCase();
+    if (ext) return ext;
+  }
   try {
     const pathname = new URL(url).pathname;
     return pathname.split('.').pop()?.toLowerCase() ?? '';
@@ -42,7 +46,7 @@ export default function ResourceCard({
   onSummarize,
 }: ResourceCardProps) {
   const [isHovered, setIsHovered] = useState(false);
-  const extension = getFileExtension(item.file_url);
+  const extension = getFileExtension(item.title, item.file_url);
   const isPdf = extension === 'pdf';
   const isPpt = extension === 'ppt' || extension === 'pptx';
   const isDoc = extension === 'doc' || extension === 'docx';

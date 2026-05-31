@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { createClient } from '@/lib/supabase';
+import { auth, db } from '@/lib/firebase';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { logActivity } from '@/components/ActivityHeatmap';
 
 export interface Flashcard {
@@ -182,8 +183,7 @@ export const useSRSStore = create<SRSState>((set, get) => ({
   },
 
   syncToCloud: async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) return;
 
     set({ syncing: true });
@@ -193,47 +193,42 @@ export const useSRSStore = create<SRSState>((set, get) => ({
         cards: get().cards,
         updated_at: new Date().toISOString(),
       };
-      const { error } = await supabase
-        .from('srs_data') // fallback to profile/planner table metadata if srs_data does not exist
-        .upsert(
-          { user_id: user.id, data: payload },
-          { onConflict: 'user_id' }
-        );
-      if (error) {
-        // If srs_data does not exist, we save it inside planner_data key under metadata or just swallow.
-        // Let's print a warning but continue normally.
-        console.warn('Supabase srs_data table not found, fallback to local storage only.');
-      }
+      
+      const docRef = doc(db, 'srs_data', user.uid);
+      await setDoc(docRef, {
+        user_id: user.uid,
+        data: payload,
+        updated_at: new Date().toISOString()
+      }, { merge: true });
     } catch (e) {
-      console.error('Supabase sync error:', e);
+      console.error('Firebase SRS sync error:', e);
     } finally {
       set({ syncing: false });
     }
   },
 
   pullFromCloud: async () => {
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (!user) return;
 
     set({ syncing: true });
     try {
-      const { data, error } = await supabase
-        .from('srs_data')
-        .select('data')
-        .eq('user_id', user.id)
-        .single();
+      const docRef = doc(db, 'srs_data', user.uid);
+      const docSnap = await getDoc(docRef);
       
-      if (!error && data?.data) {
-        const cloudDecks = data.data.decks || [];
-        const cloudCards = data.data.cards || [];
-        
-        set({ decks: cloudDecks, cards: cloudCards });
-        localStorage.setItem(DECKS_KEY, JSON.stringify(cloudDecks));
-        localStorage.setItem(CARDS_KEY, JSON.stringify(cloudCards));
+      if (docSnap.exists()) {
+        const cloudData = docSnap.data()?.data;
+        if (cloudData) {
+          const cloudDecks = cloudData.decks || [];
+          const cloudCards = cloudData.cards || [];
+          
+          set({ decks: cloudDecks, cards: cloudCards });
+          localStorage.setItem(DECKS_KEY, JSON.stringify(cloudDecks));
+          localStorage.setItem(CARDS_KEY, JSON.stringify(cloudCards));
+        }
       }
     } catch (e) {
-      console.error('Supabase pull error:', e);
+      console.error('Firebase SRS pull error:', e);
     } finally {
       set({ syncing: false });
     }

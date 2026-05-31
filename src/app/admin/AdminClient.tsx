@@ -1,7 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { createClient } from '@/lib/supabase';
+import { auth, db, storage } from '@/lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { collection, query, where, getDocs, doc, setDoc, deleteDoc, updateDoc } from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { Trash, Edit2, Check, X, File as FileIcon, LogOut, ShieldCheck, ArrowLeft, Loader2, ChevronDown, Plus, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 
@@ -26,8 +29,6 @@ function getErrorMessage(error: unknown): string {
 }
 
 export default function AdminClient() {
-  const supabase = useMemo(() => createClient(), []);
-
   const [tab, setTab] = useState<'upload' | 'manage'>('upload');
   const [branch, setBranch] = useState('AIDS');
   const [semester, setSemester] = useState('4');
@@ -52,56 +53,106 @@ export default function AdminClient() {
   const [message, setMessage] = useState('');
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserEmail(data.user?.email ?? null);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUserEmail(user?.email ?? null);
     });
-  }, [supabase]);
+    return () => unsubscribe();
+  }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
     window.location.href = '/';
   };
 
   const fetchSubjects = useCallback(async () => {
-    const { data } = await supabase
-      .from('subjects')
-      .select('*')
-      .eq('branch', branch)
-      .eq('semester', parseInt(semester));
-    const filtered = (data || []).filter(
-      (sub: Subject) => !(branch === 'AIDS' && sub.name.toUpperCase() === 'DBMS'),
-    );
-    setSubjects(filtered);
-    setSelectedSubject(filtered.length > 0 ? filtered[0].id : '');
-  }, [supabase, branch, semester]);
+    try {
+      const q = query(
+        collection(db, 'subjects'),
+        where('branch', '==', branch),
+        where('semester', '==', parseInt(semester))
+      );
+      const snapshot = await getDocs(q);
+      const data = snapshot.docs.map(doc => ({
+        id: doc.id,
+        name: doc.data().name || '',
+        branch: doc.data().branch || '',
+        semester: Number(doc.data().semester || 0)
+      }));
+
+      // Sort alphabetically by name
+      data.sort((a, b) => a.name.localeCompare(b.name));
+
+      const filtered = data.filter(
+        (sub) => !(branch === 'AIDS' && sub.name.toUpperCase() === 'DBMS'),
+      );
+      setSubjects(filtered);
+      setSelectedSubject(filtered.length > 0 ? filtered[0].id : '');
+    } catch (err) {
+      console.error("Error fetching subjects in admin:", err);
+    }
+  }, [branch, semester]);
 
   const fetchResources = useCallback(async () => {
     setLoadingResources(true);
-    const { data, error } = await supabase
-      .from('resources')
-      .select(`
-        id, 
-        title, 
-        file_url, 
-        subject_id, 
-        subjects!inner(branch, semester),
-        resource_content(id)
-      `)
-      .eq('subjects.branch', branch)
-      .eq('subjects.semester', parseInt(semester));
+    try {
+      // 1. Fetch matching subjects to get their IDs and Names
+      const subjectsSnapshot = await getDocs(query(
+        collection(db, 'subjects'),
+        where('branch', '==', branch),
+        where('semester', '==', parseInt(semester))
+      ));
 
-    if (!error) {
-      const mapped = (data || []).map((r: any) => ({
-        id: r.id,
-        title: r.title,
-        file_url: r.file_url,
-        subject_id: r.subject_id,
-        is_indexed: Array.isArray(r.resource_content) ? r.resource_content.length > 0 : false
-      }));
-      setResources(mapped);
+      if (subjectsSnapshot.empty) {
+        setResources([]);
+        setLoadingResources(false);
+        return;
+      }
+
+      const subjectsMap = new Map<string, string>();
+      const subjectIds: string[] = [];
+
+      subjectsSnapshot.docs.forEach(doc => {
+        subjectsMap.set(doc.id, doc.data().name || "");
+        subjectIds.push(doc.id);
+      });
+
+      // 2. Fetch resources for these subjects
+      const resourcesList: Resource[] = [];
+      const chunkSize = 30;
+
+      for (let i = 0; i < subjectIds.length; i += chunkSize) {
+        const chunk = subjectIds.slice(i, i + chunkSize);
+        const q = query(collection(db, 'resources'), where('subject_id', 'in', chunk));
+        const snapshot = await getDocs(q);
+
+        if (snapshot.empty) continue;
+
+        // Query indexed content check (limit array filter to matching resources)
+        const resourceDocIds = snapshot.docs.map(d => d.id);
+        const rcSnapshot = await getDocs(query(
+          collection(db, 'resource_content'),
+          where('resource_id', 'in', resourceDocIds.slice(0, 30)) // Firestore limit is 30 for 'in'
+        ));
+        const indexedResourceIds = new Set(rcSnapshot.docs.map(doc => doc.data().resource_id));
+
+        snapshot.docs.forEach(doc => {
+          const d = doc.data();
+          resourcesList.push({
+            id: doc.id,
+            title: d.title || "",
+            file_url: d.file_url || "",
+            subject_id: d.subject_id || "",
+            is_indexed: indexedResourceIds.has(doc.id)
+          });
+        });
+      }
+
+      setResources(resourcesList);
+    } catch (err) {
+      console.error("Error fetching resources in admin:", err);
     }
     setLoadingResources(false);
-  }, [supabase, branch, semester]);
+  }, [branch, semester]);
 
   useEffect(() => {
     fetchSubjects();
@@ -156,15 +207,19 @@ export default function AdminClient() {
       const cleanTitle = title.replace(/[^a-zA-Z0-9]/g, '_');
       const filePath = `${branch}/Sem_${semester}/${subjectName}/${cleanTitle}_${Math.floor(Math.random() * 1000)}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage.from('course-content').upload(filePath, file);
-      if (uploadError) throw uploadError;
+      // Firebase Storage upload
+      const storageRef = ref(storage, `course-content/${filePath}`);
+      await uploadBytes(storageRef, file);
+      const publicUrl = await getDownloadURL(storageRef);
 
-      const { data: { publicUrl } } = supabase.storage.from('course-content').getPublicUrl(filePath);
-
-      const { error: dbError } = await supabase
-        .from('resources')
-        .insert({ subject_id: selectedSubject, title, file_url: publicUrl });
-      if (dbError) throw dbError;
+      // Firestore insert
+      const newResourceRef = doc(collection(db, 'resources'));
+      await setDoc(newResourceRef, {
+        subject_id: selectedSubject,
+        title,
+        file_url: publicUrl,
+        created_at: new Date().toISOString()
+      });
 
       // Trigger RAG indexing webhook in the background
       fetch('/api/webhooks/storage-sync', { method: 'POST' }).catch((err) => {
@@ -185,12 +240,32 @@ export default function AdminClient() {
   const handleDelete = async (id: string, fileUrl: string) => {
     if (!confirm('Permanently delete this file?')) return;
     try {
+      // Firebase Storage delete
       if (fileUrl.includes('/course-content/')) {
-        const storagePath = fileUrl.split('/course-content/')[1];
-        await supabase.storage.from('course-content').remove([storagePath]);
+        const decodedUrl = decodeURIComponent(fileUrl);
+        const pathStartIdx = decodedUrl.indexOf('/o/');
+        if (pathStartIdx !== -1) {
+          const pathEndIdx = decodedUrl.indexOf('?');
+          const storagePath = decodedUrl.substring(pathStartIdx + 3, pathEndIdx !== -1 ? pathEndIdx : undefined);
+          const fileRef = ref(storage, storagePath);
+          await deleteObject(fileRef).catch(err => {
+            console.warn("Storage object delete failed (might not exist):", err);
+          });
+        }
       }
-      const { error } = await supabase.from('resources').delete().eq('id', id);
-      if (error) throw error;
+
+      // Firestore delete
+      await deleteDoc(doc(db, 'resources', id));
+
+      // Also delete matching resource_content documents if any
+      const rcSnapshot = await getDocs(query(
+        collection(db, 'resource_content'),
+        where('resource_id', '==', id)
+      ));
+      for (const docSnap of rcSnapshot.docs) {
+        await deleteDoc(docSnap.ref);
+      }
+
       setResources((prev) => prev.filter((r) => r.id !== id));
       setMessage('✓ File deleted successfully.');
     } catch (error: unknown) {
@@ -206,11 +281,10 @@ export default function AdminClient() {
 
   const saveEdit = async (id: string) => {
     try {
-      const { error } = await supabase
-        .from('resources')
-        .update({ title: editTitle, subject_id: editSubjectId })
-        .eq('id', id);
-      if (error) throw error;
+      await updateDoc(doc(db, 'resources', id), {
+        title: editTitle,
+        subject_id: editSubjectId
+      });
       setResources((prev) =>
         prev.map((r) => (r.id === id ? { ...r, title: editTitle, subject_id: editSubjectId } : r)),
       );
@@ -317,11 +391,7 @@ export default function AdminClient() {
       {/* Message */}
       {message && (
         <div
-          className={`mb-5 p-3.5 rounded-lg text-sm border ${
-            message.startsWith('Error')
-              ? 'bg-surface border-border text-foreground'
-              : 'bg-surface border-border text-foreground'
-          }`}
+          className={`mb-5 p-3.5 rounded-lg text-sm border bg-surface border-border text-foreground`}
         >
           {message}
         </div>
@@ -462,9 +532,9 @@ export default function AdminClient() {
                           />
                           <div className="relative group">
                             <select
-                              value={editSubjectId}
-                              onChange={(e) => setEditSubjectId(e.target.value)}
-                              className="appearance-none w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
+                               value={editSubjectId}
+                               onChange={(e) => setEditSubjectId(e.target.value)}
+                               className="appearance-none w-full bg-background border border-border rounded-lg px-3 py-2 text-sm font-medium outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground transition-all"
                             >
                               {subjects.map((sub) => (
                                 <option key={sub.id} value={sub.id}>

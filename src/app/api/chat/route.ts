@@ -1,6 +1,6 @@
 import { groq } from '@ai-sdk/groq';
 import { streamText } from 'ai';
-import { createAdminClient } from '@/lib/supabaseAdmin';
+import { adminDb } from '@/lib/firebaseAdmin';
 import { performRAGSearch } from '@/lib/ragSearch';
 import { z } from 'zod';
 
@@ -13,8 +13,6 @@ const chatSchema = z.object({
     resourceId: z.string().optional(),
   }).optional(),
 });
-
-export const runtime = 'edge';
 
 export async function POST(req: Request) {
   let body;
@@ -42,21 +40,24 @@ export async function POST(req: Request) {
   // Semantic Caching Interceptor
   if (cleanPrompt.length > 5) {
     try {
-      const supabase = createAdminClient();
-      const { data: cached } = await supabase
-        .from('semantic_cache')
-        .select('response')
-        .eq('prompt', cleanPrompt)
-        .single();
+      const db = adminDb();
+      const cachedSnapshot = await db
+        .collection('semantic_cache')
+        .where('prompt', '==', cleanPrompt)
+        .limit(1)
+        .get();
 
-      if (cached && cached.response) {
-        const streamData = '0:' + JSON.stringify(cached.response) + '\n';
-        return new Response(streamData, {
-          headers: {
-            'Content-Type': 'text/plain; charset=utf-8',
-            'X-Semantic-Cache': 'HIT',
-          },
-        });
+      if (!cachedSnapshot.empty) {
+        const cached = cachedSnapshot.docs[0].data();
+        if (cached && cached.response) {
+          const streamData = '0:' + JSON.stringify(cached.response) + '\n';
+          return new Response(streamData, {
+            headers: {
+              'Content-Type': 'text/plain; charset=utf-8',
+              'X-Semantic-Cache': 'HIT',
+            },
+          });
+        }
       }
     } catch (err) {
       console.warn('Semantic cache check error:', err);
@@ -119,10 +120,11 @@ MODERN TUTOR GUIDELINES:
     onFinish: async ({ text }) => {
       if (cleanPrompt.length > 5) {
         try {
-          const supabase = createAdminClient();
-          await supabase.from('semantic_cache').insert({
+          const db = adminDb();
+          await db.collection('semantic_cache').add({
             prompt: cleanPrompt,
             response: text,
+            created_at: new Date().toISOString()
           });
         } catch (err) {
           console.warn('Semantic cache insert error:', err);

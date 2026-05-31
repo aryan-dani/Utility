@@ -4,38 +4,37 @@ import { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 import { ArrowLeft, BookOpen, Loader2 } from 'lucide-react';
-import { createClient } from '@/lib/supabase';
+import { auth } from '@/lib/firebase';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
 export default function SignupPage() {
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const searchParams = useSearchParams();
-  const supabase = useMemo(() => createClient(), []);
 
   const redirectTo = searchParams.get('redirectTo') || '/planner';
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
         window.location.href = redirectTo;
       }
     });
-  }, [supabase, redirectTo]);
+    return () => unsubscribe();
+  }, [redirectTo]);
 
   const handleGoogleSignup = async () => {
     setGoogleLoading(true);
     setError(null);
-    document.cookie = `utility_oauth_redirect=${encodeURIComponent(redirectTo)}; path=/; max-age=600; SameSite=Lax`;
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      setError(error.message);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      setTimeout(() => {
+        window.location.href = redirectTo;
+      }, 500);
+    } catch (err: any) {
+      setError(err.message);
       setGoogleLoading(false);
     }
   };

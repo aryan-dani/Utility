@@ -30,7 +30,8 @@ import {
 import { logActivity } from '@/components/ActivityHeatmap';
 import { isSubjectMatch } from '@/lib/subjectMatcher';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createClient } from '@/lib/supabase';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 interface SyllabusClientProps {
@@ -296,39 +297,39 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
     localStorage.setItem(key, JSON.stringify({ data: planData, meta: planMeta }));
     toast.success(`Scheduled task on ${scheduleDate}!`);
 
-    const supabase = createClient();
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (user) {
       try {
-        const { data: existing, error: fetchErr } = await supabase
-          .from('planner_plans')
-          .select('id')
-          .eq('owner_id', user.id)
-          .eq('month', month)
-          .eq('year', year)
-          .single();
+        const q = query(
+          collection(db, 'planner_plans'),
+          where('owner_id', '==', user.uid),
+          where('month', '==', month),
+          where('year', '==', year)
+        );
+        const snapshot = await getDocs(q);
 
-        if (existing) {
-          await supabase
-            .from('planner_plans')
-            .update({ data: planData, updated_at: new Date().toISOString() })
-            .eq('id', existing.id);
+        if (!snapshot.empty) {
+          const docId = snapshot.docs[0].id;
+          await updateDoc(doc(db, 'planner_plans', docId), {
+            data: planData,
+            updated_at: new Date().toISOString()
+          });
         } else {
-          await supabase
-            .from('planner_plans')
-            .insert({
-              owner_id: user.id,
-              owner_email: user.email,
-              title: planMeta.title,
-              month,
-              year,
-              data: planData,
-              is_public: false
-            });
+          const newDocRef = doc(collection(db, 'planner_plans'));
+          await setDoc(newDocRef, {
+            owner_id: user.uid,
+            owner_email: user.email,
+            title: planMeta.title,
+            month,
+            year,
+            data: planData,
+            is_public: false,
+            updated_at: new Date().toISOString()
+          });
         }
         toast.success('Synced to Cloud Planner');
       } catch (err) {
-        console.error('Supabase sync error:', err);
+        console.error('Firebase sync error:', err);
       }
     }
 

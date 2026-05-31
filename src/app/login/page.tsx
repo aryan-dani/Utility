@@ -2,7 +2,8 @@
 
 import { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClient } from '@/lib/supabase';
+import { auth } from '@/lib/firebase';
+import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import Link from 'next/link';
 import { ArrowLeft, Loader2, Eye, EyeOff, BookOpen } from 'lucide-react';
 
@@ -14,48 +15,48 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const searchParams = useSearchParams();
-  const supabase = useMemo(() => createClient(), []);
 
   const redirectTo = searchParams.get('redirectTo') || '/planner';
 
   // If already logged in, redirect
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) {
+    const unsubscribe = auth.onAuthStateChanged((user) => {
+      if (user) {
         window.location.href = redirectTo;
       }
     });
-  }, [supabase, redirectTo]);
+    return () => unsubscribe();
+  }, [redirectTo]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-
-    if (error) {
-      setError(error.message);
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      // Wait a brief moment for ID token cookie sync to trigger
+      setTimeout(() => {
+        window.location.href = redirectTo;
+      }, 500);
+    } catch (err: any) {
+      setError(err.message);
       setLoading(false);
-    } else {
-      window.location.href = redirectTo;
     }
   };
 
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError(null);
-    document.cookie = `utility_oauth_redirect=${encodeURIComponent(redirectTo)}; path=/; max-age=600; SameSite=Lax`;
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
-
-    if (error) {
-      setError(error.message);
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      setTimeout(() => {
+        window.location.href = redirectTo;
+      }, 500);
+    } catch (err: any) {
+      setError(err.message);
       setGoogleLoading(false);
     }
   };

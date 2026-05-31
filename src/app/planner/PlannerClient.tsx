@@ -8,7 +8,9 @@ import {
   CalendarDays, MoreHorizontal, Minus, List, Columns, Calendar, RefreshCw, Tag
 } from 'lucide-react';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { logActivity } from '@/components/ActivityHeatmap';
 import { parsePrompt, mergeEntries } from '@/lib/promptParser';
 import { toast } from 'sonner';
@@ -868,7 +870,6 @@ export default function PlannerClient() {
   const [quickAddDate, setQuickAddDate] = useState<string | null>(null);
   const [quickAddText, setQuickAddText] = useState('');
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const supabase = useMemo(() => createClient(), []);
 
   const today = todayISO();
   const calendarDays = useMemo(() => getCalendarDays(month, year), [month, year]);
@@ -894,14 +895,11 @@ export default function PlannerClient() {
 
   // ── Auth ──
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user ? { id: data.user.id, email: data.user.email ?? undefined } : null);
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      setUser(firebaseUser ? { id: firebaseUser.uid, email: firebaseUser.email ?? undefined } : null);
     });
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ? { id: session.user.id, email: session.user.email ?? undefined } : null);
-    });
-    return () => listener.subscription.unsubscribe();
-  }, [supabase]);
+    return () => unsubscribe();
+  }, []);
 
   // ── Cloud pull on login ──
   useEffect(() => {
@@ -923,44 +921,36 @@ export default function PlannerClient() {
     if (!user) return;
     setSyncing(true);
     try {
-      const { data: existing, error: fetchErr } = await supabase
-        .from('planner_plans')
-        .select('id')
-        .eq('owner_id', user.id)
-        .eq('month', month)
-        .eq('year', year)
-        .single();
+      const q = query(
+        collection(db, 'planner_plans'),
+        where('owner_id', '==', user.id),
+        where('month', '==', month),
+        where('year', '==', year)
+      );
+      const snapshot = await getDocs(q);
 
-      if (fetchErr && fetchErr.code !== 'PGRST116') throw fetchErr;
-
-      if (existing) {
-        const { error } = await supabase
-          .from('planner_plans')
-          .update({
-            data: planData,
-            title: planMeta.title,
-            is_public: planMeta.is_public,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', existing.id);
-        if (error) throw error;
-        setPlanMeta(prev => ({ ...prev, id: existing.id }));
+      if (!snapshot.empty) {
+        const docId = snapshot.docs[0].id;
+        await updateDoc(doc(db, 'planner_plans', docId), {
+          data: planData,
+          title: planMeta.title,
+          is_public: planMeta.is_public,
+          updated_at: new Date().toISOString(),
+        });
+        setPlanMeta(prev => ({ ...prev, id: docId }));
       } else {
-        const { data: newPlan, error } = await supabase
-          .from('planner_plans')
-          .insert({
-            owner_id: user.id,
-            owner_email: user.email,
-            title: planMeta.title,
-            month,
-            year,
-            data: planData,
-            is_public: planMeta.is_public,
-          })
-          .select('id')
-          .single();
-        if (error) throw error;
-        if (newPlan) setPlanMeta(prev => ({ ...prev, id: newPlan.id }));
+        const newDocRef = doc(collection(db, 'planner_plans'));
+        await setDoc(newDocRef, {
+          owner_id: user.id,
+          owner_email: user.email || '',
+          title: planMeta.title,
+          month,
+          year,
+          data: planData,
+          is_public: planMeta.is_public,
+          updated_at: new Date().toISOString(),
+        });
+        setPlanMeta(prev => ({ ...prev, id: newDocRef.id }));
       }
       setLastSynced(new Date());
     } catch (e) {
@@ -968,41 +958,51 @@ export default function PlannerClient() {
     } finally {
       setSyncing(false);
     }
-  }, [user, supabase, planData, planMeta, month, year]);
+  }, [user, planData, planMeta.title, planMeta.is_public, month, year]);
 
   const pullFromCloud = useCallback(async () => {
     if (!user) return;
     setSyncing(true);
     try {
-      const { data, error } = await supabase
-        .from('planner_plans')
-        .select('id, data, title, is_public, updated_at')
-        .eq('owner_id', user.id)
-        .eq('month', month)
-        .eq('year', year)
-        .single();
+      const q = query(
+        collection(db, 'planner_plans'),
+        where('owner_id', '==', user.id),
+        where('month', '==', month),
+        where('year', '==', year)
+      );
+      const snapshot = await getDocs(q);
 
-      if (error && error.code !== 'PGRST116') throw error;
-
-      if (data) {
+      if (!snapshot.empty) {
+        const docSnap = snapshot.docs[0];
+        const data = docSnap.data();
+        
         setPlanData((data.data as PlanData) || {});
-        setPlanMeta({ id: data.id, title: data.title || 'Study Plan', month, year, is_public: data.is_public });
-        setLastSynced(new Date(data.updated_at));
-        localStorage.setItem(storageKey(month, year), JSON.stringify({ data: data.data, meta: { id: data.id, title: data.title, month, year, is_public: data.is_public } }));
+        setPlanMeta({ id: docSnap.id, title: data.title || 'Study Plan', month, year, is_public: !!data.is_public });
+        
+        let updatedDate = new Date();
+        if (data.updated_at) {
+          updatedDate = new Date(data.updated_at);
+        }
+        setLastSynced(updatedDate);
+        localStorage.setItem(storageKey(month, year), JSON.stringify({
+          data: data.data,
+          meta: { id: docSnap.id, title: data.title, month, year, is_public: !!data.is_public }
+        }));
 
         // Load collaborators
-        const { data: collabs } = await supabase
-          .from('planner_collaborators')
-          .select('*')
-          .eq('plan_id', data.id);
-        if (collabs) setCollaborators(collabs as Collaborator[]);
+        const collSnap = await getDocs(query(
+          collection(db, 'planner_collaborators'),
+          where('plan_id', '==', docSnap.id)
+        ));
+        const collabs = collSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+        setCollaborators(collabs as Collaborator[]);
       }
     } catch (e) {
       console.error(e);
     } finally {
       setSyncing(false);
     }
-  }, [user, supabase, month, year]);
+  }, [user, month, year]);
 
   useEffect(() => {
     if (!user || !mounted) return;
@@ -1185,24 +1185,32 @@ export default function PlannerClient() {
       return;
     }
     try {
-      const { data, error } = await supabase
-        .from('planner_collaborators')
-        .insert({ plan_id: planMeta.id, user_email: email, role })
-        .select()
-        .single();
-      if (error) throw error;
-      if (data) setCollaborators(prev => [...prev, data as Collaborator]);
+      // Check if collaborator already exists
+      const existingSnap = await getDocs(query(
+        collection(db, 'planner_collaborators'),
+        where('plan_id', '==', planMeta.id),
+        where('user_email', '==', email)
+      ));
+      if (!existingSnap.empty) {
+        toast.error('Already invited');
+        return;
+      }
+
+      const docRef = doc(collection(db, 'planner_collaborators'));
+      const newCollab = { plan_id: planMeta.id, user_email: email, role };
+      await setDoc(docRef, newCollab);
+
+      setCollaborators(prev => [...prev, { id: docRef.id, ...newCollab }]);
       toast.success(`Invited ${email} as ${role}`);
     } catch (e: any) {
-      if (e?.code === '23505') toast.error('Already invited');
-      else toast.error('Failed to invite');
+      toast.error('Failed to invite');
       console.error(e);
     }
   };
 
   const removeCollaborator = async (id: string) => {
     try {
-      await supabase.from('planner_collaborators').delete().eq('id', id);
+      await deleteDoc(doc(db, 'planner_collaborators', id));
       setCollaborators(prev => prev.filter(c => c.id !== id));
       toast.success('Collaborator removed');
     } catch (e) {

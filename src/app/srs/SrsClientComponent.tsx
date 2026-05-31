@@ -26,7 +26,8 @@ import {
   Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { createClient } from '@/lib/supabase';
+import { auth } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
 import { toast } from 'sonner';
 
 function getTodayString() {
@@ -119,10 +120,14 @@ export default function SrsClient() {
 
   useEffect(() => {
     initStore();
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      if (data.user) setUser({ email: data.user.email });
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({ email: firebaseUser.email || undefined });
+      } else {
+        setUser(null);
+      }
     });
+    return () => unsubscribe();
   }, [initStore]);
 
   const activeDeck = useMemo(() => decks.find(d => d.id === selectedDeckId), [decks, selectedDeckId]);

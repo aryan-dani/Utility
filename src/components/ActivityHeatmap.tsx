@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState, useMemo } from 'react';
-import { createClient } from '@/lib/supabase';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
 import { Flame, Trophy, Calendar, Zap, Info } from 'lucide-react';
 
 interface ActivityLog {
@@ -28,48 +29,34 @@ export function logActivity(actionType: string, count = 1) {
     console.error('Local activity log error:', err);
   }
 
-  // 2. Log to Supabase if logged in
-  const supabase = createClient();
-  supabase.auth.getUser().then(({ data: { user } }) => {
-    if (!user) return;
-    // RPC or direct insert/rpc
-    supabase
-      .from('activity_logs')
-      .select('count')
-      .eq('user_id', user.id)
-      .eq('action_type', actionType)
-      .eq('logged_date', today)
-      .single()
-      .then(({ data }) => {
-        if (data) {
-          supabase
-            .from('activity_logs')
-            .update({ count: data.count + count })
-            .eq('user_id', user.id)
-            .eq('action_type', actionType)
-            .eq('logged_date', today)
-            .then();
-        } else {
-          supabase
-            .from('activity_logs')
-            .insert({
-              user_id: user.id,
-              action_type: actionType,
-              count: count,
-              logged_date: today,
-            })
-            .then();
-        }
-      });
-  });
+  // 2. Log to Firestore if logged in
+  const user = auth.currentUser;
+  if (!user) return;
+
+  const docId = `${user.uid}_${actionType}_${today}`;
+  const logRef = doc(db, 'activity_logs', docId);
+
+  getDoc(logRef)
+    .then((docSnap) => {
+      if (docSnap.exists()) {
+        updateDoc(logRef, { count: (docSnap.data().count || 0) + count });
+      } else {
+        setDoc(logRef, {
+          user_id: user.uid,
+          action_type: actionType,
+          count: count,
+          logged_date: today,
+        });
+      }
+    })
+    .catch((err) => console.error("Firebase logActivity error:", err));
 }
 
 export default function ActivityHeatmap() {
-  const supabase = useMemo(() => createClient(), []);
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [hoveredCell, setHoveredCell] = useState<{ date: string; count: number } | null>(null);
-
+ 
   const fetchActivity = async () => {
     // Load local storage first
     try {
@@ -78,21 +65,22 @@ export default function ActivityHeatmap() {
         setActivityMap(JSON.parse(local));
       }
     } catch {}
-
+ 
     // Try cloud fetch
-    const { data: { user } } = await supabase.auth.getUser();
+    const user = auth.currentUser;
     if (user) {
-      const { data } = await supabase
-        .from('activity_logs')
-        .select('logged_date, count')
-        .eq('user_id', user.id);
-
-      if (data) {
+      try {
+        const q = query(collection(db, 'activity_logs'), where('user_id', '==', user.uid));
+        const snapshot = await getDocs(q);
         const cloudMap: Record<string, number> = {};
-        data.forEach((item: ActivityLog) => {
-          cloudMap[item.logged_date] = (cloudMap[item.logged_date] || 0) + item.count;
+        
+        snapshot.docs.forEach((doc) => {
+          const item = doc.data();
+          if (item.logged_date && item.count) {
+            cloudMap[item.logged_date] = (cloudMap[item.logged_date] || 0) + Number(item.count);
+          }
         });
-
+ 
         setActivityMap((prev) => {
           const merged = { ...prev };
           Object.keys(cloudMap).forEach((date) => {
@@ -101,6 +89,8 @@ export default function ActivityHeatmap() {
           localStorage.setItem(STORAGE_KEY, JSON.stringify(merged));
           return merged;
         });
+      } catch (err) {
+        console.error("Firebase fetchActivity error:", err);
       }
     }
     setLoading(false);

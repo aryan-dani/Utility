@@ -1,4 +1,4 @@
-import { createAdminClient } from "./supabaseAdmin";
+import { adminDb } from "./firebaseAdmin";
 
 export interface RAGSearchResult {
   title: string;
@@ -11,7 +11,7 @@ export interface RAGSearchResult {
 }
 
 /**
- * Shared utility for searching resources via RPC with a fallback to basic text search.
+ * Shared utility for searching resources via Firestore with a robust text-scoring fallback.
  * @param query The search term
  * @param limit The maximum number of results to return
  * @returns Array of formatted search results
@@ -22,70 +22,91 @@ export async function performRAGSearch(
   resourceId?: string,
 ): Promise<RAGSearchResult[]> {
   try {
-    const supabase = createAdminClient();
+    const db = adminDb();
+    const searchTerms = query.toLowerCase().split(/\s+/).filter(t => t.length > 1);
 
-    // Try the RPC first (full-text search function)
-    const { data: searchResults, error: rpcError } = await supabase.rpc(
-      "search_resource_content",
-      {
-        query_text: query,
-      },
-    );
+    if (searchTerms.length === 0) return [];
 
-    let finalResults = searchResults;
-    if (resourceId && finalResults) {
-      finalResults = finalResults.filter((r: any) => r.resource_id === resourceId);
+    // 1. Search in resource_content collection
+    let contentRef = db.collection("resource_content") as any;
+    if (resourceId) {
+      contentRef = contentRef.where("resource_id", "==", resourceId);
     }
+    const snapshot = await contentRef.get();
+    
+    const matches: any[] = [];
+    snapshot.docs.forEach((doc: any) => {
+      const d = doc.data();
+      const content = (d.content || "").toLowerCase();
+      const title = (d.title || "").toLowerCase();
+      const subjectName = (d.subject_name || "").toLowerCase();
 
-    // Robust Fallback: Use standard ILIKE/textSearch if RPC fails or returns nothing
-    // To save egress, this fallback searches 'resources.title' rather than doing unindexed scans on 'resource_content.content'
-    if (rpcError || !finalResults || finalResults.length === 0) {
-      let queryBuilder = supabase
-        .from("resources")
-        .select(
-          `
-          id,
-          title, 
-          file_url,
-          subjects!inner (
-            name,
-            branch,
-            semester
-          )
-        `,
-        )
-        .ilike("title", `%${query}%`);
+      let score = 0;
+      searchTerms.forEach(term => {
+        if (title.includes(term)) score += 10;        // Title match is highly relevant
+        if (subjectName.includes(term)) score += 5;    // Subject match is moderately relevant
+        if (content.includes(term)) score += 2;        // Body content match
+      });
 
+      if (score > 0) {
+        matches.push({
+          resource_id: d.resource_id,
+          title: d.title || "Untitled",
+          snippet: d.snippet || d.content?.substring(0, 500) + "..." || "",
+          subject_name: d.subject_name || "Unknown",
+          branch: d.branch,
+          semester: d.semester,
+          file_url: d.file_url,
+          score
+        });
+      }
+    });
+
+    // 2. Fallback: Search in resources by title if no content matches found
+    if (matches.length === 0) {
+      let resourcesRef = db.collection("resources") as any;
       if (resourceId) {
-        queryBuilder = queryBuilder.eq("id", resourceId);
+        resourcesRef = resourcesRef.where("__name__", "==", resourceId);
       }
+      const resSnapshot = await resourcesRef.get();
 
-      const { data: fallbackData } = await queryBuilder.limit(limit);
+      resSnapshot.docs.forEach((doc: any) => {
+        const d = doc.data();
+        const title = (d.title || "").toLowerCase();
 
-      if (fallbackData) {
-        finalResults = (fallbackData as any[]).map((r) => ({
-          resource_id: r.id,
-          title: r.title,
-          file_url: r.file_url,
-          subject_name: r.subjects.name,
-          branch: r.subjects.branch,
-          semester: r.subjects.semester,
-          snippet: `Matched by title: ${r.title}`,
-        }));
-      }
+        let score = 0;
+        searchTerms.forEach(term => {
+          if (title.includes(term)) score += 1;
+        });
+
+        if (score > 0) {
+          matches.push({
+            resource_id: doc.id,
+            title: d.title || "Untitled",
+            snippet: `Matched by title: ${d.title}`,
+            subject_name: d.subject_name || "Unknown",
+            branch: d.branch,
+            semester: d.semester,
+            file_url: d.file_url,
+            score
+          });
+        }
+      });
     }
 
-    if (finalResults && Array.isArray(finalResults)) {
-      return finalResults.slice(0, limit).map((r: any) => ({
-        resource_id: r.resource_id,
-        title: r.title,
-        file_url: r.file_url,
-        subject_name: r.subject_name,
-        branch: r.branch,
-        semester: r.semester,
-        snippet: r.snippet || r.content?.substring(0, 500) + "..." || "",
-      }));
-    }
+    // Sort by relevance score desc
+    matches.sort((a, b) => b.score - a.score);
+
+    return matches.slice(0, limit).map(r => ({
+      resource_id: r.resource_id,
+      title: r.title,
+      file_url: r.file_url,
+      subject_name: r.subject_name,
+      branch: r.branch,
+      semester: r.semester,
+      snippet: r.snippet
+    }));
+
   } catch (err) {
     console.error("RAG Search Critical Error:", err);
   }

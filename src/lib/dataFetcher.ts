@@ -1,7 +1,5 @@
-import { createClient as createBrowserClient } from "./supabase";
-import { createAdminClient } from "./supabaseAdmin";
+import { adminDb } from "./firebaseAdmin";
 import { unstable_cache } from "next/cache";
-import { SupabaseClient } from "@supabase/supabase-js";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -29,15 +27,6 @@ export type ResourceCategory =
   | "pyq"
   | "other"
   | "writeup";
-
-// ─── Internal types for Supabase query results ────────────────────────────────
-
-interface SubjectRow {
-  id: string;
-  name: string;
-  branch: string;
-  semester: number;
-}
 
 // ─── Filter configuration ────────────────────────────────────────────────────
 
@@ -86,16 +75,22 @@ export function getResourceCategory(
 
   if (
     /_ppt\//.test(haystack) ||
-    /\bpptx?\b|presentation|slides?/.test(haystack)
+    /[_.-]pptx?\b|\bpptx?\b|presentation|slides?/i.test(haystack)
   ) {
     return "ppt";
   }
 
-  if (/_notes\//.test(haystack) || /\bnotes?\b|handwritten/.test(haystack)) {
+  if (
+    /_notes\//.test(haystack) ||
+    /[_.-]notes?\b|\bnotes?\b|handwritten/i.test(haystack)
+  ) {
     return "notes";
   }
 
-  if (/_writeups?\//.test(haystack) || /\bwriteups?\b/.test(haystack)) {
+  if (
+    /_writeups?\//.test(haystack) ||
+    /[_.-]writeups?\b|\bwriteups?\b/i.test(haystack)
+  ) {
     return "writeup";
   }
 
@@ -109,29 +104,40 @@ export const getSubjectsFromDB = unstable_cache(
     branch: string,
     semester: number,
   ): Promise<SubjectItem[]> => {
-    const supabase = createAdminClient();
-    const { data, error } = await supabase
-      .from("subjects")
-      .select("id, name, branch, semester")
-      .eq("branch", branch)
-      .eq("semester", semester)
-      .order("name");
+    try {
+      const db = adminDb();
+      const snapshot = await db.collection("subjects")
+        .where("branch", "==", branch)
+        .where("semester", "==", semester)
+        .get();
 
-    if (error) {
-      console.error("Error fetching subjects:", error.message);
+      const subjects: SubjectItem[] = snapshot.docs.map(doc => {
+        const d = doc.data();
+        return {
+          id: doc.id,
+          name: d.name || "",
+          branch: d.branch || "",
+          semester: Number(d.semester || 0)
+        };
+      });
+
+      // Sort alphabetically by name
+      subjects.sort((a, b) => a.name.localeCompare(b.name));
+
+      const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
+        s.toUpperCase(),
+      );
+
+      return subjects
+        .filter((item) => !excluded.includes(item.name.toUpperCase()))
+        .filter((item) => item.name.toUpperCase() !== "SYLLABUS");
+    } catch (error) {
+      console.error("Error fetching subjects from Firestore:", error);
       return [];
     }
-
-    const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
-      s.toUpperCase(),
-    );
-
-    return (data as SubjectRow[])
-      .filter((item) => !excluded.includes(item.name.toUpperCase()))
-      .filter((item) => item.name.toUpperCase() !== "SYLLABUS");
   },
   ["subjects-cache"],
-  { revalidate: 3600 },
+  { revalidate: 1 },
 );
 
 export const getResourcesFromDB = unstable_cache(
@@ -139,77 +145,105 @@ export const getResourcesFromDB = unstable_cache(
     branch: string,
     semester: number,
   ): Promise<ResourceItem[]> => {
-    const supabase = createAdminClient();
+    try {
+      const db = adminDb();
 
-    const { data, error } = await supabase
-      .from("resources")
-      .select(
-        `
-      id,
-      title,
-      file_url,
-      created_at,
-      subjects!inner(
-        name,
-        branch,
-        semester
-      )
-    `,
-      )
-      .eq("subjects.branch", branch)
-      .eq("subjects.semester", semester);
+      // 1. Fetch matching subjects to get their IDs and Names
+      const subjectsSnapshot = await db.collection("subjects")
+        .where("branch", "==", branch)
+        .where("semester", "==", semester)
+        .get();
 
-    if (error) {
-      console.error("Error fetching resources:", error.message);
-      return [];
-    }
+      if (subjectsSnapshot.empty) return [];
 
-    const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
-      s.toUpperCase(),
-    );
+      const subjectsMap = new Map<string, string>();
+      const subjectIds: string[] = [];
 
-    const resources: ResourceItem[] = (data as any[])
-      .filter((item) => item.subjects?.name?.toUpperCase() !== "SYLLABUS")
-      .map((item) => {
-        const url = item.file_url;
-
-        return {
-          id: item.id,
-          title: item.title,
-          file_url: url,
-          created_at: item.created_at,
-          subject_name: item.subjects?.name ?? "Unknown",
-          category: getResourceCategory(item.title, url),
-        };
+      subjectsSnapshot.docs.forEach(doc => {
+        const d = doc.data();
+        if (d.name?.toUpperCase() !== "SYLLABUS") {
+          subjectsMap.set(doc.id, d.name || "");
+          subjectIds.push(doc.id);
+        }
       });
 
-    // Deduplicate and filter
-    const seen = new Set<string>();
-    return resources
-      .filter((item) => {
-        const titleLower = item.title.toLowerCase();
+      if (subjectIds.length === 0) return [];
 
-        if (!item.title.trim()) return false;
-        if (EXCLUDED_TITLE_PATTERNS.some((re) => re.test(titleLower)))
-          return false;
-        if (EXCLUDED_TITLES.includes(titleLower)) return false;
-        if (excluded.includes(item.subject_name.toUpperCase())) return false;
+      // 2. Fetch resources for these subjects (Firestore 'in' supports up to 30 items)
+      // If we ever have more than 30 subjects in a semester, chunk them.
+      const resources: ResourceItem[] = [];
+      const chunkSize = 30;
 
-        const key = `${item.subject_name}-${item.category}-${titleLower}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
+      for (let i = 0; i < subjectIds.length; i += chunkSize) {
+        const chunk = subjectIds.slice(i, i + chunkSize);
+        const resourcesSnapshot = await db.collection("resources")
+          .where("subject_id", "in", chunk)
+          .get();
 
-        return true;
-      })
-      .sort((a, b) =>
-        a.title.localeCompare(b.title, undefined, {
-          numeric: true,
-          sensitivity: "base",
-        }),
+        resourcesSnapshot.docs.forEach(doc => {
+          const d = doc.data();
+          const url = d.file_url || "";
+          const subId = d.subject_id || "";
+          const subName = subjectsMap.get(subId) || "Unknown";
+
+          // Parse created_at. If it's a Firestore Timestamp, convert to ISOString.
+          let createdAtStr = new Date().toISOString();
+          if (d.created_at) {
+            if (typeof d.created_at.toDate === 'function') {
+              createdAtStr = d.created_at.toDate().toISOString();
+            } else if (d.created_at.seconds) {
+              createdAtStr = new Date(d.created_at.seconds * 1000).toISOString();
+            } else {
+              createdAtStr = new Date(d.created_at).toISOString();
+            }
+          }
+
+          resources.push({
+            id: doc.id,
+            title: d.title || "",
+            file_url: url,
+            created_at: createdAtStr,
+            subject_name: subName,
+            category: d.category || getResourceCategory(d.title || "", url),
+          });
+        });
+      }
+
+      const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
+        s.toUpperCase(),
       );
+
+      // Deduplicate and filter
+      const seen = new Set<string>();
+      return resources
+        .filter((item) => {
+          const titleLower = item.title.toLowerCase();
+
+          if (!item.title.trim()) return false;
+          if (EXCLUDED_TITLE_PATTERNS.some((re) => re.test(titleLower)))
+            return false;
+          if (EXCLUDED_TITLES.includes(titleLower)) return false;
+          if (excluded.includes(item.subject_name.toUpperCase())) return false;
+
+          const key = `${item.subject_name}-${item.category}-${titleLower}`;
+          if (seen.has(key)) return false;
+          seen.add(key);
+
+          return true;
+        })
+        .sort((a, b) =>
+          a.title.localeCompare(b.title, undefined, {
+            numeric: true,
+            sensitivity: "base",
+          }),
+        );
+    } catch (error) {
+      console.error("Error fetching resources from Firestore:", error);
+      return [];
+    }
   },
   ["resources-cache"],
-  { revalidate: 3600 },
+  { revalidate: 1 },
 );
 
 export const getSyllabusFile = unstable_cache(
@@ -217,19 +251,32 @@ export const getSyllabusFile = unstable_cache(
     branch: string,
     semester: number,
   ): Promise<string | null> => {
-    const supabase = createAdminClient();
+    try {
+      const db = adminDb();
 
-    const { data, error } = await supabase
-      .from("resources")
-      .select(`file_url, subjects!inner(name, branch, semester)`)
-      .eq("subjects.branch", branch)
-      .eq("subjects.semester", semester)
-      .eq("subjects.name", "Syllabus")
-      .limit(1)
-      .single();
+      // 1. Find the Syllabus subject
+      const subjectsSnapshot = await db.collection("subjects")
+        .where("branch", "==", branch)
+        .where("semester", "==", semester)
+        .where("name", "==", "Syllabus")
+        .limit(1)
+        .get();
 
-    if (error || !data) return null;
-    return data.file_url;
+      if (subjectsSnapshot.empty) return null;
+      const syllabusSubjectId = subjectsSnapshot.docs[0].id;
+
+      // 2. Find resource matching this subject
+      const resourcesSnapshot = await db.collection("resources")
+        .where("subject_id", "==", syllabusSubjectId)
+        .limit(1)
+        .get();
+
+      if (resourcesSnapshot.empty) return null;
+      return resourcesSnapshot.docs[0].data().file_url || null;
+    } catch (error) {
+      console.error("Error fetching syllabus file from Firestore:", error);
+      return null;
+    }
   },
   ["syllabus-cache"],
   { revalidate: 3600 },

@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabaseServer';
-import { createAdminClient } from '@/lib/supabaseAdmin';
+import { adminDb } from '@/lib/firebaseAdmin';
 
 export async function DELETE(
   request: Request,
@@ -26,34 +26,24 @@ export async function DELETE(
       return NextResponse.json({ error: 'Valid email required' }, { status: 401 });
     }
 
-    // Initialize admin client to bypass RLS for fetching and deleting
-    const adminSupabase = createAdminClient();
+    const db = adminDb();
 
     // Fetch the deck to check the author
-    const { data: deck, error: fetchError } = await adminSupabase
-      .from('community_decks')
-      .select('author_name')
-      .eq('id', id)
-      .single();
+    const deckDoc = await db.collection('community_decks').doc(id).get();
 
-    if (fetchError || !deck) {
+    if (!deckDoc.exists) {
       return NextResponse.json({ error: 'Deck not found' }, { status: 404 });
     }
 
+    const deck = deckDoc.data();
+
     // Verify authorship
-    if (deck.author_name !== userEmailPrefix) {
+    if (deck?.author_name !== userEmailPrefix) {
       return NextResponse.json({ error: 'Forbidden: You can only delete your own decks' }, { status: 403 });
     }
 
     // Perform deletion
-    const { error: deleteError } = await adminSupabase
-      .from('community_decks')
-      .delete()
-      .eq('id', id);
-
-    if (deleteError) {
-      throw deleteError;
-    }
+    await deckDoc.ref.delete();
 
     return NextResponse.json({ success: true });
   } catch (error) {

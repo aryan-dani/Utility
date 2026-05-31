@@ -1,29 +1,34 @@
-import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import { adminAuth } from "./firebaseAdmin";
 
 export async function createClient() {
   const cookieStore = await cookies();
+  const token = cookieStore.get("__session")?.value;
 
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() {
-          return cookieStore.getAll();
-        },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            );
-          } catch {
-            // The `setAll` method was called from a Server Component.
-            // This can be ignored if you have middleware refreshing
-            // user sessions.
-          }
-        },
+  return {
+    auth: {
+      async getUser() {
+        if (!token) return { data: { user: null }, error: null };
+        try {
+          const decoded = await adminAuth().verifyIdToken(token);
+          return {
+            data: {
+              user: {
+                id: decoded.uid,
+                uid: decoded.uid,
+                email: decoded.email,
+                email_verified: decoded.email_verified,
+                name: decoded.name,
+                picture: decoded.picture,
+              },
+            },
+            error: null,
+          };
+        } catch (e) {
+          console.warn("Firebase Admin verifyIdToken error in supabaseServer:", e);
+          return { data: { user: null }, error: e };
+        }
       },
-    }
-  );
+    },
+  };
 }

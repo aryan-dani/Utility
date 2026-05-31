@@ -1,61 +1,92 @@
 /**
  * runtime/lib/storage.mjs
- * Bucket and file operations. All bucket/path names are dynamic — nothing hardcoded.
+ * Bucket and file operations using Firebase Storage.
  */
 
-import { getClient, getUrl, getServiceKey } from "./supabase.mjs";
+import { bucket } from "./firebase.mjs";
 import { writeFileSync, mkdirSync, existsSync } from "fs";
 import { dirname } from "path";
-
-const supabase = () => getClient();
 
 // ── Buckets ────────────────────────────────────────────────────────────────────
 
 /** List all storage buckets. */
 export async function listBuckets() {
-  const { data, error } = await supabase().storage.listBuckets();
-  if (error) throw new Error(`listBuckets: ${error.message}`);
-  return data ?? [];
+  return [{ name: bucket.name }];
 }
 
 // ── Files ──────────────────────────────────────────────────────────────────────
 
 /**
  * List immediate children of a path in a bucket.
- * Returns items with { name, id, metadata } — folders have no id.
  */
-export async function listFiles(bucket, path = "", options = {}) {
-  const { limit = 1000, offset = 0, sortBy } = options;
-  const opts = { limit, offset };
-  if (sortBy) opts.sortBy = sortBy;
-  const { data, error } = await supabase().storage.from(bucket).list(path || undefined, opts);
-  if (error) throw new Error(`listFiles("${bucket}", "${path}"): ${error.message}`);
-  return data ?? [];
+export async function listFiles(bucketName, path = "", options = {}) {
+  const prefix = path ? (path.endsWith('/') ? path : path + '/') : '';
+  const [files, nextQuery] = await bucket.getFiles({
+    prefix,
+    delimiter: '/'
+  });
+
+  const results = [];
+  
+  // Folders are in nextQuery.prefixes
+  if (nextQuery && nextQuery.prefixes) {
+    for (const folder of nextQuery.prefixes) {
+      const folderName = folder.replace(prefix, '').replace('/', '');
+      if (folderName) {
+        results.push({
+          name: folderName,
+          id: null,
+          metadata: {}
+        });
+      }
+    }
+  }
+
+  // Files
+  for (const file of files) {
+    // getFiles prefix includes the directory itself, skip it if it is the prefix folder itself
+    if (file.name === prefix) continue;
+    const name = file.name.replace(prefix, '');
+    const [metadata] = await file.getMetadata().catch(() => [{}]);
+    results.push({
+      name,
+      id: file.name,
+      metadata: {
+        size: parseInt(metadata.size || 0),
+        mimetype: metadata.contentType
+      },
+      updated_at: metadata.updated
+    });
+  }
+
+  return results;
 }
 
 /**
  * Recursively list ALL files in a bucket (or a sub-path).
  * Returns full relative paths as strings.
  */
-export async function listAllFiles(bucket, prefix = "") {
-  const items = await listFiles(bucket, prefix);
+export async function listAllFiles(bucketName, prefix = "") {
+  const queryPrefix = prefix ? (prefix.endsWith('/') ? prefix : prefix + '/') : '';
+  const [files] = await bucket.getFiles({ prefix: queryPrefix });
+  
   const results = [];
-  for (const item of items) {
-    const fullPath = prefix ? `${prefix}/${item.name}` : item.name;
-    if (!item.id) {
-      // Folder — recurse
-      const children = await listAllFiles(bucket, fullPath);
-      results.push(...children);
-    } else {
-      results.push({ path: fullPath, name: item.name, size: item.metadata?.size, contentType: item.metadata?.mimetype, updatedAt: item.updated_at });
-    }
+  for (const file of files) {
+    if (file.name === queryPrefix || file.name.endsWith('/')) continue;
+    const [metadata] = await file.getMetadata().catch(() => [{}]);
+    results.push({
+      path: file.name,
+      name: file.name.split("/").pop(),
+      size: parseInt(metadata.size || 0),
+      contentType: metadata.contentType || "application/octet-stream",
+      updatedAt: metadata.updated || new Date().toISOString()
+    });
   }
   return results;
 }
 
 /**
  * Build a directory tree structure from a flat list of file paths.
- * Returns a nested object for pretty printing.
  */
 export function buildFileTree(files) {
   const tree = {};
@@ -77,18 +108,17 @@ export function buildFileTree(files) {
 /**
  * Download a file from storage and return its Buffer.
  */
-export async function downloadFile(bucket, path) {
-  const { data, error } = await supabase().storage.from(bucket).download(path);
-  if (error) throw new Error(`downloadFile("${bucket}", "${path}"): ${error.message}`);
-  const arrayBuffer = await data.arrayBuffer();
-  return Buffer.from(arrayBuffer);
+export async function downloadFile(bucketName, path) {
+  const file = bucket.file(path);
+  const [content] = await file.download();
+  return content;
 }
 
 /**
  * Download a file and save it to a local path.
  */
-export async function downloadToLocal(bucket, path, localPath) {
-  const buffer = await downloadFile(bucket, path);
+export async function downloadToLocal(bucketName, path, localPath) {
+  const buffer = await downloadFile(bucketName, path);
   const dir = dirname(localPath);
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true });
   writeFileSync(localPath, buffer);
@@ -101,26 +131,28 @@ export async function downloadToLocal(bucket, path, localPath) {
 /**
  * Upload a buffer to storage.
  */
-export async function uploadFile(bucket, path, buffer, contentType = "application/octet-stream") {
-  const { data, error } = await supabase()
-    .storage.from(bucket)
-    .upload(path, buffer, { contentType, upsert: true });
-  if (error) throw new Error(`uploadFile("${bucket}", "${path}"): ${error.message}`);
-  return data;
+export async function uploadFile(bucketName, path, buffer, contentType = "application/octet-stream") {
+  const file = bucket.file(path);
+  await file.save(buffer, {
+    metadata: { contentType },
+    resumable: false
+  });
+  return { path };
 }
 
 // ── Delete ─────────────────────────────────────────────────────────────────────
 
 /**
  * Delete one or more files from storage.
- * @param {string} bucket
- * @param {string|string[]} paths
  */
-export async function deleteFile(bucket, paths) {
+export async function deleteFile(bucketName, paths) {
   const pathArr = Array.isArray(paths) ? paths : [paths];
-  const { data, error } = await supabase().storage.from(bucket).remove(pathArr);
-  if (error) throw new Error(`deleteFile("${bucket}"): ${error.message}`);
-  return data;
+  for (const p of pathArr) {
+    await bucket.file(p).delete().catch(err => {
+      console.warn(`Warning deleting ${p}: ${err.message}`);
+    });
+  }
+  return { success: true };
 }
 
 // ── URLs ───────────────────────────────────────────────────────────────────────
@@ -128,20 +160,19 @@ export async function deleteFile(bucket, paths) {
 /**
  * Get the public URL for a file.
  */
-export function getPublicUrl(bucket, path) {
-  const { data } = supabase().storage.from(bucket).getPublicUrl(path);
-  return data.publicUrl;
+export function getPublicUrl(bucketName, path) {
+  return `https://firebasestorage.googleapis.com/v0/b/${bucket.name}/o/${encodeURIComponent(path)}?alt=media`;
 }
 
 /**
  * Get a signed (temporary) URL for a private file.
  */
-export async function getSignedUrl(bucket, path, expiresInSeconds = 3600) {
-  const { data, error } = await supabase()
-    .storage.from(bucket)
-    .createSignedUrl(path, expiresInSeconds);
-  if (error) throw new Error(`getSignedUrl: ${error.message}`);
-  return data.signedUrl;
+export async function getSignedUrl(bucketName, path, expiresInSeconds = 3600) {
+  const [url] = await bucket.file(path).getSignedUrl({
+    action: 'read',
+    expires: Date.now() + expiresInSeconds * 1000
+  });
+  return url;
 }
 
 // ── Metadata ───────────────────────────────────────────────────────────────────
@@ -149,12 +180,16 @@ export async function getSignedUrl(bucket, path, expiresInSeconds = 3600) {
 /**
  * Get metadata for a specific file (size, mime type, etc).
  */
-export async function getFileMetadata(bucket, path) {
-  const parts = path.split("/");
-  const name = parts.pop();
-  const folder = parts.join("/");
-  const items = await listFiles(bucket, folder);
-  const file = items.find((f) => f.name === name);
-  if (!file) throw new Error(`File not found: ${path} in bucket "${bucket}"`);
-  return file;
+export async function getFileMetadata(bucketName, path) {
+  const file = bucket.file(path);
+  const [metadata] = await file.getMetadata();
+  return {
+    name: path.split("/").pop(),
+    id: file.name,
+    metadata: {
+      size: parseInt(metadata.size || 0),
+      mimetype: metadata.contentType
+    },
+    updated_at: metadata.updated
+  };
 }

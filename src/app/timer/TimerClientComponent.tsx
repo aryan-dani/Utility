@@ -17,7 +17,8 @@ import {
   BarChart3
 } from 'lucide-react';
 import { FadeIn, ScaleButton } from '@/components/Animations';
-import { createClient } from '@/lib/supabase';
+import { auth, db } from '@/lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
 import { logActivity } from '@/components/ActivityHeatmap';
 
 type TimerMode = 'work' | 'break' | 'longBreak';
@@ -134,15 +135,14 @@ export default function TimerClient() {
             });
             localStorage.setItem('utility_planner_week', JSON.stringify(weekData));
             
-            const supabase = createClient();
-            const { data: { user } } = await supabase.auth.getUser();
+            const user = auth.currentUser;
             if (user) {
-              await supabase
-                .from('planner_data')
-                .upsert(
-                  { user_id: user.id, data: weekData, updated_at: new Date().toISOString() },
-                  { onConflict: 'user_id' }
-                );
+              const docRef = doc(db, 'planner_data', user.uid);
+              await setDoc(docRef, {
+                user_id: user.uid,
+                data: weekData,
+                updated_at: new Date().toISOString()
+              }, { merge: true });
             }
           }
         } catch (e) {

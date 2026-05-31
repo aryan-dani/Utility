@@ -25,7 +25,8 @@ import {
   Mic
 } from 'lucide-react';
 import { useAcademicStore } from '@/store/academicStore';
-import { createClient } from '@/lib/supabase';
+import { auth, db } from '@/lib/firebase';
+import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import ReactMarkdown from 'react-markdown';
 import { logActivity } from '@/components/ActivityHeatmap';
 import { toast } from 'sonner';
@@ -218,7 +219,6 @@ export default function AskClient() {
   const [subjects, setSubjects] = useState<string[]>([]);
   const [activeTab, setActiveTab] = useState<'chat' | 'flashcards' | 'quiz'>('chat');
 
-  const supabase = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
 
   // Grounded Document Chat States
@@ -259,14 +259,15 @@ export default function AskClient() {
 
   // Fetch subjects for context
   useEffect(() => {
-    supabase
-      .from('subjects')
-      .select('name')
-      .eq('branch', branch)
-      .eq('semester', semester)
-      .then(({ data }) => {
-        if (data) setSubjects(data.map((s: { name: string }) => s.name).filter((n: string) => n.toUpperCase() !== 'SYLLABUS'));
-      });
+    const q = query(
+      collection(db, 'subjects'),
+      where('branch', '==', branch),
+      where('semester', '==', semester)
+    );
+    getDocs(q).then((snapshot) => {
+      const data = snapshot.docs.map(doc => ({ name: doc.data().name as string }));
+      setSubjects(data.map((s: { name: string }) => s.name).filter((n: string) => n.toUpperCase() !== 'SYLLABUS'));
+    }).catch(err => console.error("Error loading subjects in AskAI:", err));
   }, [branch, semester]);
 
   // Fetch resources for grounded chat selector
@@ -584,15 +585,18 @@ export default function AskClient() {
     if (flashcards.length === 0 || isPublishingDeck) return;
     setIsPublishingDeck(true);
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const authorName = userData?.user?.email ? userData.user.email.split('@')[0] : 'Anonymous Scholar';
+      const user = auth.currentUser;
+      const authorName = user?.email ? user.email.split('@')[0] : 'Anonymous Scholar';
 
-      await supabase.from('community_decks').insert({
+      const newDeckRef = doc(collection(db, 'community_decks'));
+      await setDoc(newDeckRef, {
         title: flashcardTopic || 'Academic Flashcards',
         branch,
         semester,
         author_name: authorName,
         flashcards: flashcards,
+        upvotes: 0,
+        created_at: new Date().toISOString()
       });
 
       setPublishedDeck(true);

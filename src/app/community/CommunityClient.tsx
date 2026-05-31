@@ -1,7 +1,9 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { createClient } from '@/lib/supabase';
+import { auth, db } from '@/lib/firebase';
+import { onAuthStateChanged } from 'firebase/auth';
+import { doc, updateDoc, increment } from 'firebase/firestore';
 import { useAcademicStore } from '@/store/academicStore';
 import { Search, ThumbsUp, Layers, User, Calendar, BookOpen, X, ArrowRight, Check, Trash2, Flame, Clock } from 'lucide-react';
 import { logActivity } from '@/components/ActivityHeatmap';
@@ -35,15 +37,16 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
   const [sortBy, setSortBy] = useState<'top' | 'newest'>('top');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-  const supabase = useMemo(() => createClient(), []);
-
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user?.email) {
-        setCurrentUserEmail(data.user.email);
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (user?.email) {
+        setCurrentUserEmail(user.email);
+      } else {
+        setCurrentUserEmail(null);
       }
     });
-  }, [supabase]);
+    return () => unsubscribe();
+  }, []);
 
   const handleUpvote = async (deckId: string, currentUpvotes: number) => {
     if (upvotedDecks[deckId]) return;
@@ -53,7 +56,8 @@ export default function CommunityClient({ initialDecks }: CommunityClientProps) 
     setDecks((prev) => prev.map((d) => (d.id === deckId ? { ...d, upvotes: newUpvotes } : d)));
 
     try {
-      await supabase.from('community_decks').update({ upvotes: newUpvotes }).eq('id', deckId);
+      const docRef = doc(db, 'community_decks', deckId);
+      await updateDoc(docRef, { upvotes: increment(1) });
       logActivity('community_deck_upvoted', 1);
     } catch (err) {
       console.warn('Upvote error:', err);

@@ -32,7 +32,8 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAcademicStore, Branch, Semester } from "../store/academicStore";
-import { createClient } from "@/lib/supabase";
+import { auth } from "@/lib/firebase";
+import { signOut, onIdTokenChanged } from "firebase/auth";
 
 const PRIMARY_LINKS = [
   { href: "/syllabus", label: "Syllabus", Icon: BookOpen },
@@ -249,7 +250,6 @@ function NavbarInner() {
   const searchRef = useRef<HTMLInputElement>(null);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const appsRef = useRef<HTMLDivElement>(null);
-  const supabase = useMemo(() => createClient(), []);
 
   const branch = (searchParams.get("branch") as Branch) || "AIDS";
   const semester = Number(searchParams.get("semester") || "4") as Semester;
@@ -268,15 +268,21 @@ function NavbarInner() {
   }, [branch, semester, setBranch, setSemester]);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user ? { email: data.user.email } : null);
+    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({ email: firebaseUser.email || undefined });
+        try {
+          const token = await firebaseUser.getIdToken();
+          document.cookie = `__session=${token}; path=/; max-age=3600; SameSite=Lax; Secure`;
+        } catch (e) {
+          console.error("Error getting Firebase ID token:", e);
+        }
+      } else {
+        setUser(null);
+        document.cookie = "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
+      }
     });
-    const { data: listener } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user ? { email: session.user.email } : null);
-      },
-    );
-    return () => listener.subscription.unsubscribe();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
@@ -337,7 +343,7 @@ function NavbarInner() {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await signOut(auth);
     setUserMenuOpen(false);
     window.location.href = "/";
   };

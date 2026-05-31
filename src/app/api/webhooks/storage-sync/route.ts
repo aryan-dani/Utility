@@ -1,5 +1,5 @@
 import { NextResponse, after } from 'next/server';
-import syncProject from '../../../../../runtime/tools/sync.mjs';
+import syncDrive from '../../../../../runtime/tools/sync-drive.mjs';
 import indexContent from '../../../../../runtime/tools/index-content.mjs';
 
 export const dynamic = 'force-dynamic';
@@ -18,11 +18,11 @@ export async function POST(request: Request) {
 
     console.log('🔔 Storage webhook triggered. Queuing sync and index pipeline in background...');
 
-    // 1. Run syncProject and indexContent in the background using Next.js `after`
+    // 1. Run syncDrive and indexContent in the background using Next.js `after`
     after(async () => {
       try {
         console.log('🚀 Starting background sync and index...');
-        await syncProject();
+        await syncDrive();
         await indexContent();
         console.log('✅ Background sync and index completed successfully.');
       } catch (err) {
