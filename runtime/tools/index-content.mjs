@@ -167,7 +167,7 @@ export default async function indexContent() {
           {
             id: res.id,
             resource_id: res.id,
-            content: cleanText,
+            content: cleanText.length > 800000 ? cleanText.substring(0, 800000) : cleanText,
             pages: pages,
             last_indexed: new Date().toISOString(),
             title: res.title || "",

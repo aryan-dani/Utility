@@ -8,9 +8,8 @@ import {
   CalendarDays, MoreHorizontal, Minus, List, Columns, Calendar, RefreshCw, Tag
 } from 'lucide-react';
 import Link from 'next/link';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { logActivity } from '@/components/ActivityHeatmap';
 import { parsePrompt, mergeEntries } from '@/lib/promptParser';
 import { toast } from 'sonner';
@@ -921,37 +920,28 @@ export default function PlannerClient() {
     if (!user) return;
     setSyncing(true);
     try {
-      const q = query(
-        collection(db, 'planner_plans'),
-        where('owner_id', '==', user.id),
-        where('month', '==', month),
-        where('year', '==', year)
-      );
-      const snapshot = await getDocs(q);
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) return;
+      const idToken = await firebaseUser.getIdToken();
 
-      if (!snapshot.empty) {
-        const docId = snapshot.docs[0].id;
-        await updateDoc(doc(db, 'planner_plans', docId), {
-          data: planData,
-          title: planMeta.title,
-          is_public: planMeta.is_public,
-          updated_at: new Date().toISOString(),
-        });
-        setPlanMeta(prev => ({ ...prev, id: docId }));
-      } else {
-        const newDocRef = doc(collection(db, 'planner_plans'));
-        await setDoc(newDocRef, {
-          owner_id: user.id,
-          owner_email: user.email || '',
-          title: planMeta.title,
+      const res = await fetch('/api/planner', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
           month,
           year,
           data: planData,
-          is_public: planMeta.is_public,
-          updated_at: new Date().toISOString(),
-        });
-        setPlanMeta(prev => ({ ...prev, id: newDocRef.id }));
-      }
+          title: planMeta.title,
+          is_public: planMeta.is_public
+        })
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const resData = await res.json();
+      setPlanMeta(prev => ({ ...prev, id: resData.id }));
       setLastSynced(new Date());
     } catch (e) {
       console.error('Sync error:', e);
@@ -964,38 +954,41 @@ export default function PlannerClient() {
     if (!user) return;
     setSyncing(true);
     try {
-      const q = query(
-        collection(db, 'planner_plans'),
-        where('owner_id', '==', user.id),
-        where('month', '==', month),
-        where('year', '==', year)
-      );
-      const snapshot = await getDocs(q);
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) return;
+      const idToken = await firebaseUser.getIdToken();
 
-      if (!snapshot.empty) {
-        const docSnap = snapshot.docs[0];
-        const data = docSnap.data();
-        
-        setPlanData((data.data as PlanData) || {});
-        setPlanMeta({ id: docSnap.id, title: data.title || 'Study Plan', month, year, is_public: !!data.is_public });
+      const res = await fetch(`/api/planner?month=${month}&year=${year}`, {
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+      const resData = await res.json();
+
+      if (resData.plan) {
+        const p = resData.plan;
+        setPlanData(p.data || {});
+        setPlanMeta({
+          id: p.id,
+          title: p.title || 'Study Plan',
+          month,
+          year,
+          is_public: !!p.is_public
+        });
         
         let updatedDate = new Date();
-        if (data.updated_at) {
-          updatedDate = new Date(data.updated_at);
+        if (p.updated_at) {
+          updatedDate = new Date(p.updated_at);
         }
         setLastSynced(updatedDate);
         localStorage.setItem(storageKey(month, year), JSON.stringify({
-          data: data.data,
-          meta: { id: docSnap.id, title: data.title, month, year, is_public: !!data.is_public }
+          data: p.data,
+          meta: { id: p.id, title: p.title, month, year, is_public: !!p.is_public }
         }));
 
-        // Load collaborators
-        const collSnap = await getDocs(query(
-          collection(db, 'planner_collaborators'),
-          where('plan_id', '==', docSnap.id)
-        ));
-        const collabs = collSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-        setCollaborators(collabs as Collaborator[]);
+        setCollaborators(resData.collaborators || []);
       }
     } catch (e) {
       console.error(e);
@@ -1185,32 +1178,54 @@ export default function PlannerClient() {
       return;
     }
     try {
-      // Check if collaborator already exists
-      const existingSnap = await getDocs(query(
-        collection(db, 'planner_collaborators'),
-        where('plan_id', '==', planMeta.id),
-        where('user_email', '==', email)
-      ));
-      if (!existingSnap.empty) {
-        toast.error('Already invited');
-        return;
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) return;
+      const idToken = await firebaseUser.getIdToken();
+
+      const res = await fetch('/api/planner/collaborators', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({
+          planId: planMeta.id,
+          email,
+          role
+        })
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        let parsedErr;
+        try { parsedErr = JSON.parse(errText); } catch {}
+        throw new Error(parsedErr?.error || errText);
       }
 
-      const docRef = doc(collection(db, 'planner_collaborators'));
-      const newCollab = { plan_id: planMeta.id, user_email: email, role };
-      await setDoc(docRef, newCollab);
-
-      setCollaborators(prev => [...prev, { id: docRef.id, ...newCollab }]);
+      const resData = await res.json();
+      setCollaborators(prev => [...prev, resData.collaborator]);
       toast.success(`Invited ${email} as ${role}`);
     } catch (e: any) {
-      toast.error('Failed to invite');
+      toast.error(e.message || 'Failed to invite');
       console.error(e);
     }
   };
 
   const removeCollaborator = async (id: string) => {
     try {
-      await deleteDoc(doc(db, 'planner_collaborators', id));
+      const firebaseUser = auth.currentUser;
+      if (!firebaseUser) return;
+      const idToken = await firebaseUser.getIdToken();
+
+      const res = await fetch(`/api/planner/collaborators?id=${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${idToken}`
+        }
+      });
+
+      if (!res.ok) throw new Error(await res.text());
+
       setCollaborators(prev => prev.filter(c => c.id !== id));
       toast.success('Collaborator removed');
     } catch (e) {

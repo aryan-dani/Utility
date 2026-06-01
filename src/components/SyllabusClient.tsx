@@ -15,9 +15,8 @@ import {
   Trophy, 
   Brain, 
   HelpCircle, 
-  Sparkles, 
   Clock, 
-  BookOpen, 
+  BookOpen,  
   Cpu, 
   Database, 
   Activity, 
@@ -604,7 +603,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                     >
                       <div className="p-6 space-y-4">
                         <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
-                          <Sparkles className="w-3.5 h-3.5 text-primary" />
+                          <BookOpen className="w-3.5 h-3.5 text-primary" />
                           Curriculum Units
                         </div>
 

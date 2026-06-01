@@ -1,17 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, signOut } from "firebase/auth";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-  doc,
-  deleteDoc,
-  updateDoc,
-} from "firebase/firestore";
 import {
   Trash,
   Edit2,
@@ -103,100 +94,28 @@ export default function AdminClient() {
     }
   };
 
-  const fetchSubjects = useCallback(async () => {
-    try {
-      const q = query(
-        collection(db, "subjects"),
-        where("branch", "==", branch),
-        where("semester", "==", parseInt(semester)),
-      );
-      const snapshot = await getDocs(q);
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        name: doc.data().name || "",
-        branch: doc.data().branch || "",
-        semester: Number(doc.data().semester || 0),
-      }));
-
-      data.sort((a, b) => a.name.localeCompare(b.name));
-      setSubjects(data);
-    } catch (err) {
-      console.error("Error fetching subjects:", err);
-    }
-  }, [branch, semester]);
-
-  const fetchResources = useCallback(async () => {
+  const fetchAdminData = useCallback(async () => {
     setLoadingResources(true);
     try {
-      const subjectsSnapshot = await getDocs(
-        query(
-          collection(db, "subjects"),
-          where("branch", "==", branch),
-          where("semester", "==", parseInt(semester)),
-        ),
+      const res = await fetch(
+        `/api/admin/resources?branch=${branch}&semester=${semester}`
       );
-
-      if (subjectsSnapshot.empty) {
-        setResources([]);
-        setLoadingResources(false);
-        return;
+      if (!res.ok) {
+        throw new Error(await res.text());
       }
-
-      const subjectIds: string[] = [];
-      subjectsSnapshot.docs.forEach((doc) => {
-        subjectIds.push(doc.id);
-      });
-
-      const resourcesList: Resource[] = [];
-      const chunkSize = 30;
-
-      for (let i = 0; i < subjectIds.length; i += chunkSize) {
-        const chunk = subjectIds.slice(i, i + chunkSize);
-        const q = query(
-          collection(db, "resources"),
-          where("subject_id", "in", chunk),
-        );
-        const snapshot = await getDocs(q);
-
-        if (snapshot.empty) continue;
-
-        const resourceDocIds = snapshot.docs.map((d) => d.id);
-        const rcSnapshot = await getDocs(
-          query(
-            collection(db, "resource_content"),
-            where("resource_id", "in", resourceDocIds.slice(0, 30)),
-          ),
-        );
-        const indexedResourceIds = new Set(
-          rcSnapshot.docs.map((doc) => doc.data().resource_id),
-        );
-
-        snapshot.docs.forEach((doc) => {
-          const d = doc.data();
-          resourcesList.push({
-            id: doc.id,
-            title: d.title || "",
-            file_url: d.file_url || "",
-            subject_id: d.subject_id || "",
-            is_indexed: indexedResourceIds.has(doc.id),
-          });
-        });
-      }
-
-      setResources(resourcesList);
+      const data = await res.json();
+      setSubjects(data.subjects || []);
+      setResources(data.resources || []);
     } catch (err) {
-      console.error("Error fetching resources:", err);
+      console.error("Error fetching admin data:", err);
+    } finally {
+      setLoadingResources(false);
     }
-    setLoadingResources(false);
   }, [branch, semester]);
 
   useEffect(() => {
-    fetchSubjects();
-  }, [fetchSubjects]);
-
-  useEffect(() => {
-    if (tab === "manage") fetchResources();
-  }, [tab, fetchResources]);
+    fetchAdminData();
+  }, [fetchAdminData]);
 
   const handleDelete = async (id: string) => {
     if (
@@ -206,16 +125,11 @@ export default function AdminClient() {
     )
       return;
     try {
-      await deleteDoc(doc(db, "resources", id));
-
-      const rcSnapshot = await getDocs(
-        query(
-          collection(db, "resource_content"),
-          where("resource_id", "==", id),
-        ),
-      );
-      for (const docSnap of rcSnapshot.docs) {
-        await deleteDoc(docSnap.ref);
+      const res = await fetch(`/api/admin/resources?id=${id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) {
+        throw new Error(await res.text());
       }
 
       setResources((prev) => prev.filter((r) => r.id !== id));
@@ -233,10 +147,21 @@ export default function AdminClient() {
 
   const saveEdit = async (id: string) => {
     try {
-      await updateDoc(doc(db, "resources", id), {
-        title: editTitle,
-        subject_id: editSubjectId,
+      const res = await fetch("/api/admin/resources", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id,
+          title: editTitle,
+          subject_id: editSubjectId,
+        }),
       });
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
       setResources((prev) =>
         prev.map((r) =>
           r.id === id
@@ -252,7 +177,7 @@ export default function AdminClient() {
   };
 
   return (
-    <div className="flex w-full min-h-[85vh] bg-background">
+    <div className="flex w-full min-h-[calc(100vh-4rem)] bg-background">
       {/* Sidebar */}
       <div className="w-64 border-r border-border bg-card p-6 flex-col hidden md:flex">
         <Link
@@ -433,7 +358,7 @@ export default function AdminClient() {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex-1 flex flex-col">
+            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col">
               {loadingResources ? (
                 <div className="p-12 flex items-center justify-center flex-1">
                   <Loader2 className="w-5 h-5 animate-spin text-muted" />
@@ -492,17 +417,34 @@ export default function AdminClient() {
                                   <span className="text-[10px] font-bold uppercase tracking-widest text-muted">
                                     {subject?.name || "Uncategorized"}
                                   </span>
-                                  {resource.is_indexed ? (
-                                    <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-1">
-                                      <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
-                                      Indexed
-                                    </span>
-                                  ) : (
-                                    <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1 animate-pulse">
-                                      <span className="w-1 h-1 rounded-full bg-amber-500"></span>
-                                      Indexing...
-                                    </span>
-                                  )}
+                                  {(() => {
+                                    const indexableExts = ['.pdf', '.docx', '.pptx', '.doc', '.ppt'];
+                                    const isIndexable = indexableExts.some(ext => 
+                                      resource.title.toLowerCase().endsWith(ext)
+                                    );
+                                    if (resource.is_indexed) {
+                                      return (
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-1">
+                                          <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
+                                          Indexed
+                                        </span>
+                                      );
+                                    } else if (isIndexable) {
+                                      return (
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1 animate-pulse">
+                                          <span className="w-1 h-1 rounded-full bg-amber-500"></span>
+                                          Indexing...
+                                        </span>
+                                      );
+                                    } else {
+                                      return (
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
+                                          <span className="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
+                                          Static / Non-Indexable
+                                        </span>
+                                      );
+                                    }
+                                  })()}
                                 </div>
                               </div>
                             </div>

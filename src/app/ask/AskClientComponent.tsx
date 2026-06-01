@@ -28,6 +28,7 @@ import { useAcademicStore } from '@/store/academicStore';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
 import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { logActivity } from '@/components/ActivityHeatmap';
 import { toast } from 'sonner';
 import { useSRSStore } from '@/store/srsStore';
@@ -65,6 +66,7 @@ function MessageContent({ content }: { content: string }) {
   return (
     <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-surface prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-code:text-primary prose-code:bg-primary/5 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
       <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
         components={{
           pre: ({ children }) => <div className="relative group my-4">{children}</div>,
           code: ({ inline, className, children, ...props }: any) => {
@@ -91,6 +93,33 @@ function MessageContent({ content }: { content: string }) {
               </code>
             );
           },
+          table: ({ children }) => (
+            <div className="overflow-x-auto my-6 rounded-2xl border border-border bg-card/50 backdrop-blur-md shadow-xs">
+              <table className="min-w-full divide-y divide-border/60 text-xs">
+                {children}
+              </table>
+            </div>
+          ),
+          thead: ({ children }) => (
+            <thead className="bg-surface/50 font-bold uppercase tracking-wider text-muted">
+              {children}
+            </thead>
+          ),
+          th: ({ children }) => (
+            <th className="px-4 py-3.5 text-left text-xs font-bold text-foreground/85 border-b border-border/60">
+              {children}
+            </th>
+          ),
+          td: ({ children }) => (
+            <td className="px-4 py-3 text-xs text-foreground/75 border-b border-border/40 font-semibold leading-relaxed">
+              {children}
+            </td>
+          ),
+          tr: ({ children }) => (
+            <tr className="hover:bg-surface/20 transition-colors">
+              {children}
+            </tr>
+          ),
         }}
       >
         {content}
@@ -489,6 +518,18 @@ export default function AskClient() {
   const handleSubmit = (e?: React.FormEvent) => {
     e?.preventDefault();
     if (!(input || '').trim() || isLoading) return;
+
+    // Auto-rename chat session title if it is still 'New Chat'
+    if (activeSessionId) {
+      const currentSession = sessions.find(s => s.id === activeSessionId);
+      if (currentSession && currentSession.title === 'New Chat') {
+        const text = input.trim();
+        const newTitle = text.slice(0, 30) + (text.length > 30 ? '...' : '');
+        const updated = sessions.map(s => s.id === activeSessionId ? { ...s, title: newTitle } : s);
+        saveSessions(updated);
+      }
+    }
+
     sendMessage({ 
       text: input,
       context: { branch, semester, subjects } 
@@ -652,7 +693,7 @@ export default function AskClient() {
   };
 
   return (
-    <div className="flex-1 w-full flex flex-col max-w-4xl mx-auto h-[calc(100vh-4rem)]">
+    <div className="flex-1 w-full flex flex-col max-w-7xl mx-auto h-[calc(100vh-4rem)] px-4 sm:px-6">
       {/* Top Navigation Tabs */}
       <div className="border-b border-border bg-background px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-1.5 p-1 bg-surface border border-border rounded-xl shadow-xs">
@@ -660,7 +701,7 @@ export default function AskClient() {
             onClick={() => setActiveTab('chat')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'chat'
-                ? 'bg-foreground text-background shadow-sm'
+                ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted hover:text-foreground'
             }`}
           >
@@ -671,7 +712,7 @@ export default function AskClient() {
             onClick={() => setActiveTab('flashcards')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'flashcards'
-                ? 'bg-foreground text-background shadow-sm'
+                ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted hover:text-foreground'
             }`}
           >
@@ -682,7 +723,7 @@ export default function AskClient() {
             onClick={() => setActiveTab('quiz')}
             className={`flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
               activeTab === 'quiz'
-                ? 'bg-foreground text-background shadow-sm'
+                ? 'bg-primary text-primary-foreground shadow-xs'
                 : 'text-muted hover:text-foreground'
             }`}
           >
@@ -722,7 +763,7 @@ export default function AskClient() {
                       onClick={() => handleSwitchSession(s.id)}
                       className={`group/session w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
                         isActive 
-                          ? 'bg-foreground text-background font-semibold shadow-xs' 
+                          ? 'bg-primary text-primary-foreground font-semibold shadow-xs' 
                           : 'text-muted hover:text-foreground hover:bg-surface-hover'
                       }`}
                     >
@@ -730,14 +771,14 @@ export default function AskClient() {
                       <div className="flex items-center gap-1.5 opacity-0 group-hover/session:opacity-100 transition-opacity shrink-0">
                         <button
                           onClick={(e) => handleRenameSession(s.id, s.title, e)}
-                          className={`p-1 rounded-md hover:bg-surface-hover transition-colors ${isActive ? 'text-background hover:text-foreground' : 'text-muted hover:text-foreground'}`}
+                          className={`p-1 rounded-md transition-colors ${isActive ? 'text-primary-foreground/75 hover:bg-primary-hover hover:text-primary-foreground' : 'hover:bg-surface-hover text-muted hover:text-foreground'}`}
                           title="Rename Chat"
                         >
                           <Plus className="w-3 h-3 rotate-45" />
                         </button>
                         <button
                           onClick={(e) => handleDeleteSession(s.id, e)}
-                          className={`p-1 rounded-md hover:bg-surface-hover transition-colors ${isActive ? 'text-background hover:text-red-500' : 'text-muted hover:text-red-500'}`}
+                          className={`p-1 rounded-md transition-colors ${isActive ? 'text-primary-foreground/75 hover:bg-primary-hover hover:text-red-400' : 'hover:bg-surface-hover text-muted hover:text-red-500'}`}
                           title="Delete Chat"
                         >
                           <Trash2 className="w-3 h-3" />

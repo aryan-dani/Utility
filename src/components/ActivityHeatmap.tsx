@@ -1,8 +1,7 @@
 'use client';
 
-import { useEffect, useState, useMemo } from 'react';
-import { auth, db } from '@/lib/firebase';
-import { collection, query, where, getDocs, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { useEffect, useState } from 'react';
+import { auth } from '@/lib/firebase';
 import { Flame, Trophy, Calendar, Zap, Info } from 'lucide-react';
 
 interface ActivityLog {
@@ -29,27 +28,22 @@ export function logActivity(actionType: string, count = 1) {
     console.error('Local activity log error:', err);
   }
 
-  // 2. Log to Firestore if logged in
+  // 2. Log to Firestore via server API if logged in
   const user = auth.currentUser;
   if (!user) return;
 
-  const docId = `${user.uid}_${actionType}_${today}`;
-  const logRef = doc(db, 'activity_logs', docId);
-
-  getDoc(logRef)
-    .then((docSnap) => {
-      if (docSnap.exists()) {
-        updateDoc(logRef, { count: (docSnap.data().count || 0) + count });
-      } else {
-        setDoc(logRef, {
-          user_id: user.uid,
-          action_type: actionType,
-          count: count,
-          logged_date: today,
-        });
-      }
+  user.getIdToken()
+    .then((idToken) => {
+      fetch('/api/activity', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify({ actionType, count })
+      }).catch((err) => console.error("API logActivity network error:", err));
     })
-    .catch((err) => console.error("Firebase logActivity error:", err));
+    .catch((err) => console.error("API logActivity token error:", err));
 }
 
 export default function ActivityHeatmap() {
@@ -70,12 +64,17 @@ export default function ActivityHeatmap() {
     const user = auth.currentUser;
     if (user) {
       try {
-        const q = query(collection(db, 'activity_logs'), where('user_id', '==', user.uid));
-        const snapshot = await getDocs(q);
+        const idToken = await user.getIdToken();
+        const res = await fetch('/api/activity', {
+          headers: {
+            'Authorization': `Bearer ${idToken}`
+          }
+        });
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
         const cloudMap: Record<string, number> = {};
         
-        snapshot.docs.forEach((doc) => {
-          const item = doc.data();
+        (data.logs || []).forEach((item: any) => {
           if (item.logged_date && item.count) {
             cloudMap[item.logged_date] = (cloudMap[item.logged_date] || 0) + Number(item.count);
           }
@@ -90,7 +89,7 @@ export default function ActivityHeatmap() {
           return merged;
         });
       } catch (err) {
-        console.error("Firebase fetchActivity error:", err);
+        console.error("API fetchActivity error:", err);
       }
     }
     setLoading(false);

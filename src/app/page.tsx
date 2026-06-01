@@ -66,9 +66,13 @@ import ActivityHeatmap from "@/components/ActivityHeatmap";
 
 export default function Home() {
   return (
-    <div className="flex-1 w-full flex flex-col">
+    <div className="flex-1 w-full flex flex-col relative">
       {/* Hero */}
-      <section className="w-full max-w-7xl mx-auto px-6 pt-20 pb-28 flex flex-col items-center justify-center text-center">
+      <section className="w-full max-w-7xl mx-auto px-6 pt-24 pb-28 flex flex-col items-center justify-center text-center relative overflow-hidden">
+        {/* Glow Effects */}
+        <div className="absolute top-[-10%] left-[50%] -translate-x-[50%] w-[600px] h-[300px] bg-primary/5 rounded-full blur-[120px] pointer-events-none -z-10" />
+        <div className="absolute top-[20%] left-[20%] w-[250px] h-[250px] bg-indigo-500/5 rounded-full blur-[100px] pointer-events-none -z-10" />
+        
         <FadeIn>
           <h1 className="text-5xl sm:text-6xl md:text-7xl font-bold tracking-tight leading-[1.08] mb-6 text-foreground max-w-4xl mx-auto">
             Everything for your
@@ -89,18 +93,18 @@ export default function Home() {
       <div className="w-full border-t border-border" />
 
       {/* Features */}
-      <section className="w-full max-w-[90rem] mx-auto px-6 py-20">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden border border-border shadow-card">
+      <section className="w-full max-w-7xl mx-auto px-6 py-20">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {FEATURES.map(({ href, label, number, Icon, description }, i) => (
             <Link
               key={href}
               href={href}
-              className="group block bg-background hover:bg-surface transition-colors duration-200"
+              className="group block bg-card border border-border hover:border-border-strong rounded-2xl transition-all duration-300 premium-card shadow-xs hover:shadow-md hover:-translate-y-[2px]"
             >
               <FadeIn delay={i * 0.07} y={8}>
                 <div className="p-6 h-full flex flex-col gap-6">
                   <div className="flex items-start justify-between">
-                    <div className="w-10 h-10 rounded-lg bg-surface border border-border flex items-center justify-center group-hover:bg-surface-hover transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center group-hover:bg-surface-hover transition-colors">
                       <Icon className="w-5 h-5 text-foreground" />
                     </div>
                     <span className="text-xs font-mono text-muted">

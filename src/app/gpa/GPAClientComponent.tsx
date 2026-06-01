@@ -17,6 +17,7 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import { FadeIn, ScaleButton, StaggerContainer, StaggerItem } from '@/components/Animations';
+import Link from 'next/link';
 
 interface Subject {
   id: string;
@@ -704,6 +705,14 @@ export default function GPAClient() {
                                   );
                                 })}
                               </div>
+
+                              <Link
+                                href={`/ask?tab=chat&prompt=${encodeURIComponent(`I want to achieve a high grade in my Semester 4 course: "${sub.name}". Based on my current class resources, can you explain the most critical units, concepts, and formulas I should focus on to score 90+? Please break down a study schedule and list some potential exam questions.`)}`}
+                                className="w-full mt-4 flex items-center justify-center gap-1.5 py-2 bg-foreground text-background hover:opacity-90 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-opacity text-center block"
+                              >
+                                <Target className="w-3.5 h-3.5" />
+                                Generate AI Study Guide
+                              </Link>
                             </div>
                           </div>
                         );

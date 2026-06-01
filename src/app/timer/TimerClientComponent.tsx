@@ -61,6 +61,77 @@ export default function TimerClient() {
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
+  const [soundscape, setSoundscape] = useState<'none' | 'lofi' | 'rain' | 'cafe'>('none');
+  const [soundVolume, setSoundVolume] = useState(0.5);
+  const [soundPlaying, setSoundPlaying] = useState(false);
+  const soundAudioRef = useRef<HTMLAudioElement | null>(null);
+
+  const soundUrls = useMemo(() => ({
+    lofi: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+    rain: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
+    cafe: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+  }), []);
+
+  useEffect(() => {
+    if (soundscape === 'none') {
+      if (soundAudioRef.current) {
+        soundAudioRef.current.pause();
+        soundAudioRef.current = null;
+      }
+      setSoundPlaying(false);
+      return;
+    }
+
+    if (soundAudioRef.current) {
+      soundAudioRef.current.pause();
+    }
+
+    const audio = new Audio(soundUrls[soundscape]);
+    audio.loop = true;
+    audio.volume = soundVolume;
+    soundAudioRef.current = audio;
+
+    if (isActive || soundPlaying) {
+      audio.play()
+        .then(() => setSoundPlaying(true))
+        .catch(err => console.error("Soundscape play failed", err));
+    }
+  }, [soundscape, soundUrls]);
+
+  useEffect(() => {
+    if (soundAudioRef.current) {
+      soundAudioRef.current.volume = soundVolume;
+    }
+  }, [soundVolume]);
+
+  useEffect(() => {
+    if (isActive && soundscape !== 'none' && soundAudioRef.current && !soundPlaying) {
+      soundAudioRef.current.play()
+        .then(() => setSoundPlaying(true))
+        .catch(() => {});
+    }
+  }, [isActive, soundscape, soundPlaying]);
+
+  useEffect(() => {
+    return () => {
+      if (soundAudioRef.current) {
+        soundAudioRef.current.pause();
+      }
+    };
+  }, []);
+
+  const toggleSoundscapePlay = () => {
+    if (!soundAudioRef.current) return;
+    if (soundPlaying) {
+      soundAudioRef.current.pause();
+      setSoundPlaying(false);
+    } else {
+      soundAudioRef.current.play()
+        .then(() => setSoundPlaying(true))
+        .catch(err => console.error("Soundscape play failed", err));
+    }
+  };
+
   const totalTime =
     mode === 'work'
       ? sanitizeDuration(workTime) * 60
@@ -231,7 +302,7 @@ export default function TimerClient() {
   }, [weeklyChartData]);
 
   return (
-    <div className="flex-1 w-full max-w-4xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-center gap-12 min-h-[85vh]">
+    <div className="flex-1 w-full max-w-4xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-center gap-12 min-h-[calc(100vh-4rem)]">
       
       {/* Left panel: Pomodoro timer */}
       <div className="flex-1 flex flex-col items-center max-w-md w-full">
@@ -372,6 +443,58 @@ export default function TimerClient() {
               );
             })}
           </div>
+        </div>
+
+        {/* Ambient Soundscapes Card */}
+        <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-2">
+              <Volume2 className="w-4 h-4 text-muted" />
+              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Ambient Soundscapes</h3>
+            </div>
+            {soundscape !== 'none' && (
+              <button 
+                onClick={toggleSoundscapePlay}
+                className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-surface border border-border rounded-md text-foreground hover:bg-surface-hover transition-all"
+              >
+                {soundPlaying ? 'Pause' : 'Play'}
+              </button>
+            )}
+          </div>
+          
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {(['lofi', 'rain', 'cafe'] as const).map((s) => (
+              <button
+                key={s}
+                onClick={() => setSoundscape(soundscape === s ? 'none' : s)}
+                className={`px-3 py-2 rounded-xl text-xs font-semibold capitalize transition-all border ${
+                  soundscape === s
+                    ? 'bg-foreground text-background border-transparent font-bold'
+                    : 'bg-surface/50 border-border text-muted hover:border-border-strong hover:text-foreground'
+                }`}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+
+          {soundscape !== 'none' && (
+            <div className="space-y-2 animate-fade-in">
+              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted">
+                <span>Volume</span>
+                <span>{Math.round(soundVolume * 100)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={soundVolume}
+                onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
+                className="w-full accent-foreground bg-surface border border-border rounded-lg appearance-none h-1.5 cursor-pointer"
+              />
+            </div>
+          )}
         </div>
       </FadeIn>
 
