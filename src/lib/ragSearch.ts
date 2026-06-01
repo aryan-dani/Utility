@@ -27,10 +27,22 @@ export async function performRAGSearch(
 
     if (searchTerms.length === 0) return [];
 
+    const stopWords = new Set([
+      "the", "is", "a", "and", "or", "in", "of", "to", "for", "with", "on", 
+      "at", "by", "an", "this", "that", "it", "from", "as", "are", "be", "was",
+      "were", "but", "not", "he", "she", "they", "them", "his", "her", "their"
+    ]);
+    const cleanTerms = searchTerms.filter(t => !stopWords.has(t));
+    const queryTerms = (cleanTerms.length > 0 ? cleanTerms : searchTerms).slice(0, 10);
+
     // 1. Search in resource_content collection
     let contentRef = db.collection("resource_content") as any;
     if (resourceId) {
       contentRef = contentRef.where("resource_id", "==", resourceId);
+    } else if (queryTerms.length > 0) {
+      contentRef = contentRef.where("search_tokens", "array-contains-any", queryTerms);
+    } else {
+      return [];
     }
     const snapshot = await contentRef.get();
     

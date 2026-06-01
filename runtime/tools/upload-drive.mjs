@@ -4,45 +4,17 @@
  * Preserves folder structures and triggers Google Drive to Firestore Sync upon completion.
  */
 
-import { google } from "googleapis";
 import { readFileSync, existsSync, readdirSync, statSync, createReadStream } from "fs";
 import { join, dirname, basename } from "path";
 import { fileURLToPath } from "url";
 import syncDrive from "./sync-drive.mjs";
+import { env } from "../lib/env.mjs";
+import { getDrive } from "../lib/drive.mjs";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-// ── Env loading ────────────────────────────────────────────────────────────────
-
-function loadEnv() {
-  const envPath = join(__dirname, "..", "..", ".env.local");
-  if (!existsSync(envPath)) {
-    return process.env;
-  }
-
-  const content = readFileSync(envPath, "utf-8");
-  const parsed = {};
-  for (const line of content.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
-    const key = trimmed.slice(0, eqIdx).trim();
-    let value = trimmed.slice(eqIdx + 1).trim();
-    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
-      value = value.slice(1, -1);
-    }
-    parsed[key] = value;
-  }
-  return { ...process.env, ...parsed };
-}
-
-const env = loadEnv();
-
 const clientEmail = env["FIREBASE_CLIENT_EMAIL"];
-const privateKey = env["FIREBASE_PRIVATE_KEY"]
-  ? env["FIREBASE_PRIVATE_KEY"].replace(/\\n/g, "\n")
-  : undefined;
+const privateKey = env["FIREBASE_PRIVATE_KEY"];
 const driveFolderId = env["GOOGLE_DRIVE_FOLDER_ID"];
 
 if (!clientEmail || !privateKey) {
@@ -53,12 +25,7 @@ if (!driveFolderId) {
 }
 
 // Authenticate Google Drive API
-const auth = new google.auth.JWT({
-  email: clientEmail,
-  key: privateKey,
-  scopes: ["https://www.googleapis.com/auth/drive"]
-});
-const drive = google.drive({ version: "v3", auth });
+const drive = getDrive(["https://www.googleapis.com/auth/drive"]);
 
 // ── Helper functions for Drive traversal ───────────────────────────────────────
 

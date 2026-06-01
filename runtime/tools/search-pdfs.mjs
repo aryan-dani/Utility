@@ -6,7 +6,7 @@
 import { listAllFiles, downloadFile } from "../lib/storage.mjs";
 import { searchInPdf } from "../lib/pdf.mjs";
 
-async function searchAll(bucket, term) {
+export async function searchAll(bucket, term) {
   console.log(`\n🔍 Searching for "${term}" in bucket "${bucket}"...\n`);
   
   const files = await listAllFiles(bucket);
@@ -41,9 +41,12 @@ async function searchAll(bucket, term) {
   }
 }
 
-const args = process.argv.slice(2);
-if (args.length < 1) {
-  console.log("Usage: node runtime/tools/search-pdfs.mjs <term> [bucket_name]");
-} else {
-  searchAll(args[1] || "course-content", args[0]);
+// Allow running directly
+if (import.meta.url.endsWith(process.argv[1].replace(/\\/g, "/"))) {
+  const args = process.argv.slice(2);
+  if (args.length < 1) {
+    console.log("Usage: node runtime/tools/search-pdfs.mjs <term> [bucket_name]");
+  } else {
+    searchAll(args[1] || "course-content", args[0]);
+  }
 }

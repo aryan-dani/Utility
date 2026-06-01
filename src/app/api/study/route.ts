@@ -33,7 +33,8 @@ export async function POST(req: Request) {
     const branchName = branch === 'AIDS' ? 'Artificial Intelligence & Data Science Engineering' : branch;
     const semester = context?.semester || 4;
 
-    const cacheKey = `study_${type}_${topic}_${branch}_${semester}`.trim().toLowerCase();
+    const cleanTopic = topic.trim().toLowerCase().replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "").replace(/\s+/g, " ");
+    const cacheKey = `study_${type}_${cleanTopic}_${branch}_${semester}`.trim();
 
     // Semantic Caching Interceptor
     try {

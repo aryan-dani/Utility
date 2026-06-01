@@ -4,75 +4,16 @@
  * Scans Google Drive directory recursively and updates 'subjects' and 'resources' collections.
  */
 
-import { google } from "googleapis";
 import { db } from "../lib/firebase.mjs";
-import { readFileSync, existsSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
 import crypto from "crypto";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
-// ── Env loading ────────────────────────────────────────────────────────────────
-
-function loadEnv() {
-  const envPath = join(__dirname, "..", "..", ".env.local");
-  if (!existsSync(envPath)) {
-    return process.env;
-  }
-
-  const content = readFileSync(envPath, "utf-8");
-  const parsed = {};
-  for (const line of content.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed || trimmed.startsWith("#")) continue;
-    const eqIdx = trimmed.indexOf("=");
-    if (eqIdx === -1) continue;
-    const key = trimmed.slice(0, eqIdx).trim();
-    let value = trimmed.slice(eqIdx + 1).trim();
-    if (
-      (value.startsWith('"') && value.endsWith('"')) ||
-      (value.startsWith("'") && value.endsWith("'"))
-    ) {
-      value = value.slice(1, -1);
-    }
-    parsed[key] = value;
-  }
-  return { ...process.env, ...parsed };
-}
-
-const env = loadEnv();
+import { env } from "../lib/env.mjs";
+import { getDrive } from "../lib/drive.mjs";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function generateId(input) {
   const hash = crypto.createHash("sha256").update(input).digest("hex");
   return `${hash.substring(0, 8)}-${hash.substring(8, 12)}-4${hash.substring(12, 15)}-a${hash.substring(15, 18)}-${hash.substring(18, 30)}`;
-}
-
-let driveInstance = null;
-
-function getDrive() {
-  if (driveInstance) return driveInstance;
-
-  const clientEmail = env["FIREBASE_CLIENT_EMAIL"];
-  const privateKey = env["FIREBASE_PRIVATE_KEY"]
-    ? env["FIREBASE_PRIVATE_KEY"].replace(/\\n/g, "\n")
-    : undefined;
-
-  if (!clientEmail || !privateKey) {
-    throw new Error(
-      "❌ Missing FIREBASE_CLIENT_EMAIL or FIREBASE_PRIVATE_KEY in environment variables.",
-    );
-  }
-
-  const auth = new google.auth.JWT({
-    email: clientEmail,
-    key: privateKey,
-    scopes: ["https://www.googleapis.com/auth/drive.readonly"],
-  });
-  driveInstance = google.drive({ version: "v3", auth });
-  return driveInstance;
 }
 
 /** Recursively retrieve all files from a Google Drive folder */

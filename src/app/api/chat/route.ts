@@ -37,13 +37,23 @@ export async function POST(req: Request) {
 
   const cleanPrompt = lastMessage.trim().toLowerCase();
 
+  // Normalize prompt for more robust cache hits
+  const normalizePrompt = (p: string) => {
+    return p
+      .toLowerCase()
+      .replace(/[.,\/#!$%\^&\*;:{}=\-_`~()?]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  };
+  const normalizedPrompt = normalizePrompt(cleanPrompt);
+
   // Semantic Caching Interceptor
-  if (cleanPrompt.length > 5) {
+  if (normalizedPrompt.length > 5) {
     try {
       const db = adminDb();
       const cachedSnapshot = await db
         .collection('semantic_cache')
-        .where('prompt', '==', cleanPrompt)
+        .where('prompt', '==', normalizedPrompt)
         .limit(1)
         .get();
 
@@ -118,11 +128,11 @@ MODERN TUTOR GUIDELINES:
     system: systemPrompt,
     messages: finalMessages,
     onFinish: async ({ text }) => {
-      if (cleanPrompt.length > 5) {
+      if (normalizedPrompt.length > 5) {
         try {
           const db = adminDb();
           await db.collection('semantic_cache').add({
-            prompt: cleanPrompt,
+            prompt: normalizedPrompt,
             response: text,
             created_at: new Date().toISOString()
           });
