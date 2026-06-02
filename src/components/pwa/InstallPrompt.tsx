@@ -2,22 +2,17 @@
 
 import { useEffect, useState } from 'react';
 import { Download, X } from 'lucide-react';
+import { usePWA } from '@/contexts/PWAContext';
 
 export default function InstallPrompt() {
-  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const { deferredPrompt, setDeferredPrompt, isInstallable } = usePWA();
   const [isVisible, setIsVisible] = useState(false);
 
   useEffect(() => {
-    const handler = (e: Event) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      if (!localStorage.getItem('pwa-prompt-dismissed')) {
-        setIsVisible(true);
-      }
-    };
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
-  }, []);
+    if (isInstallable && !localStorage.getItem('pwa-prompt-dismissed')) {
+      setIsVisible(true);
+    }
+  }, [isInstallable]);
 
   const handleInstall = async () => {
     if (!deferredPrompt) return;
@@ -34,7 +29,7 @@ export default function InstallPrompt() {
     localStorage.setItem('pwa-prompt-dismissed', 'true');
   };
 
-  if (!isVisible) return null;
+  if (!isVisible || !isInstallable) return null;
 
   return (
     <div className="fixed bottom-4 left-4 right-4 z-50 md:left-auto md:w-96 flex flex-col gap-3 p-4 bg-surface border border-border shadow-popover rounded-xl animate-slide-up">
@@ -43,13 +38,13 @@ export default function InstallPrompt() {
           <h3 className="text-sm font-semibold text-foreground">Install Utility</h3>
           <p className="text-xs text-muted mt-1">Get the app for offline access, faster loading, and a better experience.</p>
         </div>
-        <button onClick={handleDismiss} className="text-muted hover:text-foreground">
+        <button onClick={handleDismiss} className="text-muted hover:text-foreground transition-colors">
           <X className="w-4 h-4" />
         </button>
       </div>
       <button
         onClick={handleInstall}
-        className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground hover:bg-primary-hover px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        className="w-full flex items-center justify-center gap-2 bg-foreground text-background hover:opacity-90 px-4 py-2 rounded-lg text-sm font-bold transition-all"
       >
         <Download className="w-4 h-4" />
         Install App

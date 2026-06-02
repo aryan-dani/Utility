@@ -51,6 +51,8 @@ export default function PwaUpdater() {
         label: 'Update Now',
         onClick: () => {
           worker.postMessage({ type: 'SKIP_WAITING' });
+          // Fallback reload in case controllerchange doesn't fire or SW is broken
+          setTimeout(() => window.location.reload(), 500);
         },
       },
       duration: 10000,
@@ -60,39 +62,9 @@ export default function PwaUpdater() {
   const handleUpdate = () => {
     if (registration?.waiting) {
       registration.waiting.postMessage({ type: 'SKIP_WAITING' });
+      setTimeout(() => window.location.reload(), 500);
     }
   };
 
-  if (!updateAvailable) return null;
-
-  return (
-    <div className="fixed bottom-4 right-4 z-[999] max-w-sm bg-card border border-border rounded-xl shadow-lg p-4 flex flex-col gap-3 animate-in fade-in slide-in-from-bottom-5">
-      <div className="flex items-start gap-3">
-        <div className="p-2 rounded-lg bg-indigo-500/10 text-indigo-500">
-          <RefreshCw className="w-5 h-5 animate-spin" style={{ animationDuration: '3s' }} />
-        </div>
-        <div>
-          <h4 className="font-semibold text-sm">Update Available</h4>
-          <p className="text-xs text-muted-foreground mt-0.5">
-            A new version of Utility is available. Refresh now to apply updates.
-          </p>
-        </div>
-      </div>
-      <div className="flex gap-2 justify-end">
-        <button
-          onClick={() => setUpdateAvailable(false)}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-border hover:bg-accent hover:text-accent-foreground transition-colors"
-        >
-          Dismiss
-        </button>
-        <button
-          onClick={handleUpdate}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium bg-indigo-600 text-white hover:bg-indigo-700 transition-colors flex items-center gap-1.5"
-        >
-          <RefreshCw className="w-3.5 h-3.5" />
-          Refresh Now
-        </button>
-      </div>
-    </div>
-  );
+  return null;
 }
