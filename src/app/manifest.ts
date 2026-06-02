@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Utility — Academic OS',
+    name: 'Utility',
     short_name: 'Utility',
     description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
     start_url: '/',

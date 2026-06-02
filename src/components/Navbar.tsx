@@ -29,6 +29,7 @@ import {
   Users,
   LayoutGrid,
   Layers,
+  Download,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAcademicStore, Branch, Semester } from "../store/academicStore";
@@ -65,6 +66,12 @@ const SECONDARY_LINKS = [
     label: "Study Planner",
     Icon: CalendarCheck,
     desc: "Monthly planner with prompts & collaboration",
+  },
+  {
+    href: "/install",
+    label: "Install App",
+    Icon: Download,
+    desc: "Install Utility as a standalone app",
   },
 ];
 

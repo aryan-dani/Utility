@@ -25,21 +25,21 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   title: {
-    default: 'Academic OS',
-    template: '%s — Academic OS',
+    default: 'Utility',
+    template: '%s — Utility',
   },
   description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
   keywords: ['academic', 'syllabus', 'resources', 'planner', 'university', 'student', 'AI'],
   openGraph: {
-    title: 'Academic OS',
+    title: 'Utility',
     description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
     type: 'website',
-    url: 'https://academic-os.vercel.app', // placeholder
+    url: 'https://utility.vercel.app', // placeholder
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Academic OS',
+    title: 'Utility',
   },
 };
 

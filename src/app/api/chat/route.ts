@@ -127,6 +127,7 @@ MODERN TUTOR GUIDELINES:
     model: groq('llama-3.3-70b-versatile'),
     system: systemPrompt,
     messages: finalMessages,
+    maxOutputTokens: 2048,
     onFinish: async ({ text }) => {
       if (normalizedPrompt.length > 5) {
         try {

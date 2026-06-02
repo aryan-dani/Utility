@@ -14,7 +14,8 @@ import {
   Search,
   Printer,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  ChevronDown
 } from 'lucide-react';
 import { FadeIn, ScaleButton, StaggerContainer, StaggerItem } from '@/components/Animations';
 import Link from 'next/link';
@@ -131,6 +132,7 @@ export default function GPAClient() {
   });
   const [targetCGPA, setTargetCGPA] = useState<number>(8.5);
   const [targetSemester, setTargetSemester] = useState<number>(8);
+  const [isTargetSemOpen, setIsTargetSemOpen] = useState(false);
 
   const currentBranch = useMemo(() => 
     selectedBranch ? COURSE_DATA[selectedBranch] : null, 
@@ -840,19 +842,46 @@ export default function GPAClient() {
                     />
                   </div>
 
-                  <div className="space-y-2">
+                  <div className="space-y-2 relative">
                     <label className="text-[10px] font-black uppercase tracking-widest text-muted block pl-1">
                       Target Semester Horizon
                     </label>
-                    <select
-                      value={targetSemester}
-                      onChange={(e) => setTargetSemester(parseInt(e.target.value) || 8)}
-                      className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm font-bold text-foreground outline-none focus:border-foreground/50 transition-all"
-                    >
-                      {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
-                        <option key={num} value={num}>Semester {num}</option>
-                      ))}
-                    </select>
+                    <div className="relative">
+                      <button
+                        onClick={() => setIsTargetSemOpen(!isTargetSemOpen)}
+                        className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm font-bold text-foreground outline-none focus:border-foreground/50 transition-all flex justify-between items-center"
+                      >
+                        Semester {targetSemester}
+                        <ChevronDown className={`w-4 h-4 text-muted transition-transform ${isTargetSemOpen ? 'rotate-180' : ''}`} />
+                      </button>
+                      
+                      {isTargetSemOpen && (
+                        <>
+                          <div 
+                            className="fixed inset-0 z-40" 
+                            onClick={() => setIsTargetSemOpen(false)}
+                          />
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[250px] overflow-y-auto">
+                            {[1, 2, 3, 4, 5, 6, 7, 8].map(num => (
+                              <button
+                                key={num}
+                                onClick={() => {
+                                  setTargetSemester(num);
+                                  setIsTargetSemOpen(false);
+                                }}
+                                className={`text-left px-4 py-3 text-sm font-bold transition-colors border-b border-border/50 last:border-0 ${
+                                  targetSemester === num 
+                                    ? 'bg-surface text-foreground' 
+                                    : 'text-muted hover:bg-surface hover:text-foreground'
+                                }`}
+                              >
+                                Semester {num}
+                              </button>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>

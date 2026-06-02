@@ -60,11 +60,13 @@ export async function performRAGSearch(
         if (content.includes(term)) score += 2;        // Body content match
       });
 
+      if (resourceId) score += 1; // Guarantee inclusion if explicitly selected
+
       if (score > 0) {
         matches.push({
           resource_id: d.resource_id,
           title: d.title || "Untitled",
-          snippet: d.snippet || d.content?.substring(0, 500) + "..." || "",
+          snippet: d.snippet || d.content?.substring(0, 1500) + "..." || "",
           subject_name: d.subject_name || "Unknown",
           branch: d.branch,
           semester: d.semester,

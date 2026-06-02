@@ -184,10 +184,10 @@ export default function CommunityClient({
 
           <div className="h-6 w-px bg-border hidden sm:block"></div>
 
-          <div className="flex bg-surface border border-border rounded-xl p-0.5">
+          <div className="flex bg-surface border border-border rounded-full p-0.5">
             <button
               onClick={() => setSortBy("top")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 sortBy === "top"
                   ? "bg-background shadow-sm text-foreground"
                   : "text-muted hover:text-foreground"
@@ -200,7 +200,7 @@ export default function CommunityClient({
             </button>
             <button
               onClick={() => setSortBy("newest")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
                 sortBy === "newest"
                   ? "bg-background shadow-sm text-foreground"
                   : "text-muted hover:text-foreground"

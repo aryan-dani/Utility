@@ -62,7 +62,8 @@ function CopyButton({ text }: { text: string }) {
 }
 
 /* Professional markdown renderer using react-markdown */
-function MessageContent({ content }: { content: string }) {
+function MessageContent({ content, showCursor }: { content: string, showCursor?: boolean }) {
+  const displayContent = showCursor ? content + ' ▋' : content;
   return (
     <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-surface prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-code:text-primary prose-code:bg-primary/5 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
       <ReactMarkdown
@@ -122,7 +123,7 @@ function MessageContent({ content }: { content: string }) {
           ),
         }}
       >
-        {content}
+        {displayContent}
       </ReactMarkdown>
     </div>
   );
@@ -191,11 +192,11 @@ function AddToSrsButton({ cards, defaultName }: { cards: Flashcard[]; defaultNam
   };
 
   return (
-    <div ref={dropdownRef} className="relative">
+    <div ref={dropdownRef} className="relative shrink-0">
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={added}
-        className="flex items-center gap-1.5 px-4 py-2 border border-border hover:bg-surface text-xs font-semibold rounded-xl text-foreground transition-all shadow-xs"
+        className="flex items-center gap-1.5 px-4 py-2 border border-border hover:bg-surface text-xs font-semibold rounded-xl text-foreground transition-all shadow-xs whitespace-nowrap"
       >
         {added ? (
           <>
@@ -243,6 +244,8 @@ export interface ChatSession {
   createdAt: string;
 }
 
+const EMPTY_ARRAY: any[] = [];
+
 export default function AskClient() {
   const { branch, semester } = useAcademicStore();
   const [subjects, setSubjects] = useState<string[]>([]);
@@ -261,6 +264,7 @@ export default function AskClient() {
   // Chat History / Sessions States
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [sessionsLoaded, setSessionsLoaded] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Chat refs & state
@@ -268,6 +272,20 @@ export default function AskClient() {
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [showScrollDown, setShowScrollDown] = useState(false);
+
+  // Focus dropdown state
+  const [isFocusDropdownOpen, setIsFocusDropdownOpen] = useState(false);
+  const focusDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (focusDropdownRef.current && !focusDropdownRef.current.contains(event.target as Node)) {
+        setIsFocusDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
 
   // Flashcard state
   const [flashcardTopic, setFlashcardTopic] = useState('');
@@ -349,26 +367,56 @@ export default function AskClient() {
     }
   };
 
+  const chatBody = useMemo(() => ({
+    context: { 
+      branch, 
+      semester, 
+      subjects, 
+      resourceId: selectedResourceId !== 'all' ? selectedResourceId : undefined 
+    },
+  }), [branch, semester, subjects, selectedResourceId]);
+
+  const activeSession = useMemo(() => {
+    return sessions.find(s => s.id === activeSessionId);
+  }, [sessions, activeSessionId]);
+
+  const chatSessionKey = useMemo(() => {
+    return activeSessionId ? `${activeSessionId}-${selectedResourceId}-${branch}-${semester}` : undefined;
+  }, [activeSessionId, selectedResourceId, branch, semester]);
+
+  const initialMessages = useMemo(() => {
+    if (!activeSessionId) return EMPTY_ARRAY;
+    const session = sessions.find(s => s.id === activeSessionId);
+    return session ? session.messages : EMPTY_ARRAY;
+  }, [chatSessionKey, sessionsLoaded]);
+
   const chatHelpers = (useChat as any)({
     api: '/api/chat',
-    body: {
-      context: { 
-        branch, 
-        semester, 
-        subjects, 
-        resourceId: selectedResourceId !== 'all' ? selectedResourceId : undefined 
-      },
-    },
+    id: chatSessionKey,
+    initialMessages,
+    body: chatBody,
   });
+
   const { 
     messages = [], 
     sendMessage,
+    regenerate,
     status,
     setMessages,
   } = chatHelpers;
 
+  console.log('AskClient Render:', {
+    activeSessionId,
+    chatSessionKey,
+    sessionsLoaded,
+    initialMessagesLength: initialMessages.length,
+    messagesLength: messages.length,
+    messagesRef: messages,
+    initialMessagesRef: initialMessages,
+  });
+
   const [input, setInput] = useState('');
-  const isLoading = status === 'streaming' || status === 'loading';
+  const isLoading = status === 'submitted' || status === 'streaming';
 
   // Load chat sessions on mount
   useEffect(() => {
@@ -379,7 +427,6 @@ export default function AskClient() {
         setSessions(parsed);
         if (parsed.length > 0) {
           setActiveSessionId(parsed[0].id);
-          setMessages(parsed[0].messages);
         } else {
           const initialId = Math.random().toString(36).slice(2, 11);
           const initialSession = {
@@ -405,7 +452,22 @@ export default function AskClient() {
       setSessions([initialSession]);
       setActiveSessionId(initialId);
     }
+    setSessionsLoaded(true);
   }, []);
+
+  const sessionsRef = useRef(sessions);
+  useEffect(() => {
+    sessionsRef.current = sessions;
+  }, [sessions]);
+
+  // Load active session messages into useChat on mount or session switch
+  useEffect(() => {
+    if (!sessionsLoaded || !activeSessionId) return;
+    const session = sessionsRef.current.find(s => s.id === activeSessionId);
+    if (session) {
+      setMessages(session.messages);
+    }
+  }, [activeSessionId, sessionsLoaded, setMessages]);
 
   // Save sessions helper
   const saveSessions = (updated: ChatSession[]) => {
@@ -416,27 +478,47 @@ export default function AskClient() {
   // Sync current messages back to active session
   useEffect(() => {
     if (!activeSessionId) return;
-    const session = sessions.find(s => s.id === activeSessionId);
-    if (!session) return;
+    if (status !== 'ready' && status !== 'error') return; // Only sync when ready or error
+    console.log('Sync Effect Fired:', {
+      messagesLength: messages.length,
+      activeSessionId,
+      status,
+    });
     
-    if (JSON.stringify(session.messages) !== JSON.stringify(messages)) {
-      const updated = sessions.map(s => {
-        if (s.id === activeSessionId) {
-          let title = s.title;
-          if (s.title === 'New Chat' && messages.length > 0) {
-            const firstUserMsg = messages.find((m: any) => m.role === 'user');
-            if (firstUserMsg) {
-              const content = firstUserMsg.content || '';
-              title = content.slice(0, 30) + (content.length > 30 ? '...' : '');
-            }
-          }
-          return { ...s, messages, title };
-        }
-        return s;
+    setSessions(prevSessions => {
+      const session = prevSessions.find(s => s.id === activeSessionId);
+      if (!session) return prevSessions;
+ 
+      const isDiff = JSON.stringify(session.messages) !== JSON.stringify(messages);
+      console.log('Compare Messages:', {
+        sessionMsgLength: session.messages.length,
+        chatMsgLength: messages.length,
+        isDiff,
       });
-      saveSessions(updated);
-    }
-  }, [messages, activeSessionId, sessions]);
+
+      if (isDiff) {
+        const updated = prevSessions.map(s => {
+          if (s.id === activeSessionId) {
+            let title = s.title;
+            if (title === 'New Chat' && messages.length > 0) {
+              const firstUserMsg = messages.find((m: any) => m.role === 'user');
+              if (firstUserMsg) {
+                const content = getMessageContent(firstUserMsg);
+                if (content) {
+                  title = content.slice(0, 30) + (content.length > 30 ? '...' : '');
+                }
+              }
+            }
+            return { ...s, messages, title };
+          }
+          return s;
+        });
+        localStorage.setItem('utility_chat_sessions', JSON.stringify(updated));
+        return updated;
+      }
+      return prevSessions;
+    });
+  }, [messages, activeSessionId, status]);
 
   const handleNewChat = () => {
     const newId = Math.random().toString(36).slice(2, 11);
@@ -448,7 +530,6 @@ export default function AskClient() {
     };
     saveSessions([newSession, ...sessions]);
     setActiveSessionId(newId);
-    setMessages([]);
   };
 
   const handleDeleteSession = (sessionId: string, e: React.MouseEvent) => {
@@ -458,7 +539,6 @@ export default function AskClient() {
     if (activeSessionId === sessionId) {
       if (updated.length > 0) {
         setActiveSessionId(updated[0].id);
-        setMessages(updated[0].messages);
       } else {
         const newId = Math.random().toString(36).slice(2, 11);
         const newSession = {
@@ -469,7 +549,6 @@ export default function AskClient() {
         };
         saveSessions([newSession]);
         setActiveSessionId(newId);
-        setMessages([]);
       }
     }
   };
@@ -487,7 +566,6 @@ export default function AskClient() {
     const session = sessions.find(s => s.id === sessionId);
     if (session) {
       setActiveSessionId(sessionId);
-      setMessages(session.messages);
     }
   };
 
@@ -519,20 +597,9 @@ export default function AskClient() {
     e?.preventDefault();
     if (!(input || '').trim() || isLoading) return;
 
-    // Auto-rename chat session title if it is still 'New Chat'
-    if (activeSessionId) {
-      const currentSession = sessions.find(s => s.id === activeSessionId);
-      if (currentSession && currentSession.title === 'New Chat') {
-        const text = input.trim();
-        const newTitle = text.slice(0, 30) + (text.length > 30 ? '...' : '');
-        const updated = sessions.map(s => s.id === activeSessionId ? { ...s, title: newTitle } : s);
-        saveSessions(updated);
-      }
-    }
-
     sendMessage({ 
-      text: input,
-      context: { branch, semester, subjects } 
+      role: 'user',
+      content: input,
     });
     logActivity('ai_prompt', 1);
     setInput('');
@@ -761,24 +828,24 @@ export default function AskClient() {
                     <div
                       key={s.id}
                       onClick={() => handleSwitchSession(s.id)}
-                      className={`group/session w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors ${
+                      className={`group/session w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-xs font-semibold cursor-pointer transition-colors border ${
                         isActive 
-                          ? 'bg-primary text-primary-foreground font-semibold shadow-xs' 
-                          : 'text-muted hover:text-foreground hover:bg-surface-hover'
+                          ? 'bg-surface border-border-strong text-foreground shadow-sm' 
+                          : 'border-transparent text-muted hover:text-foreground hover:bg-surface-hover'
                       }`}
                     >
                       <span className="truncate max-w-[130px]">{s.title}</span>
                       <div className="flex items-center gap-1.5 opacity-0 group-hover/session:opacity-100 transition-opacity shrink-0">
                         <button
                           onClick={(e) => handleRenameSession(s.id, s.title, e)}
-                          className={`p-1 rounded-md transition-colors ${isActive ? 'text-primary-foreground/75 hover:bg-primary-hover hover:text-primary-foreground' : 'hover:bg-surface-hover text-muted hover:text-foreground'}`}
+                          className={`p-1 rounded-md transition-colors ${isActive ? 'text-foreground/75 hover:bg-surface-hover hover:text-foreground' : 'hover:bg-surface-hover text-muted hover:text-foreground'}`}
                           title="Rename Chat"
                         >
                           <Plus className="w-3 h-3 rotate-45" />
                         </button>
                         <button
                           onClick={(e) => handleDeleteSession(s.id, e)}
-                          className={`p-1 rounded-md transition-colors ${isActive ? 'text-primary-foreground/75 hover:bg-primary-hover hover:text-red-400' : 'hover:bg-surface-hover text-muted hover:text-red-500'}`}
+                          className={`p-1 rounded-md transition-colors ${isActive ? 'text-foreground/75 hover:bg-surface-hover hover:text-red-400' : 'hover:bg-surface-hover text-muted hover:text-red-500'}`}
                           title="Delete Chat"
                         >
                           <Trash2 className="w-3 h-3" />
@@ -808,20 +875,49 @@ export default function AskClient() {
                 <div className="h-4 w-px bg-border mx-1" />
 
                 {/* Grounded Document Selector */}
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 relative" ref={focusDropdownRef}>
                   <span className="text-[10px] uppercase font-bold text-muted select-none">AI Focus:</span>
-                  <select
-                    value={selectedResourceId}
-                    onChange={(e) => setSelectedResourceId(e.target.value)}
-                    className="text-xs font-semibold bg-card border border-border rounded-lg px-2 py-1 text-foreground outline-none cursor-pointer max-w-[240px] truncate hover:border-border-strong transition-colors"
+                  <button
+                    onClick={() => setIsFocusDropdownOpen(!isFocusDropdownOpen)}
+                    className="flex items-center justify-between gap-2 text-xs font-semibold bg-card border border-border rounded-xl px-3 py-1.5 text-foreground outline-none cursor-pointer w-[240px] hover:border-border-strong transition-colors shadow-xs"
                   >
-                    <option value="all">🌐 Entire Library (RAG Search)</option>
-                    {resources.map((res) => (
-                      <option key={res.id} value={res.id}>
-                        📄 {res.title}
-                      </option>
-                    ))}
-                  </select>
+                    <span className="truncate">
+                      {selectedResourceId === 'all' 
+                        ? '🌐 Entire Library (RAG)' 
+                        : `📄 ${resources.find(r => r.id === selectedResourceId)?.title || 'Unknown'}`}
+                    </span>
+                    <ChevronLeft className={`w-3.5 h-3.5 text-muted shrink-0 transition-transform ${isFocusDropdownOpen ? 'rotate-90' : '-rotate-90'}`} />
+                  </button>
+                  
+                  {isFocusDropdownOpen && (
+                    <div className="absolute top-full right-0 mt-1.5 w-[280px] bg-card border border-border rounded-xl shadow-popover overflow-hidden z-50 flex flex-col max-h-[300px]">
+                      <div className="overflow-y-auto p-1.5 flex flex-col gap-0.5">
+                        <button
+                          onClick={() => { setSelectedResourceId('all'); setIsFocusDropdownOpen(false); }}
+                          className={`w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${selectedResourceId === 'all' ? 'bg-surface text-foreground' : 'text-muted hover:bg-surface-hover hover:text-foreground'}`}
+                        >
+                          <span className="shrink-0">🌐</span>
+                          <span className="truncate">Entire Library (RAG Search)</span>
+                        </button>
+                        {resources.length > 0 && (
+                          <div className="px-3 py-1.5 mt-1 border-t border-border/40">
+                            <span className="text-[9px] uppercase font-bold tracking-wider text-muted">Specific Documents</span>
+                          </div>
+                        )}
+                        {resources.map((res) => (
+                          <button
+                            key={res.id}
+                            onClick={() => { setSelectedResourceId(res.id); setIsFocusDropdownOpen(false); }}
+                            className={`w-full flex items-center gap-2 text-left px-3 py-2 text-xs font-semibold rounded-lg transition-colors ${selectedResourceId === res.id ? 'bg-surface text-foreground' : 'text-muted hover:bg-surface-hover hover:text-foreground'}`}
+                            title={res.title}
+                          >
+                            <span className="shrink-0">📄</span>
+                            <span className="truncate">{res.title}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -876,7 +972,10 @@ export default function AskClient() {
                           <p className="text-sm whitespace-pre-wrap">{getMessageContent(m)}</p>
                         ) : (
                           <div className="relative">
-                            <MessageContent content={getMessageContent(m)} />
+                            <MessageContent 
+                              content={getMessageContent(m)} 
+                              showCursor={isLoading && m.id === messages[messages.length - 1].id}
+                            />
                             <div className="mt-2">
                               <CopyButton text={getMessageContent(m)} />
                             </div>
@@ -921,7 +1020,14 @@ export default function AskClient() {
 
             <div className="border-t border-border bg-background px-4 sm:px-6 py-4 shrink-0">
               {messages.length > 0 && (
-                <div className="flex items-center mb-2">
+                <div className="flex items-center gap-4 mb-2">
+                  <button
+                    onClick={() => regenerate()}
+                    className="inline-flex items-center gap-1.5 text-[11px] text-muted hover:text-foreground transition-colors"
+                  >
+                    <RotateCw className="w-3 h-3" />
+                    Regenerate
+                  </button>
                   <button
                     onClick={() => setMessages([])}
                     className="inline-flex items-center gap-1.5 text-[11px] text-muted hover:text-foreground transition-colors"
@@ -946,31 +1052,33 @@ export default function AskClient() {
                     disabled={isLoading}
                   />
                   
-                  {/* Speech to Text Microphone button */}
-                  <button
-                    type="button"
-                    onClick={toggleListening}
-                    className={`flex-shrink-0 w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
-                      isListening
-                        ? 'bg-red-500 text-white animate-pulse'
-                        : 'bg-card text-muted hover:text-foreground border border-border hover:bg-surface'
-                    }`}
-                    title={isListening ? "Listening... click to stop" : "Start Voice Query"}
-                  >
-                    <Mic className="w-4 h-4" />
-                  </button>
+                  <div className="flex items-center gap-1.5 flex-shrink-0 mb-0.5 mr-0.5">
+                    {/* Speech to Text Microphone button */}
+                    <button
+                      type="button"
+                      onClick={toggleListening}
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all ${
+                        isListening
+                          ? 'bg-red-500 text-white animate-pulse'
+                          : 'bg-card text-muted hover:text-foreground border border-border hover:bg-surface'
+                      }`}
+                      title={isListening ? "Listening... click to stop" : "Start Voice Query"}
+                    >
+                      <Mic className="w-4 h-4" />
+                    </button>
 
-                  <button
-                    type="submit"
-                    disabled={isLoading || !(input || '').trim()}
-                    className="flex-shrink-0 w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition-all shadow-sm mb-0.5 mr-0.5"
-                  >
-                    {isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Send className="w-4 h-4" />
-                    )}
-                  </button>
+                    <button
+                      type="submit"
+                      disabled={isLoading || !(input || '').trim()}
+                      className="w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:opacity-90 transition-all shadow-sm"
+                    >
+                      {isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <Send className="w-4 h-4" />
+                      )}
+                    </button>
+                  </div>
                 </div>
               </form>
 
@@ -1146,7 +1254,7 @@ export default function AskClient() {
                   <button
                     onClick={handlePublishDeck}
                     disabled={isPublishingDeck || publishedDeck}
-                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-foreground text-background text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-xs shrink-0"
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-foreground text-background text-xs font-semibold hover:opacity-90 disabled:opacity-50 transition-all shadow-xs shrink-0 whitespace-nowrap"
                   >
                     {isPublishingDeck ? (
                       <>
