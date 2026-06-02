@@ -137,7 +137,7 @@ export const getSubjectsFromDB = unstable_cache(
     }
   },
   ["subjects-cache"],
-  { revalidate: 600 },
+  { revalidate: 600, tags: ["subjects"] },
 );
 
 export const getResourcesFromDB = unstable_cache(
@@ -243,7 +243,7 @@ export const getResourcesFromDB = unstable_cache(
     }
   },
   ["resources-cache"],
-  { revalidate: 600 },
+  { revalidate: 600, tags: ["resources"] },
 );
 
 export const getSyllabusFile = unstable_cache(
@@ -279,5 +279,5 @@ export const getSyllabusFile = unstable_cache(
     }
   },
   ["syllabus-cache"],
-  { revalidate: 3600 },
+  { revalidate: 3600, tags: ["syllabus", "resources"] },
 );

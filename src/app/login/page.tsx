@@ -10,7 +10,7 @@ import {
   GithubAuthProvider,
 } from "firebase/auth";
 import Link from "next/link";
-import { ArrowLeft, Loader2, Eye, EyeOff, BookOpen } from "lucide-react";
+import { ArrowLeft, Loader2, Eye, EyeOff, Layers } from "lucide-react";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -100,8 +100,8 @@ export default function LoginPage() {
         <div className="bg-card border border-border rounded-xl p-8 shadow-card">
           {/* Logo */}
           <div className="flex items-center gap-2.5 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
-              <BookOpen className="w-4 h-4 text-background" />
+            <div className="flex items-center justify-center">
+              <Layers className="w-8 h-8 text-foreground" />
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">Utility</p>

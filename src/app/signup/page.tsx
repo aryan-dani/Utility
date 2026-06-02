@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { ArrowLeft, BookOpen, Loader2 } from "lucide-react";
+import { ArrowLeft, Layers, Loader2 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import {
   signInWithPopup,
@@ -74,8 +74,8 @@ export default function SignupPage() {
 
         <div className="bg-card border border-border rounded-xl p-8 shadow-card">
           <div className="flex items-center gap-2.5 mb-8">
-            <div className="w-8 h-8 rounded-lg bg-foreground flex items-center justify-center">
-              <BookOpen className="w-4 h-4 text-background" />
+            <div className="flex items-center justify-center">
+              <Layers className="w-8 h-8 text-foreground" />
             </div>
             <div>
               <p className="text-sm font-semibold text-foreground">Utility</p>

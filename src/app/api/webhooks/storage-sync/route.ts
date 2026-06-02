@@ -1,4 +1,5 @@
 import { NextResponse, after } from "next/server";
+import { revalidateTag } from "next/cache";
 import syncDrive from "../../../../../runtime/tools/sync-drive.mjs";
 import indexContent from "../../../../../runtime/tools/index-content.mjs";
 
@@ -39,6 +40,12 @@ async function handleSync(request: Request) {
         await syncDrive();
         await indexContent();
         console.log("✅ Background sync and index completed successfully.");
+        // @ts-expect-error Next.js types might expect 2 arguments in this version
+        revalidateTag("subjects");
+        // @ts-expect-error
+        revalidateTag("resources");
+        // @ts-expect-error
+        revalidateTag("syllabus");
       } catch (err) {
         console.error("❌ Background pipeline failed:", err);
       }

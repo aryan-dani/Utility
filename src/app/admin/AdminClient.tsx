@@ -190,7 +190,7 @@ export default function AdminClient() {
           </span>
         </Link>
         <div className="flex items-center gap-2 mb-8">
-          <ShieldCheck className="w-5 h-5 text-indigo-500" />
+          <ShieldCheck className="w-5 h-5 text-foreground" />
           <h2 className="text-xl font-bold tracking-tight text-foreground">
             Admin
           </h2>
@@ -201,7 +201,7 @@ export default function AdminClient() {
             onClick={() => setTab("drive")}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               tab === "drive"
-                ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20"
+                ? "bg-surface text-foreground border border-border-strong shadow-xs"
                 : "text-muted hover:text-foreground hover:bg-surface border border-transparent"
             }`}
           >
@@ -213,7 +213,7 @@ export default function AdminClient() {
             onClick={() => setTab("manage")}
             className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               tab === "manage"
-                ? "bg-indigo-500/10 text-indigo-500 border border-indigo-500/20"
+                ? "bg-surface text-foreground border border-border-strong shadow-xs"
                 : "text-muted hover:text-foreground hover:bg-surface border border-transparent"
             }`}
           >
@@ -248,19 +248,19 @@ export default function AdminClient() {
             <ArrowLeft className="w-4 h-4" />
           </Link>
           <h2 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-2">
-            <ShieldCheck className="w-5 h-5 text-indigo-500" /> Admin
+            <ShieldCheck className="w-5 h-5 text-foreground" /> Admin
           </h2>
 
           <div className="ml-auto flex items-center gap-2">
             <button
               onClick={() => setTab("drive")}
-              className={`p-2 rounded-lg ${tab === "drive" ? "bg-indigo-500/10 text-indigo-500" : "text-muted"} `}
+              className={`p-2 rounded-lg ${tab === "drive" ? "bg-surface text-foreground border border-border-strong shadow-xs" : "text-muted"} `}
             >
               <CloudFog className="w-4 h-4" />
             </button>
             <button
               onClick={() => setTab("manage")}
-              className={`p-2 rounded-lg ${tab === "manage" ? "bg-indigo-500/10 text-indigo-500" : "text-muted"} `}
+              className={`p-2 rounded-lg ${tab === "manage" ? "bg-surface text-foreground border border-border-strong shadow-xs" : "text-muted"} `}
             >
               <HardDrive className="w-4 h-4" />
             </button>
@@ -269,7 +269,7 @@ export default function AdminClient() {
 
         {/* Global Message */}
         {message && (
-          <div className="mb-6 p-4 rounded-xl text-sm font-medium border bg-indigo-500/10 border-indigo-500/30 text-indigo-500 flex items-start gap-3">
+          <div className="mb-6 p-4 rounded-xl text-sm font-medium border bg-surface border-border-strong text-foreground flex items-start gap-3 shadow-xs">
             <CheckCircle2 className="w-5 h-5 shrink-0" />
             <p>{message}</p>
           </div>
@@ -304,7 +304,7 @@ export default function AdminClient() {
                 <button
                   onClick={handleSyncDrive}
                   disabled={syncingDrive}
-                  className="flex items-center justify-center gap-2 bg-indigo-500/10 text-indigo-500 border border-indigo-500/20 font-semibold text-sm px-6 py-3 rounded-xl hover:bg-indigo-500/20 transition-all disabled:opacity-50"
+                  className="flex items-center justify-center gap-2 bg-surface text-foreground border border-border font-semibold text-sm px-6 py-3 rounded-xl hover:bg-surface-hover hover:border-border-strong transition-all disabled:opacity-50"
                 >
                   {syncingDrive ? (
                     <Loader2 className="w-4 h-4 animate-spin" />
@@ -408,7 +408,7 @@ export default function AdminClient() {
                             </div>
                           ) : (
                             <div className="flex items-center gap-3">
-                              <FileIcon className="w-4 h-4 text-indigo-500 shrink-0" />
+                              <FileIcon className="w-4 h-4 text-foreground shrink-0" />
                               <div className="min-w-0">
                                 <h3 className="font-bold text-foreground text-sm tracking-tight truncate">
                                   {resource.title}
@@ -424,22 +424,22 @@ export default function AdminClient() {
                                     );
                                     if (resource.is_indexed) {
                                       return (
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-500 flex items-center gap-1">
-                                          <span className="w-1 h-1 rounded-full bg-emerald-500"></span>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-foreground flex items-center gap-1">
+                                          <span className="w-1 h-1 rounded-full bg-foreground"></span>
                                           Indexed
                                         </span>
                                       );
                                     } else if (isIndexable) {
                                       return (
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-amber-500 flex items-center gap-1 animate-pulse">
-                                          <span className="w-1 h-1 rounded-full bg-amber-500"></span>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted flex items-center gap-1 animate-pulse">
+                                          <span className="w-1 h-1 rounded-full bg-muted"></span>
                                           Indexing...
                                         </span>
                                       );
                                     } else {
                                       return (
-                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1">
-                                          <span className="w-1 h-1 rounded-full bg-muted-foreground/50"></span>
+                                        <span className="text-[9px] font-bold uppercase tracking-wider text-muted/70 flex items-center gap-1">
+                                          <span className="w-1 h-1 rounded-full bg-muted/50"></span>
                                           Static / Non-Indexable
                                         </span>
                                       );

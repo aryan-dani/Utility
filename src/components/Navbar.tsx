@@ -371,8 +371,8 @@ function NavbarInner() {
             onClick={() => setSearchQuery("")}
             className="text-base font-bold tracking-tight text-foreground flex items-center gap-2.5 shrink-0 group"
           >
-            <div className="w-7 h-7 rounded-xl bg-foreground flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
-              <BookOpen className="w-3.5 h-3.5 text-background" />
+            <div className="flex items-center justify-center transition-transform group-hover:scale-105">
+              <Layers className="w-5 h-5 text-foreground" />
             </div>
             <span className="font-bold tracking-tight text-foreground">
               Utility
@@ -405,8 +405,8 @@ function NavbarInner() {
                 onClick={() => setSearchQuery("")}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold tracking-wide flex items-center gap-1.5 transition-all ${
                   isActive("/admin")
-                    ? "bg-indigo-500/10 text-indigo-500 shadow-xs border border-indigo-500/20"
-                    : "text-indigo-400/70 hover:text-indigo-500 hover:bg-indigo-500/10 border border-transparent"
+                    ? "bg-surface text-foreground shadow-xs border border-border/80"
+                    : "text-muted hover:text-foreground hover:bg-surface/40 border border-transparent"
                 }`}
               >
                 <ShieldCheck className="w-3.5 h-3.5" />
