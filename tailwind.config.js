@@ -5,26 +5,26 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: 'var(--background)',
-        'background-subtle': 'var(--background-subtle)',
-        foreground: 'var(--foreground)',
-        'foreground-subtle': 'var(--foreground-subtle)',
+        background: 'rgb(var(--background) / <alpha-value>)',
+        'background-subtle': 'rgb(var(--background-subtle) / <alpha-value>)',
+        foreground: 'rgb(var(--foreground) / <alpha-value>)',
+        'foreground-subtle': 'rgb(var(--foreground-subtle) / <alpha-value>)',
 
-        card: 'var(--card)',
-        'card-hover': 'var(--card-hover)',
+        card: 'rgb(var(--card) / <alpha-value>)',
+        'card-hover': 'rgb(var(--card-hover) / <alpha-value>)',
 
-        surface: 'var(--surface)',
-        'surface-hover': 'var(--surface-hover)',
+        surface: 'rgb(var(--surface) / <alpha-value>)',
+        'surface-hover': 'rgb(var(--surface-hover) / <alpha-value>)',
 
-        border: 'var(--border)',
-        'border-strong': 'var(--border-strong)',
+        border: 'rgb(var(--border) / <alpha-value>)',
+        'border-strong': 'rgb(var(--border-strong) / <alpha-value>)',
 
-        muted: 'var(--muted)',
-        'muted-hover': 'var(--muted-hover)',
+        muted: 'rgb(var(--muted) / <alpha-value>)',
+        'muted-hover': 'rgb(var(--muted-hover) / <alpha-value>)',
 
-        primary: 'var(--primary)',
-        'primary-hover': 'var(--primary-hover)',
-        'primary-foreground': 'var(--primary-foreground)',
+        primary: 'rgb(var(--primary) / <alpha-value>)',
+        'primary-hover': 'rgb(var(--primary-hover) / <alpha-value>)',
+        'primary-foreground': 'rgb(var(--primary-foreground) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'Geist', 'system-ui', 'sans-serif'],

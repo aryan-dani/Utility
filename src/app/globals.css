@@ -2,81 +2,81 @@
 @tailwind components;
 @tailwind utilities;
 
-/* ── Monochrome Design Tokens ─────────────────────────────────────────────── */
+/* ── Strict Monochrome Design Tokens ─────────────────────────────────────────────── */
 
 :root {
-  /* Light Mode */
-  --background: #ffffff;
-  --background-subtle: #fafafa;
-  --foreground: #09090b;
-  --foreground-subtle: #3f3f46;
+  /* Light Mode - Pure black and white */
+  --background: 255 255 255;
+  --background-subtle: 250 250 250;
+  --foreground: 0 0 0;
+  --foreground-subtle: 82 82 82;
 
-  --card: #ffffff;
-  --card-hover: #f4f4f5;
+  --card: 255 255 255;
+  --card-hover: 245 245 245;
 
-  --surface: #f4f4f5;
-  --surface-hover: #e4e4e7;
+  --surface: 245 245 245;
+  --surface-hover: 229 229 229;
 
-  --border: #e4e4e7;
-  --border-strong: #d4d4d8;
+  --border: 229 229 229;
+  --border-strong: 163 163 163;
 
-  --muted: #71717a;
-  --muted-hover: #52525b;
+  --muted: 115 115 115;
+  --muted-hover: 64 64 64;
 
-  --primary: #18181b;
-  --primary-hover: #3f3f46;
-  --primary-foreground: #fafafa;
+  --primary: 0 0 0;
+  --primary-hover: 64 64 64;
+  --primary-foreground: 255 255 255;
 
-  --ring: rgba(24, 24, 27, 0.12);
+  --ring: rgba(0, 0, 0, 1);
 
-  --radius: 0.5rem;
-  --radius-lg: 0.75rem;
+  --radius: 0.25rem;
+  --radius-lg: 0.5rem;
 
-  /* Resource type accents */
-  --accent-notes: #3b82f6;
-  --accent-qb: #f59e0b;
-  --accent-qb-solved: #22c55e;
-  --accent-ppt: #f97316;
-  --accent-pyq: #8b5cf6;
-  --accent-writeup: #ec4899;
-  --accent-other: #6b7280;
+  /* Resource type accents - Now strictly grayscale */
+  --accent-notes: #000000;
+  --accent-qb: #404040;
+  --accent-qb-solved: #000000;
+  --accent-ppt: #525252;
+  --accent-pyq: #737373;
+  --accent-writeup: #262626;
+  --accent-other: #a3a3a3;
 
   color-scheme: light;
 }
 
 .dark {
-  /* Dark Mode */
-  --background: #030303;
-  --background-subtle: #08080a;
-  --foreground: #fafafa;
-  --foreground-subtle: #a1a1aa;
+  /* Dark Mode - Pure black and white */
+  --background: 0 0 0;
+  --background-subtle: 10 10 10;
+  --foreground: 255 255 255;
+  --foreground-subtle: 163 163 163;
 
-  --card: rgba(10, 10, 12, 0.6);
-  --card-hover: rgba(18, 18, 22, 0.8);
+  --card: 10 10 10;
+  --card-hover: 23 23 23;
 
-  --surface: rgba(12, 12, 14, 0.5);
-  --surface-hover: rgba(24, 24, 28, 0.8);
+  --surface: 23 23 23;
+  --surface-hover: 38 38 38;
 
-  --border: rgba(255, 255, 255, 0.05);
-  --border-strong: rgba(255, 255, 255, 0.1);
+  --border: 38 38 38;
+  --border-strong: 82 82 82;
 
-  --muted: #636366;
-  --muted-hover: #8e8e93;
+  --muted: 115 115 115;
+  --muted-hover: 212 212 212;
 
-  --primary: #fafafa;
-  --primary-hover: #d4d4d8;
-  --primary-foreground: #030303;
+  --primary: 255 255 255;
+  --primary-hover: 212 212 212;
+  --primary-foreground: 0 0 0;
 
-  --ring: rgba(250, 250, 250, 0.02);
+  --ring: rgba(255, 255, 255, 1);
 
-  /* Resource type accents */
-  --accent-notes: #60a5fa;
-  --accent-qb: #fbbf24;
-  --accent-qb-solved: #4ade80;
-  --accent-ppt: #fb923c;
-  --accent-pyq: #a78bfa;
-  --accent-writeup: #f472b6;
-  --accent-other: #9ca3af;
+  /* Resource type accents - Now strictly grayscale */
+  --accent-notes: #ffffff;
+  --accent-qb: #a3a3a3;
+  --accent-qb-solved: #ffffff;
+  --accent-ppt: #d4d4d4;
+  --accent-pyq: #e5e5e5;
+  --accent-writeup: #f5f5f5;
+  --accent-other: #737373;
 
   color-scheme: dark;
 }
@@ -85,6 +85,9 @@
 
 * {
   box-sizing: border-box;
+  /* Disable glassmorphism globally */
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html {
@@ -93,8 +96,8 @@ html {
 }
 
 body {
-  background-color: var(--background);
-  color: var(--foreground);
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
   font-family: 'Inter', 'Geist', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -111,25 +114,25 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-strong);
+  background: rgb(var(--border-strong));
   border-radius: 99px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--muted);
+  background: rgb(var(--muted));
 }
 
 /* ── Focus Ring ───────────────────────────────────────────────────────────── */
 
 :focus-visible {
-  outline: 2px solid var(--primary);
+  outline: 2px solid rgb(var(--primary));
   outline-offset: 2px;
 }
 
 /* ── Selection ────────────────────────────────────────────────────────────── */
 
 ::selection {
-  background: var(--surface-hover);
-  color: var(--foreground);
+  background: rgb(var(--foreground));
+  color: rgb(var(--background));
 }
 
 /* ── Transitions ──────────────────────────────────────────────────────────── */
@@ -148,47 +151,6 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 /* ── Utilities ────────────────────────────────────────────────────────────── */
-.dark body {
-  background-color: #030303;
-  background-image: 
-    linear-gradient(rgba(255, 255, 255, 0.015) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.015) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-.glass {
-  background: rgba(255, 255, 255, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-.dark .glass {
-  background: rgba(10, 10, 12, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.04);
-}
-
-/* Card hover glow styling */
-.premium-card {
-  position: relative;
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.premium-card::after {
-  content: "";
-  position: absolute;
-  inset: -1px;
-  background: linear-gradient(to bottom right, rgba(255, 255, 255, 0.08), transparent 50%);
-  border-radius: inherit;
-  z-index: -1;
-  opacity: 0;
-  transition: opacity 0.3s ease;
-  pointer-events: none;
-}
-
-.premium-card:hover::after {
-  opacity: 1;
-}
 
 /* Shimmer loading skeleton */
 @keyframes shimmer {
@@ -199,9 +161,9 @@ h1, h2, h3, h4, h5, h6 {
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--surface) 25%,
-    var(--surface-hover) 50%,
-    var(--surface) 75%
+    rgb(var(--surface)) 25%,
+    rgb(var(--surface-hover)) 50%,
+    rgb(var(--surface)) 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;

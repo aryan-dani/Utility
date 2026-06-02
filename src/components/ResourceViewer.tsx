@@ -30,15 +30,32 @@ function getFileExtension(title: string, url: string) {
   }
 }
 
+function getDriveFileId(url: string): string | null {
+  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
+  if (match) return match[1];
+  
+  const idParam = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
+  if (idParam) return idParam[1];
+  
+  return null;
+}
+
 function getViewerUrl(resource: ResourceItem) {
-  // If it's a native Google Drive preview link, we can just use it directly
-  if (resource.file_url.includes("drive.google.com/file/d/")) {
+  const extension = getFileExtension(resource.title, resource.file_url);
+  const isPdf = extension === "pdf";
+  const isDrive = resource.file_url.includes("drive.google.com");
+
+  if (isDrive) {
+    const driveFileId = getDriveFileId(resource.file_url);
+    if (driveFileId) {
+      if (isPdf || !extension) {
+        return `/api/resources/view?id=${driveFileId}`;
+      }
+    }
     return resource.file_url;
   }
 
-  const extension = getFileExtension(resource.title, resource.file_url);
-
-  if (extension === "pdf") {
+  if (isPdf) {
     return resource.file_url;
   }
 
@@ -94,12 +111,12 @@ export default function ResourceViewer({
 
           <div className="flex shrink-0 items-center gap-1.5">
             <a
-              href={resource.file_url}
+              href={viewerUrl}
               target="_blank"
               rel="noopener noreferrer"
               className="flex h-9 w-9 items-center justify-center rounded-md text-muted transition-colors hover:bg-surface hover:text-foreground"
-              title="Open original"
-              aria-label="Open original"
+              title="Open in new tab"
+              aria-label="Open in new tab"
             >
               <ExternalLink className="h-4 w-4" />
             </a>

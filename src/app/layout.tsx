@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { Suspense } from 'react';
 import './globals.css';
@@ -6,12 +6,22 @@ import Navbar from '@/components/Navbar';
 import ConditionalFooter from '@/components/ConditionalFooter';
 import { Providers } from '@/components/Providers';
 import { Toaster } from 'sonner';
+import PwaUpdater from '@/components/pwa/PwaUpdater';
+import InstallPrompt from '@/components/pwa/InstallPrompt';
 
 const inter = Inter({
   subsets: ['latin'],
   variable: '--font-inter',
   display: 'swap',
 });
+
+export const viewport: Viewport = {
+  themeColor: '#09090b',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
 
 export const metadata: Metadata = {
   title: {
@@ -25,6 +35,11 @@ export const metadata: Metadata = {
     description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
     type: 'website',
     url: 'https://academic-os.vercel.app', // placeholder
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: 'Academic OS',
   },
 };
 
@@ -59,8 +74,11 @@ export default function RootLayout({
               className: 'bg-surface border-border text-foreground shadow-popover',
             }} 
           />
+          <PwaUpdater />
+          <InstallPrompt />
         </Providers>
       </body>
     </html>
   );
 }
+
