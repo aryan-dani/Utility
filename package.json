@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build --webpack",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "sync-drive": "node runtime/tools/sync-drive.mjs"
   },
   "dependencies": {
     "@ai-sdk/groq": "^3.0.39",
