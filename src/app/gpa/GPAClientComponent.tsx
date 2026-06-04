@@ -377,7 +377,7 @@ export default function GPAClient() {
 
   if (!selectedBranch) {
     return (
-      <div className="flex-1 w-full max-w-4xl mx-auto px-6 py-12">
+      <div className="flex-1 w-full px-6 py-12">
         <FadeIn>
           <div className="text-center mb-12">
             <h1 className="text-4xl font-black tracking-tight text-foreground mb-4 flex items-center justify-center gap-3">
@@ -414,7 +414,7 @@ export default function GPAClient() {
   }
 
   return (
-    <div className="flex-1 w-full max-w-5xl mx-auto px-6 py-10 min-h-screen">
+    <div className="flex-1 w-full px-6 py-10 min-h-screen">
       {/* CSS Injection for beautiful printing */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {

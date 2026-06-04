@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import { Suspense } from 'react';
 import './globals.css';
-import Navbar from '@/components/Navbar';
+import Navigation from '@/components/Navigation';
 import ConditionalFooter from '@/components/ConditionalFooter';
 import { Providers } from '@/components/Providers';
 import { Toaster } from 'sonner';
@@ -50,24 +50,25 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={inter.variable} suppressHydrationWarning>
-      <body className="antialiased min-h-screen flex flex-col bg-background text-foreground overflow-x-hidden">
+      <body className="antialiased min-h-screen bg-background text-foreground overflow-x-hidden">
         <Providers>
-          <Suspense fallback={<div className="h-16 border-b border-border bg-background" />}>
-            <Navbar />
-          </Suspense>
-          <main className="flex-1 w-full flex flex-col pt-16">
-            <Suspense
-              fallback={
-                <div className="flex-1 flex items-center justify-center min-h-[60vh]">
-                  <div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" />
-                </div>
-              }
-            >
-              {children}
-            </Suspense>
-          </main>
-
-          <ConditionalFooter />
+          <div className="flex min-h-screen w-full">
+            <Navigation />
+            <div className="flex-1 flex flex-col min-w-0 w-full">
+              <main className="flex-1 w-full flex flex-col pt-14 md:pt-0">
+                <Suspense
+                  fallback={
+                    <div className="flex-1 flex items-center justify-center min-h-[60vh]">
+                      <div className="w-6 h-6 border-2 border-border border-t-foreground rounded-full animate-spin" />
+                    </div>
+                  }
+                >
+                  {children}
+                </Suspense>
+              </main>
+              <ConditionalFooter />
+            </div>
+          </div>
           <Toaster 
             position="bottom-right" 
             toastOptions={{ 

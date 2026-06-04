@@ -302,7 +302,7 @@ export default function TimerClient() {
   }, [weeklyChartData]);
 
   return (
-    <div className="flex-1 w-full max-w-4xl mx-auto px-6 py-10 flex flex-col md:flex-row items-center justify-center gap-12 min-h-[calc(100vh-4rem)]">
+    <div className="flex-1 w-full px-6 py-10 flex flex-col md:flex-row items-center justify-center gap-12 min-h-screen">
       
       {/* Left panel: Pomodoro timer */}
       <div className="flex-1 flex flex-col items-center max-w-md w-full">

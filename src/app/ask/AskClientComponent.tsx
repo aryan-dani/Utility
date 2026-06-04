@@ -760,7 +760,7 @@ export default function AskClient() {
   };
 
   return (
-    <div className="flex-1 w-full flex flex-col max-w-7xl mx-auto h-[calc(100vh-4rem)] px-4 sm:px-6">
+    <div className="flex-1 w-full flex flex-col md:h-screen h-[calc(100vh-3.5rem)] px-4 sm:px-6">
       {/* Top Navigation Tabs */}
       <div className="border-b border-border bg-background px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-1.5 p-1 bg-surface border border-border rounded-xl shadow-xs">
@@ -1082,8 +1082,10 @@ export default function AskClient() {
                 </div>
               </form>
 
-              <p className="text-[10px] text-muted mt-2 text-center">
-                Powered by Groq · Llama 3.3 70B — Responses may not always be accurate
+              <p className="text-[10px] text-muted mt-2 text-center flex items-center justify-center gap-1.5 flex-wrap">
+                <span>Powered by Groq · Llama 3.3 70B — Responses may not always be accurate</span>
+                <span className="text-muted/40">•</span>
+                <span>Crafted by <a href="https://www.aryandani.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-muted hover:text-foreground hover:underline transition-all">Aryan Dani</a></span>
               </p>
             </div>
           </div>

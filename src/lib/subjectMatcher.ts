@@ -31,9 +31,13 @@ export const isSubjectMatch = (nameA: string, nameB: string): boolean => {
   
   // Helper to extract acronyms (e.g. "design and analysis of algorithms" -> "daa")
   const getAbbreviation = (str: string) => {
-    return str
+    const words = str
       .split(/\s+/)
-      .filter(w => w !== 'and' && w !== 'of' && w !== 'the' && w !== 'basic' && w !== 'basics' && w !== 'lab')
+      .filter(w => w !== 'and' && w !== 'of' && w !== 'the' && w !== 'basic' && w !== 'basics' && w !== 'lab');
+    if (words.length === 1) {
+      return words[0];
+    }
+    return words
       .map(w => w[0])
       .join('');
   };

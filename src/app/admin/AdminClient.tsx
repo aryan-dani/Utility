@@ -18,6 +18,7 @@ import {
   CloudFog,
   ExternalLink,
   HardDrive,
+  ShieldAlert,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -49,6 +50,7 @@ export default function AdminClient() {
   const [semester, setSemester] = useState("4");
   const [subjects, setSubjects] = useState<Subject[]>([]);
   const [userEmail, setUserEmail] = useState<string | null>(null);
+  const [loadingAuth, setLoadingAuth] = useState(true);
 
   // Manage State
   const [resources, setResources] = useState<Resource[]>([]);
@@ -63,6 +65,7 @@ export default function AdminClient() {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUserEmail(user?.email ?? null);
+      setLoadingAuth(false);
     });
     return () => unsubscribe();
   }, []);
@@ -176,53 +179,90 @@ export default function AdminClient() {
     }
   };
 
-  return (
-    <div className="flex w-full min-h-[calc(100vh-4rem)] bg-background">
-      {/* Sidebar */}
-      <div className="w-64 border-r border-border bg-card p-6 flex-col hidden md:flex">
-        <Link
-          href="/"
-          className="flex items-center gap-2 mb-8 text-muted hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span className="text-sm font-semibold tracking-tight">
+  const adminEmails =
+    process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",").map((e) => e.trim()) ?? [];
+  const isAdmin = userEmail && adminEmails.includes(userEmail);
+
+  if (loadingAuth) {
+    return (
+      <div className="flex-1 flex items-center justify-center min-h-[60vh] w-full bg-background">
+        <div className="flex flex-col items-center gap-3">
+          <Loader2 className="w-6 h-6 animate-spin text-muted" />
+          <p className="text-xs text-muted font-semibold">Verifying admin access...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen w-full p-6 text-center bg-background">
+        <div className="max-w-md w-full bg-card border border-border p-8 rounded-2xl shadow-sm flex flex-col items-center">
+          <ShieldAlert className="w-12 h-12 text-destructive mb-4 animate-pulse" />
+          <h2 className="text-xl font-extrabold tracking-tight text-foreground mb-2">Access Denied</h2>
+          <p className="text-xs text-muted mb-6 leading-relaxed">
+            You do not have permissions to access the admin dashboard. Please sign in with an authorized administrator account.
+          </p>
+          <Link
+            href="/"
+            className="px-4 py-2 bg-foreground text-background font-semibold text-xs rounded-xl hover:opacity-90 transition-all shadow-xs"
+          >
             Return Home
-          </span>
-        </Link>
-        <div className="flex items-center gap-2 mb-8">
-          <ShieldCheck className="w-5 h-5 text-foreground" />
-          <h2 className="text-xl font-bold tracking-tight text-foreground">
-            Admin
-          </h2>
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex w-full min-h-screen bg-background">
+      {/* Sidebar */}
+      <div className="w-64 border-r border-border bg-card p-6 flex-col hidden md:flex h-screen sticky top-0 justify-between">
+        <div className="flex flex-col flex-1 min-h-0">
+          <Link
+            href="/"
+            className="flex items-center gap-2 mb-8 text-muted hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span className="text-sm font-semibold tracking-tight">
+              Return Home
+            </span>
+          </Link>
+          <div className="flex items-center gap-2 mb-8">
+            <ShieldCheck className="w-5 h-5 text-foreground" />
+            <h2 className="text-xl font-bold tracking-tight text-foreground">
+              Admin
+            </h2>
+          </div>
+
+          <nav className="flex-1 space-y-2">
+            <button
+              onClick={() => setTab("drive")}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                tab === "drive"
+                  ? "bg-surface text-foreground border border-border-strong shadow-xs"
+                  : "text-muted hover:text-foreground hover:bg-surface border border-transparent"
+              }`}
+            >
+              <CloudFog className="w-4 h-4" />
+              Drive Manager
+            </button>
+
+            <button
+              onClick={() => setTab("manage")}
+              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+                tab === "manage"
+                  ? "bg-surface text-foreground border border-border-strong shadow-xs"
+                  : "text-muted hover:text-foreground hover:bg-surface border border-transparent"
+              }`}
+            >
+              <HardDrive className="w-4 h-4" />
+              File Manager
+            </button>
+          </nav>
         </div>
 
-        <nav className="flex-1 space-y-2">
-          <button
-            onClick={() => setTab("drive")}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-              tab === "drive"
-                ? "bg-surface text-foreground border border-border-strong shadow-xs"
-                : "text-muted hover:text-foreground hover:bg-surface border border-transparent"
-            }`}
-          >
-            <CloudFog className="w-4 h-4" />
-            Drive Manager
-          </button>
-
-          <button
-            onClick={() => setTab("manage")}
-            className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-              tab === "manage"
-                ? "bg-surface text-foreground border border-border-strong shadow-xs"
-                : "text-muted hover:text-foreground hover:bg-surface border border-transparent"
-            }`}
-          >
-            <HardDrive className="w-4 h-4" />
-            File Manager
-          </button>
-        </nav>
-
-        <div className="mt-8 pt-6 border-t border-border">
+        <div className="mt-auto pt-6 border-t border-border">
           {userEmail && (
             <p className="text-xs text-muted font-medium mb-3 truncate px-1">
               {userEmail}
@@ -230,16 +270,27 @@ export default function AdminClient() {
           )}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-destructive border border-transparent hover:border-destructive/20 rounded-xl hover:bg-destructive/5 transition-all"
+            className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-muted hover:text-destructive border border-transparent hover:border-destructive/20 rounded-xl hover:bg-destructive/5 transition-all mb-4"
           >
             <LogOut className="w-3.5 h-3.5" />
             <span>Sign out</span>
           </button>
+          <p className="text-[10px] text-muted/50 text-center tracking-tight font-semibold pt-3 border-t border-border/20">
+            Crafted by{" "}
+            <a
+              href="https://www.aryandani.com"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-extrabold hover:underline hover:text-foreground text-muted/80 transition-colors"
+            >
+              Aryan Dani
+            </a>
+          </p>
         </div>
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col p-6 sm:p-10 max-w-5xl mx-auto w-full">
+      <div className="flex-1 flex flex-col p-6 sm:p-10 w-full">
         <div className="md:hidden flex items-center gap-3 mb-6 pb-6 border-b border-border">
           <Link
             href="/"
@@ -319,8 +370,8 @@ export default function AdminClient() {
         )}
 
         {tab === "manage" && (
-          <div className="flex flex-col gap-6 animate-fade-in flex-1">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface/50 p-5 rounded-2xl border border-border shadow-sm">
+          <div className="flex flex-col gap-6 animate-fade-in flex-1 min-h-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface/50 p-5 rounded-2xl border border-border shadow-sm shrink-0">
               <div className="relative">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">
                   Branch
@@ -358,7 +409,7 @@ export default function AdminClient() {
               </div>
             </div>
 
-            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col">
+            <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden flex flex-col flex-1 min-h-0">
               {loadingResources ? (
                 <div className="p-12 flex items-center justify-center flex-1">
                   <Loader2 className="w-5 h-5 animate-spin text-muted" />
@@ -368,7 +419,7 @@ export default function AdminClient() {
                   No files found for this branch and semester.
                 </div>
               ) : (
-                <div className="divide-y divide-border overflow-y-auto max-h-[500px]">
+                <div className="divide-y divide-border overflow-y-auto flex-1 min-h-0">
                   {resources.map((resource) => {
                     const subject = subjects.find(
                       (s) => s.id === resource.subject_id,
