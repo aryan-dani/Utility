@@ -16,6 +16,9 @@ export default isDev
       disable: false,
       register: true,
       skipWaiting: false,
+      workboxOptions: {
+        skipWaiting: false,
+      },
       fallback: {
         document: '/~offline',
       },
