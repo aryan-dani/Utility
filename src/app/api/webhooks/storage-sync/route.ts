@@ -40,12 +40,9 @@ async function handleSync(request: Request) {
         await syncDrive();
         await indexContent();
         console.log("✅ Background sync and index completed successfully.");
-        // @ts-expect-error Next.js types might expect 2 arguments in this version
-        revalidateTag("subjects");
-        // @ts-expect-error
-        revalidateTag("resources");
-        // @ts-expect-error
-        revalidateTag("syllabus");
+        revalidateTag("subjects", "max");
+        revalidateTag("resources", "max");
+        revalidateTag("syllabus", "max");
       } catch (err) {
         console.error("❌ Background pipeline failed:", err);
       }

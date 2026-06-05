@@ -6,6 +6,18 @@
 
 import * as pdfParse from "pdf-parse";
 const { PDFParse } = pdfParse;
+import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
+import { pathToFileURL } from "url";
+import { createRequire } from "module";
+
+try {
+  const require = createRequire(import.meta.url);
+  const workerPath = require.resolve("pdfjs-dist/legacy/build/pdf.worker.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = pathToFileURL(workerPath).toString();
+} catch (e) {
+  console.warn("⚠️ Failed to resolve pdf.worker.mjs path:", e);
+}
+
 import officeparser from 'officeparser';
 import { writeFile, unlink } from 'fs/promises';
 import { join } from 'path';

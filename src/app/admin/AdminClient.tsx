@@ -82,7 +82,15 @@ export default function AdminClient() {
       const response = await fetch("/api/webhooks/storage-sync", {
         method: "POST",
       });
-      const data = await response.json();
+      const text = await response.text();
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (e) {
+        throw new Error(
+          `Server returned status ${response.status} (Not JSON). Response snippet: ${text.substring(0, 300)}`
+        );
+      }
       if (response.ok && data.success) {
         setMessage(
           "✓ Google Drive sync and indexing triggered in the background. It will take a few minutes to process.",
