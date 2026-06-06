@@ -11,35 +11,11 @@ import {
   Maximize,
 } from "lucide-react";
 import { ResourceItem } from "@/lib/dataFetcher";
+import { getFileExtension, getDriveFileId } from "@/lib/fileUtils";
 
 interface ResourceViewerProps {
   resource: ResourceItem;
   onClose: () => void;
-}
-
-function getFileExtension(title: string, url: string) {
-  if (title && title.includes(".")) {
-    const ext = title.split(".").pop()?.toLowerCase();
-    if (ext) return ext;
-  }
-  try {
-    const pathname = new URL(url).pathname;
-    return pathname.split(".").pop()?.toLowerCase() ?? "";
-  } catch {
-    return (
-      url.split("?")[0].split("#")[0].split(".").pop()?.toLowerCase() ?? ""
-    );
-  }
-}
-
-function getDriveFileId(url: string): string | null {
-  const match = url.match(/\/file\/d\/([a-zA-Z0-9_-]+)/);
-  if (match) return match[1];
-  
-  const idParam = url.match(/[?&]id=([a-zA-Z0-9_-]+)/);
-  if (idParam) return idParam[1];
-  
-  return null;
 }
 
 function getViewerUrl(resource: ResourceItem) {
@@ -51,6 +27,7 @@ function getViewerUrl(resource: ResourceItem) {
     const driveFileId = getDriveFileId(resource.file_url);
     if (driveFileId) {
       if (isPdf || !extension) {
+        // Stream raw file through our optimized range-supporting API to force browser's native PDF viewer
         return `/api/resources/view?id=${driveFileId}`;
       }
     }
@@ -83,9 +60,16 @@ export default function ResourceViewer({
   const externalRef = useRef<HTMLAnchorElement>(null);
 
   const [mounted, setMounted] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Reset loading state when the viewer URL changes
+  useEffect(() => {
+    setIsLoading(true);
+  }, [viewerUrl]);
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
@@ -191,13 +175,25 @@ export default function ResourceViewer({
         </button>
       </div>
 
-      <div className="flex-1 w-full h-full p-2 sm:p-4 pt-20 sm:pt-24">
-        <div className="h-full w-full overflow-hidden rounded-2xl border border-border bg-card shadow-card">
+      <div className="flex-1 w-full h-full p-2 sm:p-4 pt-20 sm:pt-24 relative">
+        <div className="h-full w-full overflow-hidden rounded-2xl border border-border bg-card shadow-card relative">
+          {isLoading && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-background/50 backdrop-blur-sm z-20 transition-all duration-300">
+              <div className="relative flex items-center justify-center">
+                <div className="absolute h-12 w-12 rounded-full border-4 border-muted/20 border-t-foreground animate-spin" />
+                <div className="h-6 w-6 rounded-full bg-foreground/10 animate-ping" />
+              </div>
+              <p className="text-sm font-medium text-foreground/75 mt-6 tracking-wide animate-pulse">
+                Preparing preview...
+              </p>
+            </div>
+          )}
           <iframe
             src={viewerUrl}
             title={resource.title}
             className="h-full w-full bg-background"
-            loading="lazy"
+            loading="eager"
+            onLoad={() => setIsLoading(false)}
           />
         </div>
       </div>
@@ -207,3 +203,4 @@ export default function ResourceViewer({
   if (!mounted) return null;
   return createPortal(content, document.body);
 }
+

@@ -85,9 +85,6 @@
 
 * {
   box-sizing: border-box;
-  /* Disable glassmorphism globally */
-  backdrop-filter: none !important;
-  -webkit-backdrop-filter: none !important;
 }
 
 html {
@@ -167,4 +164,57 @@ h1, h2, h3, h4, h5, h6 {
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
+}
+
+/* Performance & Interaction Enhancements */
+
+.resource-card-hover {
+  border-color: rgb(var(--border));
+  transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: border-color, box-shadow, transform;
+}
+
+.resource-card-hover:hover {
+  border-color: var(--card-accent) !important;
+  box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--card-accent) 12%, transparent), 
+              0 4px 6px -4px color-mix(in srgb, var(--card-accent) 12%, transparent) !important;
+  transform: translateY(-2px);
+}
+
+.resource-card-hover:active {
+  transform: translateY(0);
+}
+
+/* GPU Acceleration helper */
+.gpu-accelerated {
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  perspective: 1000px;
+  will-change: transform, opacity;
+}
+
+/* Content Visibility for long scrollable lists */
+.content-visibility-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 150px;
+}
+
+/* Reduced Motion media queries */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-delay: -1ms !important;
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    background-attachment: initial !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+    will-change: auto !important;
+  }
+  .gpu-accelerated, .resource-card-hover {
+    transform: none !important;
+    transition: none !important;
+  }
 }

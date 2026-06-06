@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { ChevronDown } from 'lucide-react';
 import { ResourceItem } from '@/lib/dataFetcher';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import ResourceCard from './ResourceCard';
 
 interface ResourceSectionProps {
@@ -65,26 +65,39 @@ export default function ResourceSection({
       </button>
 
       {/* Collapsible content with animation */}
-      <div 
-        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 overflow-hidden transition-all duration-300 ease-in-out ${
-          isExpanded ? 'max-h-[5000px] opacity-100' : 'max-h-0 opacity-0'
-        }`}
-      >
-        {items.map((item, index) => (
+      <AnimatePresence initial={false}>
+        {isExpanded && (
           <motion.div
-            key={item.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.25, delay: Math.min(index * 0.04, 0.25), ease: 'easeOut' }}
+            initial={{ height: 0, opacity: 0 }}
+            animate={{ height: 'auto', opacity: 1 }}
+            exit={{ height: 0, opacity: 0 }}
+            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            className="overflow-hidden"
           >
-            <ResourceCard 
-              item={item} 
-              onOpenResource={onOpenResource} 
-              onSummarize={onSummarize}
-            />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1 pb-1">
+              {items.map((item, index) => (
+                <motion.div
+                  key={item.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ 
+                    duration: 0.22, 
+                    delay: Math.min(index * 0.03, 0.15), 
+                    ease: 'easeOut' 
+                  }}
+                  style={{ willChange: 'transform, opacity' }}
+                >
+                  <ResourceCard 
+                    item={item} 
+                    onOpenResource={onOpenResource} 
+                    onSummarize={onSummarize}
+                  />
+                </motion.div>
+              ))}
+            </div>
           </motion.div>
-        ))}
-      </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

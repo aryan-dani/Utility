@@ -40,13 +40,19 @@ export async function GET(request: NextRequest) {
     const mimeType = fileMetadata.data.mimeType || "application/octet-stream";
     const fileName = fileMetadata.data.name || "file";
 
+    const clientRange = request.headers.get("range");
+    const driveOptions: any = { responseType: "stream" };
+    if (clientRange) {
+      driveOptions.headers = { Range: clientRange };
+    }
+
     // 2. Fetch the file media stream from Google Drive
     const res = await drive.files.get(
       {
         fileId: fileId,
         alt: "media",
       },
-      { responseType: "stream" }
+      driveOptions
     );
 
     // Convert node stream to readable stream for Next.js response
@@ -56,14 +62,23 @@ export async function GET(request: NextRequest) {
     headers.set("Content-Type", mimeType);
     headers.set("Content-Disposition", `inline; filename="${encodeURIComponent(fileName)}"`);
     headers.set("Cache-Control", "public, max-age=31536000, immutable");
+    headers.set("Accept-Ranges", "bytes");
     
-    if (fileMetadata.data.size) {
+    // Forward progressive range headers from Drive API response if present
+    if (res.headers["content-range"]) {
+      headers.set("Content-Range", res.headers["content-range"]);
+    }
+    if (res.headers["content-length"]) {
+      headers.set("Content-Length", res.headers["content-length"]);
+    } else if (fileMetadata.data.size && !clientRange) {
       headers.set("Content-Length", fileMetadata.data.size);
     }
 
+    const status = res.status || (clientRange ? 206 : 200);
+
     return new NextResponse(stream, {
-      status: 200,
-      headers: headers,
+      status,
+      headers,
     });
   } catch (error: any) {
     console.error("Error streaming file from Google Drive:", error);

@@ -71,7 +71,7 @@ const SEMESTER_OPTIONS = [1, 2, 3, 4, 5, 6, 7, 8].map((sem) => ({
   label: `Semester ${sem}`,
 }));
 
-function WorkspaceSelect<T extends string | number>({
+function WorkspaceSelectInner<T extends string | number>({
   value,
   options,
   onChange,
@@ -145,6 +145,8 @@ function WorkspaceSelect<T extends string | number>({
     </div>
   );
 }
+
+const WorkspaceSelect = React.memo(WorkspaceSelectInner) as typeof WorkspaceSelectInner;
 
 function SegmentedThemeToggle() {
   const { theme, setTheme } = useTheme();
@@ -290,8 +292,10 @@ function NavigationInner() {
     setTheme(theme === "light" ? "dark" : theme === "dark" ? "system" : "light");
   };
 
-  const isActive = (href: string) =>
-    href === "/" ? pathname === "/" : pathname.startsWith(href);
+  const isActive = useCallback((href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href),
+    [pathname]
+  );
 
   const adminEmails =
     process.env.NEXT_PUBLIC_ADMIN_EMAILS?.split(",").map((e) => e.trim()) ?? [];
@@ -303,7 +307,7 @@ function NavigationInner() {
     pathname === "/gpa" ||
     pathname.startsWith("/resources");
 
-  const renderNavLink = (link: NavLinkItem) => {
+  const renderNavLink = useCallback((link: NavLinkItem) => {
     const params = new URLSearchParams(searchParams.toString());
     const finalHref = `${link.href}?${params.toString()}`;
     const active = isActive(link.href);
@@ -330,7 +334,7 @@ function NavigationInner() {
         )}
       </Link>
     );
-  };
+  }, [collapsed, searchParams, isActive, setSearchQuery]);
 
   const renderSidebarContent = (isMobile: boolean = false) => {
     const isCollapsed = collapsed && !isMobile;
@@ -613,6 +617,7 @@ function NavigationInner() {
         className={`h-screen sticky top-0 left-0 border-r border-border bg-card/60 backdrop-blur-xl z-40 hidden md:flex flex-col shrink-0 transition-all duration-300 ${
           collapsed ? "w-16" : "w-64"
         }`}
+        style={{ willChange: "width" }}
       >
         {renderSidebarContent(false)}
       </aside>

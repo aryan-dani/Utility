@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import {
   FileText,
   FileSpreadsheet,
@@ -10,26 +9,12 @@ import {
   PenTool,
 } from "lucide-react";
 import { ResourceItem, ResourceCategory } from "@/lib/dataFetcher";
+import { getFileExtension } from "@/lib/fileUtils";
 
 interface ResourceCardProps {
   item: ResourceItem;
   onOpenResource: (item: ResourceItem) => void;
   onSummarize: (item: ResourceItem) => void;
-}
-
-function getFileExtension(title: string, url: string) {
-  if (title && title.includes(".")) {
-    const ext = title.split(".").pop()?.toLowerCase();
-    if (ext) return ext;
-  }
-  try {
-    const pathname = new URL(url).pathname;
-    return pathname.split(".").pop()?.toLowerCase() ?? "";
-  } catch {
-    return (
-      url.split("?")[0].split("#")[0].split(".").pop()?.toLowerCase() ?? ""
-    );
-  }
 }
 
 const CATEGORY_CONFIG: Record<
@@ -60,7 +45,6 @@ export default function ResourceCard({
   onOpenResource,
   onSummarize,
 }: ResourceCardProps) {
-  const [isHovered, setIsHovered] = useState(false);
   const extension = getFileExtension(item.title, item.file_url);
   const isDrivePreview = item.file_url.includes("drive.google.com/file/d/");
   const isPdf = extension === "pdf" || (isDrivePreview && !extension); // Default to PDF styling for generic drive files if no ext
@@ -91,22 +75,15 @@ export default function ResourceCard({
   return (
     <div
       onClick={handleOpen}
-      onMouseEnter={() => {
-        setIsHovered(true);
-      }}
-      onMouseLeave={() => setIsHovered(false)}
-      className="group bg-card border rounded-xl p-4 flex flex-col gap-3 transition-all duration-200 text-left shadow-sm hover:shadow-md hover:-translate-y-[2px] active:translate-y-0 cursor-pointer relative overflow-hidden"
+      className="group bg-card border rounded-xl p-4 flex flex-col gap-3 text-left shadow-sm cursor-pointer relative overflow-hidden resource-card-hover"
       style={{
-        borderColor: isHovered ? config.color : "var(--border)",
-        boxShadow: isHovered
-          ? `0 10px 15px -3px color-mix(in srgb, ${config.color} 12%, transparent), 0 4px 6px -4px color-mix(in srgb, ${config.color} 12%, transparent)`
-          : undefined,
+        ["--card-accent" as any]: config.color,
       }}
     >
       {/* Accent top border */}
       <div
         className="absolute top-0 left-0 right-0 h-[2px] opacity-60 group-hover:opacity-100 transition-opacity"
-        style={{ background: config.color }}
+        style={{ background: "var(--card-accent)" }}
       />
 
       <div className="flex items-start justify-between gap-2">
@@ -115,8 +92,8 @@ export default function ResourceCard({
           <div
             className="w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 transition-colors"
             style={{
-              background: `color-mix(in srgb, ${config.color} 12%, transparent)`,
-              color: config.color,
+              background: `color-mix(in srgb, var(--card-accent) 12%, transparent)`,
+              color: "var(--card-accent)",
             }}
           >
             {isSolved ? (
@@ -145,9 +122,9 @@ export default function ResourceCard({
             <span
               className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md"
               style={{
-                background: `color-mix(in srgb, ${config.color} 12%, transparent)`,
-                color: config.color,
-                border: `1px solid color-mix(in srgb, ${config.color} 25%, transparent)`,
+                background: `color-mix(in srgb, var(--card-accent) 12%, transparent)`,
+                color: "var(--card-accent)",
+                border: `1px solid color-mix(in srgb, var(--card-accent) 25%, transparent)`,
               }}
             >
               Solved
