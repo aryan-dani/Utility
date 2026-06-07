@@ -78,6 +78,8 @@ export default function ResourceViewer({
     }
 
     document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    document.documentElement.style.overscrollBehavior = "none";
     window.addEventListener("keydown", handleKeyDown);
     
     // Focus the container to ensure key events are captured immediately
@@ -85,6 +87,8 @@ export default function ResourceViewer({
 
     return () => {
       document.body.style.overflow = "";
+      document.body.style.overscrollBehavior = "";
+      document.documentElement.style.overscrollBehavior = "";
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [onClose]);
@@ -93,7 +97,7 @@ export default function ResourceViewer({
     <div 
       ref={containerRef}
       tabIndex={-1}
-      className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md outline-none flex flex-col"
+      className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md outline-none flex flex-col overscroll-none"
     >
       {/* Left Floating Pill */}
       <div className="absolute top-4 left-4 z-10 flex items-center gap-3 bg-card/80 backdrop-blur-md border border-border/60 rounded-2xl p-2 pr-4 shadow-lg">
