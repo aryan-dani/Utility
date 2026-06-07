@@ -20,21 +20,13 @@ interface ResourceViewerProps {
 
 function getViewerUrl(resource: ResourceItem) {
   const extension = getFileExtension(resource.title, resource.file_url);
-  const isPdf = extension === "pdf";
   const isDrive = resource.file_url.includes("drive.google.com");
 
   if (isDrive) {
-    const driveFileId = getDriveFileId(resource.file_url);
-    if (driveFileId) {
-      if (isPdf || !extension) {
-        // Stream raw file through our optimized range-supporting API to force browser's native PDF viewer
-        return `/api/resources/view?id=${driveFileId}`;
-      }
-    }
     return resource.file_url;
   }
 
-  if (isPdf) {
+  if (extension === "pdf") {
     return resource.file_url;
   }
 

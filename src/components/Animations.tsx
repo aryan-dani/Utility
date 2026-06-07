@@ -16,6 +16,7 @@ export function FadeIn({
   const shouldReduceMotion = useReducedMotion();
   return (
     <motion.div
+      suppressHydrationWarning
       initial={{ opacity: 0, y: shouldReduceMotion ? 0 : y }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
@@ -39,6 +40,7 @@ export function ScaleButton({
   const shouldReduceMotion = useReducedMotion();
   return (
     <motion.button
+      suppressHydrationWarning
       whileHover={shouldReduceMotion ? {} : { y: -1, scale: 1.01 }}
       whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
       className={className}
@@ -60,6 +62,7 @@ export function StaggerContainer({
   const shouldReduceMotion = useReducedMotion();
   return (
     <motion.div
+      suppressHydrationWarning
       initial="hidden"
       animate="visible"
       variants={{
@@ -81,6 +84,7 @@ export function StaggerItem({ children, className }: { children: React.ReactNode
   const shouldReduceMotion = useReducedMotion();
   return (
     <motion.div
+      suppressHydrationWarning
       variants={{
         hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 8 },
         visible: { 
