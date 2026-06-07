@@ -52,8 +52,8 @@ export default function PwaUpdater() {
       });
     });
 
-    // Check for updates every 60 seconds
-    const intervalId = setInterval(checkForUpdates, 60000);
+    // Check for updates every hour
+    const intervalId = setInterval(checkForUpdates, 3600000);
 
     // Listen for controllerchange (refresh page once active service worker updates)
     let refreshing = false;

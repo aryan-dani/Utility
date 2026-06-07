@@ -15,9 +15,9 @@ export default isDev
       dest: 'public',
       disable: false,
       register: true,
-      skipWaiting: true,
+      skipWaiting: false,
       workboxOptions: {
-        skipWaiting: true,
+        skipWaiting: false,
       },
       fallback: {
         document: '/~offline',
