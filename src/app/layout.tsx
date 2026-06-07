@@ -6,7 +6,6 @@ import Navigation from '@/components/Navigation';
 import ConditionalFooter from '@/components/ConditionalFooter';
 import { Providers } from '@/components/Providers';
 import { Toaster } from 'sonner';
-import PwaUpdater from '@/components/pwa/PwaUpdater';
 import InstallPrompt from '@/components/pwa/InstallPrompt';
 
 const inter = Inter({
@@ -75,7 +74,6 @@ export default function RootLayout({
               className: 'bg-surface border-border text-foreground shadow-popover',
             }} 
           />
-          <PwaUpdater />
           <InstallPrompt />
         </Providers>
       </body>
