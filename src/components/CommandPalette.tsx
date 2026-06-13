@@ -332,7 +332,7 @@ export default function CommandPalette() {
   return (
     <AnimatePresence>
       {isCommandPaletteOpen && (
-        <div className="fixed inset-0 z-[100] flex items-start justify-center pt-16 sm:pt-24 px-4 pb-4">
+        <div className="fixed inset-0 z-[200] flex items-start justify-center pt-16 sm:pt-24 px-4 pb-4">
           {/* Backdrop */}
           <motion.div
             initial={{ opacity: 0 }}

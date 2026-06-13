@@ -322,6 +322,7 @@ function NavigationInner() {
         href={finalHref}
         onClick={() => setSearchQuery("")}
         aria-label={link.label}
+        title={collapsed ? link.label : undefined}
         className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all border group relative overflow-visible ${
           active
             ? "bg-foreground/8 border-foreground/15 text-foreground font-bold shadow-xs"
@@ -344,12 +345,6 @@ function NavigationInner() {
           <span className="flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-foreground/10 text-foreground border border-foreground/20 shrink-0">
             Core
           </span>
-        )}
-
-        {collapsed && (
-          <div className="absolute left-full ml-3 px-2 py-1 bg-foreground text-background text-[10px] font-bold rounded-md whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200 shadow-md z-[200]">
-            {link.label}
-          </div>
         )}
       </Link>
     );
@@ -405,9 +400,9 @@ function NavigationInner() {
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
               transition={{ duration: 0.2 }}
-              className="px-3 pt-3 overflow-hidden"
+              className="px-3 overflow-visible relative z-50"
             >
-              <div className="bg-surface/40 border border-border/70 p-2.5 rounded-2xl flex flex-col gap-2 shadow-xs">
+              <div className="mt-3 bg-surface/40 border border-border/70 p-2.5 rounded-2xl flex flex-col gap-2 shadow-xs">
                 <p className="text-[9px] font-extrabold tracking-widest uppercase text-muted/80">
                   Workspace Filters
                 </p>
