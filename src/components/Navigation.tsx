@@ -148,8 +148,7 @@ function WorkspaceSelectInner<T extends string | number>({
 
 const WorkspaceSelect = React.memo(WorkspaceSelectInner) as typeof WorkspaceSelectInner;
 
-function SegmentedThemeToggle() {
-  const { theme, setTheme } = useTheme();
+function SegmentedThemeToggle({ theme, setTheme }: { theme: string | undefined; setTheme: (theme: string) => void }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => setMounted(true), []);
@@ -179,6 +178,7 @@ function SegmentedThemeToggle() {
                 : "text-muted hover:text-foreground hover:bg-surface/30"
             }`}
             title={opt.label}
+            aria-label={`Switch to ${opt.label} theme`}
           >
             <Icon className="w-3.5 h-3.5" />
           </button>
@@ -268,14 +268,19 @@ function NavigationInner() {
     return () => document.removeEventListener("mousedown", handler);
   }, []);
 
+  const searchParamsRef = useRef(searchParams);
+  useEffect(() => {
+    searchParamsRef.current = searchParams;
+  }, [searchParams]);
+
   const updateUrl = useCallback(
     (newBranch: string, newSem: number) => {
-      const params = new URLSearchParams(searchParams.toString());
+      const params = new URLSearchParams(searchParamsRef.current.toString());
       params.set("branch", newBranch);
       params.set("semester", newSem.toString());
       router.push(`${pathname}?${params.toString()}`);
     },
-    [pathname, router, searchParams],
+    [pathname, router],
   );
 
   useEffect(() => {
@@ -308,7 +313,7 @@ function NavigationInner() {
     pathname.startsWith("/resources");
 
   const renderNavLink = useCallback((link: NavLinkItem) => {
-    const params = new URLSearchParams(searchParams.toString());
+    const params = new URLSearchParams(searchParamsRef.current.toString());
     const finalHref = `${link.href}?${params.toString()}`;
     const active = isActive(link.href);
     return (
@@ -316,25 +321,39 @@ function NavigationInner() {
         key={link.href}
         href={finalHref}
         onClick={() => setSearchQuery("")}
-        title={collapsed ? link.label : undefined}
-        className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all border group relative ${
+        aria-label={link.label}
+        className={`flex items-center ${collapsed ? "justify-center" : "justify-between"} px-3 py-2 rounded-xl text-xs font-semibold tracking-wide transition-all border group relative overflow-visible ${
           active
-            ? "bg-primary/10 border-primary/20 text-primary font-bold shadow-xs"
+            ? "bg-foreground/8 border-foreground/15 text-foreground font-bold shadow-xs"
             : "text-muted hover:text-foreground hover:bg-surface/50 border-transparent"
         }`}
       >
+        {active && (
+          <motion.div
+            layoutId="activeIndicator"
+            className="absolute left-0 top-1.5 bottom-1.5 w-[4px] bg-foreground"
+            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+          />
+        )}
+        
         <span className="flex items-center gap-2.5 min-w-0">
-          <link.Icon className={`w-4 h-4 shrink-0 transition-transform ${active ? "text-primary" : "text-muted group-hover:text-foreground"}`} />
+          <link.Icon className={`w-4 h-4 shrink-0 transition-transform ${active ? "text-foreground" : "text-muted group-hover:text-foreground"}`} />
           {!collapsed && <span className="truncate">{link.label}</span>}
         </span>
         {!collapsed && link.featured && (
-          <span className="flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-primary/10 text-primary border border-primary/20 shrink-0">
+          <span className="flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-extrabold uppercase tracking-wider bg-foreground/10 text-foreground border border-foreground/20 shrink-0">
             Core
           </span>
         )}
+
+        {collapsed && (
+          <div className="absolute left-full ml-3 px-2 py-1 bg-foreground text-background text-[10px] font-bold rounded-md whitespace-nowrap opacity-0 pointer-events-none group-hover:opacity-100 group-hover:translate-x-1 transition-all duration-200 shadow-md z-[200]">
+            {link.label}
+          </div>
+        )}
       </Link>
     );
-  }, [collapsed, searchParams, isActive, setSearchQuery]);
+  }, [collapsed, isActive, setSearchQuery]);
 
   const renderSidebarContent = (isMobile: boolean = false) => {
     const isCollapsed = collapsed && !isMobile;
@@ -345,6 +364,7 @@ function NavigationInner() {
           <Link
             href="/"
             onClick={() => setSearchQuery("")}
+            aria-label="Utility OS Home"
             className="text-base font-bold tracking-tight text-foreground flex items-center gap-2.5 group"
           >
             <div className="flex items-center justify-center p-1.5 bg-foreground text-background rounded-xl transition-transform group-hover:scale-105 shrink-0">
@@ -357,11 +377,20 @@ function NavigationInner() {
             )}
           </Link>
 
-          {!isMobile && (
+          {isMobile ? (
+            <button
+              onClick={() => setMobileOpen(false)}
+              className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface/50 border border-transparent transition-colors md:hidden"
+              aria-label="Close navigation menu"
+            >
+              <X className="w-4.5 h-4.5" />
+            </button>
+          ) : (
             <button
               onClick={handleCollapseToggle}
               className={`p-1.5 rounded-lg hover:bg-surface border border-transparent text-muted hover:text-foreground transition-all shrink-0 hover:border-border/60 ${isCollapsed ? "" : "ml-2"}`}
               title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+              aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
               {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
             </button>
@@ -408,6 +437,7 @@ function NavigationInner() {
           {isCollapsed ? (
             <button
               onClick={() => setCommandPaletteOpen(true)}
+              aria-label="Search resources"
               className="w-full flex items-center justify-center p-2.5 bg-surface/50 border border-border/80 rounded-xl text-muted hover:text-foreground hover:border-border-strong transition-all shadow-xs"
               title="Search (Ctrl+K)"
             >
@@ -416,6 +446,7 @@ function NavigationInner() {
           ) : (
             <button
               onClick={() => setCommandPaletteOpen(true)}
+              aria-label="Search resources"
               className="w-full flex items-center justify-between px-3 py-2 bg-surface/50 border border-border/80 rounded-xl text-xs text-muted hover:text-foreground hover:border-border-strong transition-all shadow-xs group"
             >
               <span className="flex items-center gap-2 truncate">
@@ -489,6 +520,7 @@ function NavigationInner() {
                   href="/admin"
                   onClick={() => setSearchQuery("")}
                   title={isCollapsed ? "Admin Dashboard" : undefined}
+                  aria-label="Admin Dashboard"
                   className={`flex items-center ${isCollapsed ? "justify-center" : "gap-2.5 px-3 py-2"} rounded-xl text-xs font-semibold tracking-wide transition-all border group ${
                     isActive("/admin")
                       ? "bg-primary/10 border-primary/20 text-primary font-bold shadow-xs"
@@ -511,6 +543,7 @@ function NavigationInner() {
               onClick={cycleTheme}
               className="w-full flex items-center justify-center p-2 bg-surface/60 border border-border/70 rounded-xl text-muted hover:text-foreground transition-all"
               title={`Theme: ${theme}`}
+              aria-label="Cycle color theme"
             >
               {theme === "light" ? (
                 <Sun className="w-4 h-4" />
@@ -521,7 +554,7 @@ function NavigationInner() {
               )}
             </button>
           ) : (
-            <SegmentedThemeToggle />
+            <SegmentedThemeToggle theme={theme} setTheme={setTheme} />
           )}
 
           {/* User profile / Logout actions */}
@@ -529,6 +562,7 @@ function NavigationInner() {
             <div ref={userMenuRef} className="relative w-full flex justify-center">
               <button
                 onClick={() => setUserMenuOpen((o) => !o)}
+                aria-label="User Menu"
                 className={`flex items-center ${isCollapsed ? "justify-center w-8 h-8" : "justify-between w-full p-1.5"} rounded-xl border border-transparent hover:border-border/80 hover:bg-surface/50 transition-all group`}
                 title={isCollapsed ? user.email : undefined}
               >
@@ -573,6 +607,7 @@ function NavigationInner() {
           ) : (
             <Link
               href="/login"
+              aria-label="Sign In"
               className={`flex items-center justify-center ${isCollapsed ? "w-8 h-8 rounded-lg" : "w-full py-2 rounded-xl"} bg-foreground text-background font-semibold text-xs hover:opacity-90 transition-all shadow-xs`}
               title={isCollapsed ? "Sign In" : undefined}
             >
@@ -614,7 +649,7 @@ function NavigationInner() {
     <>
       {/* 1. Desktop Sticky Sidebar with collapse transition */}
       <aside
-        className={`h-screen sticky top-0 left-0 border-r border-border bg-card/60 backdrop-blur-xl z-40 hidden md:flex flex-col shrink-0 transition-all duration-300 ${
+        className={`h-screen sticky top-0 left-0 border-r border-border bg-background/60 backdrop-blur-3xl z-40 hidden md:flex flex-col shrink-0 transition-all duration-400 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
           collapsed ? "w-16" : "w-64"
         }`}
         style={{ willChange: "width" }}
@@ -623,7 +658,7 @@ function NavigationInner() {
       </aside>
 
       {/* 2. Mobile Top Header */}
-      <header className="h-14 fixed top-0 left-0 right-0 border-b border-border bg-background/80 backdrop-blur-md z-30 flex items-center justify-between px-4 md:hidden">
+      <header className="h-14 fixed top-0 left-0 right-0 border-b border-border bg-background/70 backdrop-blur-2xl z-30 flex items-center justify-between px-4 md:hidden transition-colors">
         <Link
           href="/"
           onClick={() => setSearchQuery("")}
@@ -662,20 +697,9 @@ function NavigationInner() {
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 220 }}
-              className="fixed top-0 bottom-0 left-0 w-72 bg-card border-r border-border shadow-popover z-[101] md:hidden flex flex-col"
+              transition={{ type: "spring", damping: 25, stiffness: 300, mass: 0.8 }}
+              className="fixed top-0 bottom-0 left-0 w-72 bg-background/90 backdrop-blur-3xl border-r border-border shadow-popover z-[101] md:hidden flex flex-col"
             >
-              {/* Close Button */}
-              <div className="absolute right-4 top-4">
-                <button
-                  onClick={() => setMobileOpen(false)}
-                  className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface/50 border border-transparent transition-colors"
-                  aria-label="Close menu"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
               {renderSidebarContent(true)}
             </motion.aside>
           </>

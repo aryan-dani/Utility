@@ -2,8 +2,6 @@ import { NextResponse } from 'next/server';
 import { getResourcesFromDB } from '@/lib/dataFetcher';
 
 
-export const dynamic = 'force-dynamic';
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
@@ -12,7 +10,14 @@ export async function GET(request: Request) {
 
     const resources = await getResourcesFromDB(branch, semester);
 
-    return NextResponse.json({ resources });
+    return NextResponse.json(
+      { resources },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=600, stale-while-revalidate=3600',
+        },
+      }
+    );
   } catch (error: any) {
     console.error('Error fetching resources:', error);
     return NextResponse.json(

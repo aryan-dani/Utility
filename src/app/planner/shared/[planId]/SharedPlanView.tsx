@@ -72,7 +72,7 @@ export default function SharedPlanView({ plan }: { plan: Plan }) {
   const progressPct = totalTasks > 0 ? (doneTasks / totalTasks) * 100 : 0;
 
   return (
-    <div className="flex-1 w-full px-4 sm:px-6 py-6 max-w-[1400px] mx-auto">
+    <div className="flex-1 w-full px-6 py-8 max-w-7xl mx-auto min-h-[80vh]">
       {/* Header */}
       <div className="flex flex-col gap-4 mb-6 pb-5 border-b border-border">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -92,16 +92,15 @@ export default function SharedPlanView({ plan }: { plan: Plan }) {
           </div>
 
           <div className="flex items-center gap-2">
-            <span className="px-3 py-1.5 rounded-lg bg-violet-500/10 border border-violet-500/20 text-[11px] font-bold text-violet-600 dark:text-violet-400 uppercase">
+            <span className="px-3 py-1.5 rounded-lg bg-foreground/5 border border-foreground/15 text-[11px] font-bold text-foreground uppercase">
               Read-only
             </span>
           </div>
         </div>
 
-        {/* Progress */}
         <div className="flex items-center gap-3">
-          <div className="flex-1 h-2 bg-surface rounded-full overflow-hidden border border-border">
-            <div className="h-full bg-foreground rounded-full transition-all duration-500" style={{ width: `${progressPct}%` }} />
+          <div className="flex-1 h-3 bg-surface overflow-hidden border-2 border-foreground">
+            <div className="h-full bg-foreground transition-all duration-500" style={{ width: `${progressPct}%` }} />
           </div>
           <span className="text-xs font-semibold text-muted whitespace-nowrap">{doneTasks}/{totalTasks} tasks</span>
         </div>
@@ -158,8 +157,8 @@ export default function SharedPlanView({ plan }: { plan: Plan }) {
 
               {tasks.length > 0 && (
                 <div className="mt-auto pt-1">
-                  <div className="h-0.5 bg-surface rounded-full overflow-hidden">
-                    <div className="h-full bg-foreground transition-all duration-300 rounded-full" style={{ width: `${(done / tasks.length) * 100}%` }} />
+                  <div className="h-1 bg-surface border border-foreground overflow-hidden">
+                    <div className="h-full bg-foreground transition-all duration-300" style={{ width: `${(done / tasks.length) * 100}%` }} />
                   </div>
                 </div>
               )}

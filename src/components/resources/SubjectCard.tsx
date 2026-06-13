@@ -27,10 +27,10 @@ export default function SubjectCard({
   return (
     <button
       onClick={onClick}
-      className="group flex flex-col text-left bg-card border border-border rounded-xl p-6 hover:border-border-strong hover:shadow-sm transition-colors"
+      className="group flex flex-col text-left bg-card border border-border rounded-2xl p-6 hover:border-border-strong hover:shadow-sm transition-colors"
     >
       <div className="flex items-center justify-between mb-6 w-full">
-        <div className="w-10 h-10 rounded-lg bg-surface border border-border flex items-center justify-center text-muted group-hover:text-foreground transition-colors shadow-xs">
+        <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center text-muted group-hover:text-foreground transition-colors shadow-xs">
           <Folder className="w-5 h-5" />
         </div>
         <span className="text-[10px] font-semibold bg-surface px-2.5 py-1 rounded-md border border-border text-muted group-hover:text-foreground transition-colors">

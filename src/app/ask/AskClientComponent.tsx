@@ -95,7 +95,7 @@ function MessageContent({ content, showCursor }: { content: string, showCursor?:
             );
           },
           table: ({ children }) => (
-            <div className="overflow-x-auto my-6 rounded-2xl border border-border bg-card/50 backdrop-blur-md shadow-xs">
+            <div className="overflow-x-auto my-6 border-2 border-foreground bg-card shadow-[3px_3px_0px_0px_rgb(var(--foreground))]">
               <table className="min-w-full divide-y divide-border/60 text-xs">
                 {children}
               </table>
@@ -200,7 +200,7 @@ function AddToSrsButton({ cards, defaultName }: { cards: Flashcard[]; defaultNam
       >
         {added ? (
           <>
-            <Check className="w-3.5 h-3.5 text-emerald-500" />
+            <Check className="w-3.5 h-3.5 text-foreground" />
             Saved to SRS!
           </>
         ) : (
@@ -212,7 +212,7 @@ function AddToSrsButton({ cards, defaultName }: { cards: Flashcard[]; defaultNam
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 bottom-full mb-2 w-56 bg-card border border-border rounded-2xl shadow-popover overflow-hidden z-[100] backdrop-blur-xl p-1.5 flex flex-col gap-0.5">
+        <div className="absolute right-0 bottom-full mb-2 w-56 bg-card border-2 border-foreground shadow-[4px_4px_0px_0px_rgb(var(--foreground))] overflow-hidden z-[100] p-1.5 flex flex-col gap-0.5">
           <div className="px-3 py-1.5 border-b border-border/60 mb-1">
             <p className="text-[9px] uppercase font-extrabold tracking-wider text-muted">Select SRS Deck</p>
           </div>
@@ -405,15 +405,6 @@ export default function AskClient() {
     setMessages,
   } = chatHelpers;
 
-  console.log('AskClient Render:', {
-    activeSessionId,
-    chatSessionKey,
-    sessionsLoaded,
-    initialMessagesLength: initialMessages.length,
-    messagesLength: messages.length,
-    messagesRef: messages,
-    initialMessagesRef: initialMessages,
-  });
 
   const [input, setInput] = useState('');
   const isLoading = status === 'submitted' || status === 'streaming';
@@ -479,22 +470,11 @@ export default function AskClient() {
   useEffect(() => {
     if (!activeSessionId) return;
     if (status !== 'ready' && status !== 'error') return; // Only sync when ready or error
-    console.log('Sync Effect Fired:', {
-      messagesLength: messages.length,
-      activeSessionId,
-      status,
-    });
-    
     setSessions(prevSessions => {
       const session = prevSessions.find(s => s.id === activeSessionId);
       if (!session) return prevSessions;
  
       const isDiff = JSON.stringify(session.messages) !== JSON.stringify(messages);
-      console.log('Compare Messages:', {
-        sessionMsgLength: session.messages.length,
-        chatMsgLength: messages.length,
-        isDiff,
-      });
 
       if (isDiff) {
         const updated = prevSessions.map(s => {
@@ -760,7 +740,7 @@ export default function AskClient() {
   };
 
   return (
-    <div className="flex-1 w-full flex flex-col md:h-screen h-[calc(100vh-3.5rem)] px-4 sm:px-6">
+    <div className="flex-1 w-full max-w-7xl mx-auto flex flex-col md:h-screen h-[calc(100vh-3.5rem)] px-6">
       {/* Top Navigation Tabs */}
       <div className="border-b border-border bg-background px-4 sm:px-6 py-3 flex items-center justify-between gap-4 shrink-0">
         <div className="flex items-center gap-1.5 p-1 bg-surface border border-border rounded-xl shadow-xs">
@@ -890,7 +870,7 @@ export default function AskClient() {
                   </button>
                   
                   {isFocusDropdownOpen && (
-                    <div className="absolute top-full right-0 mt-1.5 w-[280px] bg-card border border-border rounded-xl shadow-popover overflow-hidden z-50 flex flex-col max-h-[300px]">
+                    <div className="absolute top-full right-0 mt-1.5 w-[280px] bg-card border-2 border-foreground shadow-[4px_4px_0px_0px_rgb(var(--foreground))] overflow-hidden z-50 flex flex-col max-h-[300px]">
                       <div className="overflow-y-auto p-1.5 flex flex-col gap-0.5">
                         <button
                           onClick={() => { setSelectedResourceId('all'); setIsFocusDropdownOpen(false); }}
@@ -922,7 +902,7 @@ export default function AskClient() {
               </div>
 
               {selectedResourceId !== 'all' && (
-                <span className="text-[9px] font-bold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                <span className="text-[9px] font-bold uppercase tracking-wider text-foreground bg-foreground/5 px-2 py-0.5 rounded border border-foreground/15">
                   Grounded Chat Mode
                 </span>
               )}
@@ -931,7 +911,7 @@ export default function AskClient() {
             <div ref={scrollContainerRef} className="flex-1 overflow-y-auto px-4 sm:px-6 py-6 relative">
               {messages.length === 0 ? (
                 <div className="h-full flex flex-col items-center justify-center text-center px-4">
-                  <div className="w-16 h-16 rounded-2xl bg-surface border border-border flex items-center justify-center mb-6 shadow-sm">
+                  <div className="w-16 h-16 bg-surface border-2 border-foreground flex items-center justify-center mb-6 shadow-[3px_3px_0px_0px_rgb(var(--foreground))]">
                     <Brain className="w-8 h-8 text-foreground" />
                   </div>
                   <h1 className="text-2xl font-bold text-foreground mb-10 tracking-tight">Academic AI Assistant</h1>
@@ -1039,7 +1019,7 @@ export default function AskClient() {
               )}
 
               <form id="chat-form" onSubmit={handleSubmit} className="relative group">
-                <div className="flex items-end gap-2 bg-surface border border-border rounded-2xl p-1.5 focus-within:ring-2 focus-within:ring-primary/20 focus-within:border-primary transition-all shadow-sm group-hover:border-border-strong">
+                <div className="flex items-end gap-2 bg-surface border-2 border-foreground p-1.5 transition-all shadow-[3px_3px_0px_0px_rgb(var(--foreground))] focus-within:shadow-[5px_5px_0px_0px_rgb(var(--foreground))]">
                   <textarea
                     ref={inputRef}
                     value={input || ''}
@@ -1163,7 +1143,7 @@ export default function AskClient() {
               {/* The Flashcard */}
               <div
                 onClick={() => setIsFlipped(!isFlipped)}
-                className="w-full min-h-[280px] bg-card border border-border rounded-2xl p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-border-strong transition-all shadow-md relative group select-none"
+                className="w-full min-h-[280px] bg-card border-2 border-foreground p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:shadow-[5px_5px_0px_0px_rgb(var(--foreground))] transition-all shadow-[3px_3px_0px_0px_rgb(var(--foreground))] relative group select-none"
               >
                 <div className="absolute top-4 right-4 text-[10px] font-bold uppercase tracking-wider text-muted bg-surface px-2.5 py-1 rounded-md border border-border shadow-xs">
                   {isFlipped ? 'Answer' : 'Question'}
@@ -1222,7 +1202,7 @@ export default function AskClient() {
                     }}
                     className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all shadow-xs ${
                       knownCards[currentCardIndex] === true
-                        ? 'bg-emerald-600 text-white border-emerald-600'
+                        ? 'bg-foreground text-background border-foreground font-semibold'
                         : 'bg-surface border-border text-muted hover:text-foreground'
                     }`}
                   >
@@ -1265,7 +1245,7 @@ export default function AskClient() {
                       </>
                     ) : publishedDeck ? (
                       <>
-                        <Check className="w-3.5 h-3.5 text-emerald-400" />
+                        <Check className="w-3.5 h-3.5 text-foreground" />
                         Published to Community!
                       </>
                     ) : (
@@ -1280,7 +1260,7 @@ export default function AskClient() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center my-12 px-4 max-w-sm">
-              <div className="w-16 h-16 rounded-2xl bg-surface border border-border flex items-center justify-center mb-6 shadow-sm">
+              <div className="w-16 h-16 bg-surface border-2 border-foreground flex items-center justify-center mb-6 shadow-[3px_3px_0px_0px_rgb(var(--foreground))]">
                 <Layers className="w-8 h-8 text-muted" />
               </div>
               <h3 className="text-lg font-bold text-foreground mb-2">AI Flashcards</h3>
@@ -1350,7 +1330,7 @@ export default function AskClient() {
           ) : quizQuestions.length > 0 ? (
             <div className="w-full max-w-2xl space-y-8 pb-12">
               {quizQuestions.map((q, qIndex) => (
-                <div key={q.id} className="bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-sm">
+                <div key={q.id} className="bg-card border-2 border-foreground p-6 sm:p-8 shadow-[4px_4px_0px_0px_rgb(var(--foreground))]">
                   <div className="flex items-center justify-between mb-4">
                     <span className="text-xs font-bold uppercase tracking-wider text-muted bg-surface px-2.5 py-1 rounded-md border border-border shadow-xs">
                       Question {qIndex + 1}
@@ -1369,7 +1349,7 @@ export default function AskClient() {
                       let btnStyle = 'bg-surface border-border hover:border-border-strong text-foreground';
                       if (quizSubmitted) {
                         if (isCorrect) {
-                          btnStyle = 'bg-emerald-500/10 border-emerald-500 text-emerald-600 dark:text-emerald-400 font-semibold';
+                          btnStyle = 'bg-foreground/10 border-foreground text-foreground font-bold';
                         } else if (isSelected && !isCorrect) {
                           btnStyle = 'bg-destructive/10 border-destructive text-destructive font-semibold';
                         }
@@ -1386,7 +1366,7 @@ export default function AskClient() {
                           className={`w-full flex items-center justify-between p-4 rounded-xl border text-sm text-left transition-all ${btnStyle}`}
                         >
                           <span>{opt}</span>
-                          {quizSubmitted && isCorrect && <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 ml-2" />}
+                          {quizSubmitted && isCorrect && <CheckCircle2 className="w-4 h-4 text-foreground shrink-0 ml-2" />}
                           {quizSubmitted && isSelected && !isCorrect && <XCircle className="w-4 h-4 text-destructive shrink-0 ml-2" />}
                         </button>
                       );
@@ -1423,7 +1403,7 @@ export default function AskClient() {
               ))}
 
               {/* Submit / Score Section */}
-              <div className="bg-surface border border-border rounded-2xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm">
+              <div className="bg-surface border-2 border-foreground p-6 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-[4px_4px_0px_0px_rgb(var(--foreground))]">
                 <div>
                   {quizSubmitted ? (
                     <>
@@ -1472,7 +1452,7 @@ export default function AskClient() {
             </div>
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center my-12 px-4 max-w-sm">
-              <div className="w-16 h-16 rounded-2xl bg-surface border border-border flex items-center justify-center mb-6 shadow-sm">
+              <div className="w-16 h-16 bg-surface border-2 border-foreground flex items-center justify-center mb-6 shadow-[3px_3px_0px_0px_rgb(var(--foreground))]">
                 <HelpCircle className="w-8 h-8 text-muted" />
               </div>
               <h3 className="text-lg font-bold text-foreground mb-2">AI Practice Quiz</h3>

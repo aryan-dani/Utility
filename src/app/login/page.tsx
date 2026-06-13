@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import {
@@ -11,8 +11,32 @@ import {
 } from "firebase/auth";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Eye, EyeOff, Layers } from "lucide-react";
+import { motion } from "framer-motion";
 
-export default function LoginPage() {
+function getFriendlyErrorMessage(errorCode: string): string {
+  switch (errorCode) {
+    case "auth/invalid-email":
+      return "The email address is not formatted correctly.";
+    case "auth/user-disabled":
+      return "This user account has been disabled.";
+    case "auth/user-not-found":
+    case "auth/wrong-password":
+    case "auth/invalid-credential":
+      return "Incorrect email or password. Please try again.";
+    case "auth/email-already-in-use":
+      return "An account with this email address already exists.";
+    case "auth/weak-password":
+      return "The password is too weak. Please use at least 6 characters.";
+    case "auth/popup-closed-by-user":
+      return "Sign-in was cancelled. Please try again.";
+    case "auth/network-request-failed":
+      return "A network error occurred. Please check your internet connection.";
+    default:
+      return "An unexpected error occurred. Please try again later.";
+  }
+}
+
+function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -42,12 +66,11 @@ export default function LoginPage() {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      // Wait a brief moment for ID token cookie sync to trigger
       setTimeout(() => {
         router.push(redirectTo);
       }, 500);
     } catch (err: any) {
-      setError(err.message);
+      setError(getFriendlyErrorMessage(err.code || err.message));
       setLoading(false);
     }
   };
@@ -63,7 +86,7 @@ export default function LoginPage() {
         router.push(redirectTo);
       }, 500);
     } catch (err: any) {
-      setError(err.message);
+      setError(getFriendlyErrorMessage(err.code || err.message));
       setGoogleLoading(false);
     }
   };
@@ -79,14 +102,35 @@ export default function LoginPage() {
         router.push(redirectTo);
       }, 500);
     } catch (err: any) {
-      setError(err.message);
+      setError(getFriendlyErrorMessage(err.code || err.message));
       setGithubLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 overflow-hidden">
+      {/* Ambient background animations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-20">
+        <motion.div
+          animate={{
+            x: [0, 40, -20, 0],
+            y: [0, -30, 40, 0],
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          className="absolute top-[20%] left-[10%] w-[35vw] h-[35vw] rounded-full bg-foreground/3 blur-[80px]"
+        />
+        <motion.div
+          animate={{
+            x: [0, -40, 20, 0],
+            y: [0, 30, -40, 0],
+          }}
+          transition={{ duration: 18, repeat: Infinity, ease: "linear", delay: 1 }}
+          className="absolute bottom-[20%] right-[10%] w-[30vw] h-[30vw] rounded-full bg-foreground/3 blur-[80px]"
+        />
+      </div>
+      <div className="noise-overlay opacity-30" />
+
+      <div className="w-full max-w-sm relative z-10">
         {/* Back link */}
         <Link
           href="/"
@@ -97,7 +141,12 @@ export default function LoginPage() {
         </Link>
 
         {/* Card */}
-        <div className="bg-card border border-border rounded-xl p-8 shadow-card">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="glass-card rounded-2xl p-8 shadow-popover"
+        >
           {/* Logo */}
           <div className="flex items-center gap-2.5 mb-8">
             <div className="flex items-center justify-center">
@@ -115,7 +164,7 @@ export default function LoginPage() {
           </p>
 
           {error && (
-            <div className="mb-5 text-sm text-foreground bg-surface border border-border-strong p-3 rounded-lg">
+            <div className="mb-5 text-sm text-destructive bg-destructive/10 border border-destructive/20 p-3 rounded-xl">
               {error}
             </div>
           )}
@@ -125,12 +174,12 @@ export default function LoginPage() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={googleLoading || githubLoading || loading}
-              className="bg-background border border-border text-foreground py-2.5 rounded-lg text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-colors flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 duration-150"
             >
               {googleLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
               ) : (
-                <span className="flex h-4.5 w-4.5 items-center justify-center text-sm font-black leading-none text-blue-500">
+                <span className="flex h-4.5 w-4.5 items-center justify-center text-sm font-black leading-none text-foreground">
                   G
                 </span>
               )}
@@ -140,7 +189,7 @@ export default function LoginPage() {
               type="button"
               onClick={handleGithubSignIn}
               disabled={googleLoading || githubLoading || loading}
-              className="bg-background border border-border text-foreground py-2.5 rounded-lg text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-colors flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 duration-150"
             >
               {githubLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -174,7 +223,7 @@ export default function LoginPage() {
 
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
                 Email address
               </label>
               <input
@@ -184,12 +233,12 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
-                className="w-full bg-background border border-border rounded-lg px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground placeholder:text-muted transition-all"
+                className="w-full bg-background border border-border rounded-xl px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/40 text-foreground placeholder:text-muted transition-all duration-200 focus-premium"
               />
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-foreground mb-1.5">
+              <label className="block text-xs font-semibold text-foreground mb-1.5">
                 Password
               </label>
               <div className="relative">
@@ -200,7 +249,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary text-foreground placeholder:text-muted transition-all"
+                  className="w-full bg-background border border-border rounded-xl px-3 py-2.5 pr-10 text-sm outline-none focus:ring-2 focus:ring-foreground/10 focus:border-foreground/40 text-foreground placeholder:text-muted transition-all duration-200 focus-premium"
                 />
                 <button
                   type="button"
@@ -219,7 +268,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-foreground text-background py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2 mt-2"
+              className="w-full bg-foreground text-background py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2 mt-2 hover:scale-[1.01] active:scale-95 duration-150"
             >
               {loading ? (
                 <>
@@ -231,7 +280,7 @@ export default function LoginPage() {
               )}
             </button>
           </form>
-        </div>
+        </motion.div>
 
         <p className="text-center text-xs text-muted mt-6">
           New to Utility?{" "}
@@ -244,5 +293,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted" />
+      </div>
+    }>
+      <LoginContent />
+    </Suspense>
   );
 }

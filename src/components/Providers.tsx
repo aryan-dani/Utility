@@ -1,8 +1,10 @@
 'use client';
 
 import { ThemeProvider } from 'next-themes';
-import CommandPalette from './CommandPalette';
+import dynamic from 'next/dynamic';
 import { PWAProvider } from '@/contexts/PWAContext';
+
+const CommandPalette = dynamic(() => import('./CommandPalette'), { ssr: false });
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (

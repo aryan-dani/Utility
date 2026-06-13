@@ -285,7 +285,7 @@ export default function SrsClient() {
   }
 
   return (
-    <div className="flex-1 w-full px-4 sm:px-6 py-8">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 min-h-[80vh]">
       
       {/* ── 1. DASHBOARD VIEW ─────────────────────────────────────────────── */}
       {view === 'dashboard' && (
@@ -382,7 +382,7 @@ export default function SrsClient() {
               const mastery = stat?.mastery || 0;
 
               return (
-                <div key={deck.id} className="group flex flex-col justify-between bg-card border border-border hover:border-foreground/30 rounded-2xl p-5 transition-all shadow-xs relative overflow-hidden">
+                <div key={deck.id} className="group flex flex-col justify-between bg-card border-2 border-foreground p-5 transition-all shadow-[3px_3px_0px_0px_rgb(var(--foreground))] relative overflow-hidden">
                   
                   {/* Mastery Progress Bar */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-surface">
@@ -442,11 +442,11 @@ export default function SrsClient() {
                         dist[b - 1]++;
                       });
                       const colors = [
-                        'bg-red-500/80 dark:bg-red-600/80',
-                        'bg-orange-400/80 dark:bg-orange-500/80',
-                        'bg-amber-400/80 dark:bg-amber-500/80',
-                        'bg-emerald-400/80 dark:bg-emerald-500/80',
-                        'bg-green-500/80 dark:bg-green-600/80'
+                        'bg-foreground/20',
+                        'bg-foreground/40',
+                        'bg-foreground/60',
+                        'bg-foreground/80',
+                        'bg-foreground'
                       ];
                       return (
                         <div className="mt-4 space-y-1">
@@ -501,9 +501,9 @@ export default function SrsClient() {
                     {cards.filter(c => c.deckId === deck.id && c.starred).length > 0 && (
                       <button
                         onClick={() => startReview(deck.id, true)}
-                        className="w-full text-center font-bold text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/20 hover:bg-amber-500/20 rounded-lg py-1.5 transition-all flex items-center justify-center gap-1"
+                        className="w-full text-center font-bold text-[10px] text-foreground bg-foreground/5 border border-foreground/10 hover:bg-foreground/10 rounded-lg py-1.5 transition-all flex items-center justify-center gap-1"
                       >
-                        <Star className="w-3 h-3 fill-amber-500 text-amber-500" />
+                        <Star className="w-3.5 h-3.5 fill-foreground text-foreground" />
                         Review Starred ({cards.filter(c => c.deckId === deck.id && c.starred).length})
                       </button>
                     )}
@@ -553,7 +553,7 @@ export default function SrsClient() {
             >
               
               {/* Front Side (Question) */}
-              <div className="absolute inset-0 w-full h-full bg-card border border-border rounded-3xl p-8 flex flex-col justify-between shadow-lg [backface-visibility:hidden] group-hover:border-foreground/20">
+              <div className="absolute inset-0 w-full h-full bg-card border-2 border-foreground p-8 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgb(var(--foreground))] [backface-visibility:hidden] group-hover:shadow-[6px_6px_0px_0px_rgb(var(--foreground))]">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-bold text-muted uppercase tracking-widest flex items-center gap-1">
                     <HelpCircle className="w-3.5 h-3.5" /> Question
@@ -574,10 +574,10 @@ export default function SrsClient() {
                         updated[currentIndex].starred = !updated[currentIndex].starred;
                         setReviewQueue(updated);
                       }}
-                      className="p-1.5 text-muted hover:text-amber-500 rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
+                      className="p-1.5 text-muted hover:text-foreground rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
                       title="Star Card"
                     >
-                      <Star className={`w-3.5 h-3.5 ${reviewQueue[currentIndex].starred ? 'fill-amber-500 text-amber-500' : ''}`} />
+                      <Star className={`w-3.5 h-3.5 ${reviewQueue[currentIndex].starred ? 'fill-foreground text-foreground' : ''}`} />
                     </button>
                   </div>
                 </div>
@@ -594,7 +594,7 @@ export default function SrsClient() {
               </div>
 
               {/* Back Side (Answer) */}
-              <div className="absolute inset-0 w-full h-full bg-card border border-border rounded-3xl p-8 flex flex-col justify-between shadow-lg [backface-visibility:hidden] [transform:rotateY(180deg)] group-hover:border-foreground/20">
+              <div className="absolute inset-0 w-full h-full bg-card border-2 border-foreground p-8 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgb(var(--foreground))] [backface-visibility:hidden] [transform:rotateY(180deg)] group-hover:shadow-[6px_6px_0px_0px_rgb(var(--foreground))]">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" /> Answer
@@ -614,10 +614,10 @@ export default function SrsClient() {
                         updated[currentIndex].starred = !updated[currentIndex].starred;
                         setReviewQueue(updated);
                       }}
-                      className="p-1.5 text-muted hover:text-amber-500 rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
+                      className="p-1.5 text-muted hover:text-foreground rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
                       title="Star Card"
                     >
-                      <Star className={`w-3.5 h-3.5 ${reviewQueue[currentIndex].starred ? 'fill-amber-500 text-amber-500' : ''}`} />
+                      <Star className={`w-3.5 h-3.5 ${reviewQueue[currentIndex].starred ? 'fill-foreground text-foreground' : ''}`} />
                     </button>
                   </div>
                 </div>
@@ -640,7 +640,7 @@ export default function SrsClient() {
           <div className="w-full flex flex-col sm:flex-row justify-center items-center gap-4">
             <button
               onClick={() => handleGrade(false)}
-              className="w-full sm:w-44 flex items-center justify-center gap-2 border border-border hover:border-red-200 dark:hover:border-red-950 bg-card hover:bg-red-500/5 text-muted hover:text-red-500 rounded-2xl py-3 text-xs font-bold transition-all shadow-sm"
+              className="w-full sm:w-44 flex items-center justify-center gap-2 border-2 border-foreground bg-card hover:bg-foreground/5 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgb(var(--foreground))] text-foreground py-3 text-xs font-bold transition-all"
             >
               <X className="w-4 h-4" />
               <span>Forgot (Key 1)</span>
@@ -648,7 +648,7 @@ export default function SrsClient() {
             
             <button
               onClick={() => handleGrade(true)}
-              className="w-full sm:w-44 flex items-center justify-center gap-2 border border-border hover:border-green-200 dark:hover:border-green-950 bg-card hover:bg-green-500/5 text-muted hover:text-green-600 rounded-2xl py-3 text-xs font-bold transition-all shadow-sm"
+              className="w-full sm:w-44 flex items-center justify-center gap-2 border-2 border-foreground bg-card hover:bg-foreground/10 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgb(var(--foreground))] text-foreground py-3 text-xs font-bold transition-all"
             >
               <Check className="w-4 h-4" />
               <span>Got it (Key 2)</span>
@@ -687,7 +687,7 @@ export default function SrsClient() {
             
             {/* Create Card Form */}
             <div className="lg:col-span-1">
-              <div className="bg-card border border-border rounded-2xl p-5 space-y-4 shadow-xs sticky top-24">
+              <div className="bg-card border-2 border-foreground p-5 space-y-4 shadow-[4px_4px_0px_0px_rgb(var(--foreground))] sticky top-24">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                   <PlusCircle className="w-4.5 h-4.5" />
                   Add New Card
@@ -730,7 +730,7 @@ export default function SrsClient() {
 
             {/* Decks Cards Table */}
             <div className="lg:col-span-2 space-y-4">
-              <div className="bg-card border border-border rounded-2xl overflow-hidden shadow-xs">
+              <div className="bg-card border-2 border-foreground overflow-hidden shadow-[4px_4px_0px_0px_rgb(var(--foreground))]">
                 
                 <div className="px-5 py-4 border-b border-border bg-surface/30">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Cards in Deck</h3>
@@ -763,10 +763,10 @@ export default function SrsClient() {
                         <div className="flex items-center gap-1 shrink-0">
                           <button
                             onClick={() => toggleStarCard(card.id)}
-                            className="p-2 text-muted hover:text-amber-500 rounded-lg transition-all"
+                            className="p-2 text-muted hover:text-foreground rounded-lg transition-all"
                             title="Star Card"
                           >
-                            <Star className={`w-3.5 h-3.5 ${card.starred ? 'fill-amber-500 text-amber-500' : ''}`} />
+                            <Star className={`w-3.5 h-3.5 ${card.starred ? 'fill-foreground text-foreground' : ''}`} />
                           </button>
                           <button
                             onClick={() => deleteCard(card.id)}
@@ -793,7 +793,7 @@ export default function SrsClient() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+            className="w-full max-w-sm bg-card border-2 border-foreground shadow-[6px_6px_0px_0px_rgb(var(--foreground))] overflow-hidden"
           >
             <div className="px-6 py-4 border-b border-border flex justify-between items-center">
               <h2 className="font-bold text-foreground text-sm">Create New Deck</h2>
@@ -847,7 +847,7 @@ export default function SrsClient() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-full bg-card border border-border rounded-3xl p-8 shadow-2xl relative overflow-hidden flex flex-col items-center text-center"
+            className="w-full bg-card border-2 border-foreground p-8 shadow-[6px_6px_0px_0px_rgb(var(--foreground))] relative overflow-hidden flex flex-col items-center text-center"
           >
             {/* Background dynamic light effect */}
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -881,7 +881,7 @@ export default function SrsClient() {
 
             <div className="w-full flex gap-3 text-xs font-semibold px-2 py-3 bg-surface/30 rounded-xl border border-border mb-6">
               <div className="flex-1 text-center">
-                <span className="text-green-500 font-bold">{reviewSummary.gotIt}</span> Got It
+                <span className="text-foreground font-bold">{reviewSummary.gotIt}</span> Got It
               </div>
               <div className="w-px bg-border h-4 self-center" />
               <div className="flex-1 text-center">

@@ -140,6 +140,18 @@ export default function TimerClient() {
         : sanitizeDuration(longBreakTime) * 60;
   const progress = Math.min(100, Math.max(0, ((totalTime - timeLeft) / totalTime) * 100));
 
+  const themeColorClass = useMemo(() => {
+    if (mode === 'work') return 'text-foreground border-foreground/20 bg-foreground/5';
+    if (mode === 'break') return 'text-muted-hover border-muted/20 bg-muted/5';
+    return 'text-muted border-muted/20 bg-muted/5';
+  }, [mode]);
+
+  const strokeColorClass = useMemo(() => {
+    if (mode === 'work') return isActive ? 'stroke-foreground [filter:drop-shadow(0_0_8px_rgb(var(--foreground)/0.3))]' : 'stroke-foreground';
+    if (mode === 'break') return isActive ? 'stroke-muted-hover [filter:drop-shadow(0_0_8px_rgb(var(--muted)/0.3))]' : 'stroke-foreground';
+    return isActive ? 'stroke-muted [filter:drop-shadow(0_0_8px_rgb(var(--muted)/0.3))]' : 'stroke-foreground';
+  }, [mode, isActive]);
+
   // Load focus history
   useEffect(() => {
     const logsSaved = localStorage.getItem('utility_focus_logs');
@@ -262,6 +274,18 @@ export default function TimerClient() {
     }
   }, []);
 
+  useEffect(() => {
+    if (isActive) {
+      const modeLabel = mode === 'work' ? 'Work' : mode === 'break' ? 'Short Break' : 'Long Break';
+      document.title = `(${formatTime(timeLeft)}) ${modeLabel} | Utility`;
+    } else {
+      document.title = 'Focus Timer | Utility';
+    }
+    return () => {
+      document.title = 'Utility';
+    };
+  }, [timeLeft, isActive, mode]);
+
   const formatTime = (seconds: number) => {
     const safeSeconds = Number.isFinite(seconds)
       ? Math.min(MAX_DURATION_MINUTES * 60, Math.max(0, Math.floor(seconds)))
@@ -307,7 +331,7 @@ export default function TimerClient() {
       {/* Left panel: Pomodoro timer */}
       <div className="flex-1 flex flex-col items-center max-w-md w-full">
         <FadeIn className="w-full text-center mb-8">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-surface text-muted text-[10px] font-bold uppercase tracking-wider mb-4 border border-border">
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-none text-[10px] font-bold uppercase tracking-wider mb-4 border-2 border-foreground transition-all duration-300 ${themeColorClass}`}>
             {mode === 'work' ? <Brain className="w-3 h-3" /> : <Coffee className="w-3 h-3" />}
             {mode === 'work' ? 'Deep Work Session' : mode === 'break' ? 'Short Break' : 'Long Break'}
           </div>
@@ -342,7 +366,7 @@ export default function TimerClient() {
                 cx="50%"
                 cy="50%"
                 r="48%"
-                className="fill-none stroke-foreground stroke-[6] transition-all duration-1000 ease-linear"
+                className={`fill-none stroke-[6] transition-all duration-1000 ease-linear ${strokeColorClass}`}
                 strokeDasharray="301.6%"
                 strokeDashoffset={`${301.6 - (301.6 * progress) / 100}%`}
                 strokeLinecap="round"
@@ -353,12 +377,14 @@ export default function TimerClient() {
               <span className="text-5xl sm:text-6xl font-black tabular-nums tracking-tighter text-foreground">
                 {formatTime(timeLeft)}
               </span>
-              <div className="flex items-center gap-2 mt-4">
+              <div className="flex items-center gap-2.5 mt-4">
                 {[...Array(4)].map((_, i) => (
                   <div 
                     key={i} 
-                    className={`w-2 h-2 rounded-full border border-foreground/20 ${
-                      i < (sessions % 4) ? 'bg-foreground' : 'bg-transparent'
+                    className={`w-2.5 h-2.5 rounded-none border-2 border-foreground transition-colors duration-300 ${
+                      i < (sessions % 4) 
+                        ? 'bg-foreground border-foreground' 
+                        : 'bg-transparent'
                     }`} 
                   />
                 ))}
@@ -372,23 +398,30 @@ export default function TimerClient() {
           <div className="flex items-center justify-center gap-4">
             <button
               onClick={resetTimer}
-              className="w-12 h-12 rounded-full border border-border bg-card flex items-center justify-center text-muted hover:text-foreground hover:bg-surface transition-all"
+              className="w-12 h-12 rounded-none border-2 border-foreground bg-card flex items-center justify-center text-foreground hover:translate-x-[-2px] hover:translate-y-[-2px] active:translate-x-[0px] active:translate-y-[0px] shadow-[2px_2px_0px_0px_rgb(var(--foreground))] transition-all"
               title="Reset"
+              aria-label="Reset timer"
             >
               <RotateCcw className="w-5 h-5" />
             </button>
             
-            <ScaleButton
+            <button
               onClick={toggleTimer}
-              className="w-24 h-12 rounded-full bg-foreground text-background flex items-center justify-center shadow-xl"
+              className={`w-28 h-12 rounded-none border-2 border-foreground flex items-center justify-center shadow-[4px_4px_0px_0px_rgb(var(--foreground))] hover:translate-x-[-2px] hover:translate-y-[-2px] active:translate-x-[0px] active:translate-y-[0px] transition-all duration-150 ${
+                isActive 
+                  ? 'bg-destructive text-destructive-foreground' 
+                  : 'bg-foreground text-background'
+              }`}
+              aria-label={isActive ? "Pause timer" : "Start timer"}
             >
               {isActive ? <span className="font-bold text-xs uppercase tracking-widest">Pause</span> : <span className="font-bold text-xs uppercase tracking-widest">Start</span>}
-            </ScaleButton>
+            </button>
 
             <button
               onClick={() => setShowSettings(true)}
-              className="w-12 h-12 rounded-full border border-border bg-card flex items-center justify-center text-muted hover:text-foreground hover:bg-surface transition-all"
+              className="w-12 h-12 rounded-none border-2 border-foreground bg-card flex items-center justify-center text-foreground hover:translate-x-[-2px] hover:translate-y-[-2px] active:translate-x-[0px] active:translate-y-[0px] shadow-[2px_2px_0px_0px_rgb(var(--foreground))] transition-all"
               title="Settings"
+              aria-label="Timer settings"
             >
               <Settings2 className="w-5 h-5" />
             </button>
@@ -432,7 +465,7 @@ export default function TimerClient() {
                   <div className="absolute -top-8 bg-foreground text-background text-[10px] font-bold rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-md z-10">
                     {d.minutes}m
                   </div>
-                  <div className="w-5 bg-surface border border-border rounded-md overflow-hidden flex items-end h-20 transition-all group-hover:border-foreground/30">
+                  <div className="w-5 bg-surface border border-border rounded-none overflow-hidden flex items-end h-20 transition-all group-hover:border-foreground/30">
                     <div 
                       className="w-full bg-foreground transition-all duration-500 ease-out" 
                       style={{ height: `${pct}%` }}
@@ -456,6 +489,7 @@ export default function TimerClient() {
               <button 
                 onClick={toggleSoundscapePlay}
                 className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-surface border border-border rounded-md text-foreground hover:bg-surface-hover transition-all"
+                aria-label={soundPlaying ? 'Pause soundscape' : 'Play soundscape'}
               >
                 {soundPlaying ? 'Pause' : 'Play'}
               </button>
@@ -472,6 +506,7 @@ export default function TimerClient() {
                     ? 'bg-foreground text-background border-transparent font-bold'
                     : 'bg-surface/50 border-border text-muted hover:border-border-strong hover:text-foreground'
                 }`}
+                aria-label={`Select ${s} soundscape`}
               >
                 {s}
               </button>
@@ -492,6 +527,7 @@ export default function TimerClient() {
                 value={soundVolume}
                 onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
                 className="w-full accent-foreground bg-surface border border-border rounded-lg appearance-none h-1.5 cursor-pointer"
+                aria-label="Soundscape volume slider"
               />
             </div>
           )}

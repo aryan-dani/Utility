@@ -75,7 +75,7 @@ export default function ResourceCard({
   return (
     <div
       onClick={handleOpen}
-      className="group bg-card border rounded-xl p-4 flex flex-col gap-3 text-left shadow-sm cursor-pointer relative overflow-hidden resource-card-hover"
+      className="group bg-card border rounded-2xl p-4 flex flex-col gap-3 text-left shadow-sm cursor-pointer relative overflow-hidden resource-card-hover"
       style={{
         ["--card-accent" as any]: config.color,
       }}
@@ -156,7 +156,7 @@ export default function ResourceCard({
             e.stopPropagation();
             handleOpen();
           }}
-          className="flex items-center justify-center gap-1.5 w-full py-2 bg-surface hover:bg-surface-hover border border-border rounded-lg text-xs font-medium text-foreground transition-colors"
+          className="flex items-center justify-center gap-1.5 w-full py-2 bg-surface hover:bg-surface-hover border border-border rounded-xl text-xs font-medium text-foreground transition-colors"
         >
           <ExternalLink className="w-3.5 h-3.5 text-muted" />
           Open
@@ -169,7 +169,7 @@ export default function ResourceCard({
               e.stopPropagation();
               onSummarize(item);
             }}
-            className="flex items-center justify-center gap-1.5 w-full py-2 bg-foreground text-background hover:opacity-90 rounded-lg text-xs font-medium transition-opacity"
+            className="flex items-center justify-center gap-1.5 w-full py-2 bg-foreground text-background hover:opacity-90 rounded-xl text-xs font-medium transition-opacity"
           >
             Summarize
           </button>

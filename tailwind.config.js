@@ -25,6 +25,11 @@ module.exports = {
         primary: 'rgb(var(--primary) / <alpha-value>)',
         'primary-hover': 'rgb(var(--primary-hover) / <alpha-value>)',
         'primary-foreground': 'rgb(var(--primary-foreground) / <alpha-value>)',
+
+        destructive: 'rgb(var(--destructive) / <alpha-value>)',
+        'destructive-foreground': 'rgb(var(--destructive-foreground) / <alpha-value>)',
+        accent: 'rgb(var(--accent) / <alpha-value>)',
+        'accent-hover': 'rgb(var(--accent-hover) / <alpha-value>)',
       },
       fontFamily: {
         sans: ['Inter', 'Geist', 'system-ui', 'sans-serif'],
@@ -32,14 +37,35 @@ module.exports = {
       },
       borderRadius: {
         DEFAULT: 'var(--radius)',
+        md: 'var(--radius-md)',
         lg: 'var(--radius-lg)',
-        xl: '1rem',
-        '2xl': '1.5rem',
+        xl: 'var(--radius-xl)',
+        '2xl': 'var(--radius-2xl)',
+        '3xl': 'var(--radius-3xl)',
+      },
+      borderWidth: {
+        DEFAULT: '2px',
+        0: '0px',
+        1: '1px',
+        2: '2px',
+        3: '3px',
+        4: '4px',
+        6: '6px',
+        8: '8px',
       },
       boxShadow: {
-        'card': '0 1px 3px 0 rgba(0,0,0,0.06), 0 1px 2px -1px rgba(0,0,0,0.06)',
-        'card-hover': '0 4px 12px 0 rgba(0,0,0,0.08), 0 2px 4px -2px rgba(0,0,0,0.06)',
-        'popover': '0 8px 30px rgba(0,0,0,0.12)',
+        DEFAULT: '4px 4px 0px 0px rgb(var(--foreground))',
+        sm: '2px 2px 0px 0px rgb(var(--foreground))',
+        md: '4px 4px 0px 0px rgb(var(--foreground))',
+        lg: '6px 6px 0px 0px rgb(var(--foreground))',
+        xl: '8px 8px 0px 0px rgb(var(--foreground))',
+        '2xl': '12px 12px 0px 0px rgb(var(--foreground))',
+        '3xs': '1px 1px 0px 0px rgb(var(--foreground))',
+        'xs': '2px 2px 0px 0px rgb(var(--foreground))',
+        'card': '4px 4px 0px 0px rgb(var(--foreground))',
+        'card-hover': '6px 6px 0px 0px rgb(var(--foreground))',
+        'popover': '4px 4px 0px 0px rgb(var(--foreground))',
+        'glow': '0 0 0px 0px transparent',
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out forwards',
@@ -48,6 +74,7 @@ module.exports = {
         'scale-in': 'scaleIn 0.15s ease-out forwards',
         'shimmer': 'shimmer 1.5s infinite',
         'spin-slow': 'spin 2s linear infinite',
+        'pulse-subtle': 'pulseSubtle 2.5s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
       keyframes: {
         fadeIn: {
@@ -69,6 +96,10 @@ module.exports = {
         shimmer: {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' },
+        },
+        pulseSubtle: {
+          '0%, 100%': { opacity: '1', transform: 'scale(1)' },
+          '50%': { opacity: '0.85', transform: 'scale(1.015)' },
         },
       },
       transitionTimingFunction: {

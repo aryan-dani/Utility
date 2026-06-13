@@ -6,7 +6,13 @@ import Footer from './Footer';
 export default function ConditionalFooter() {
   const pathname = usePathname();
 
-  if (pathname !== '/') return null;
+  const allowedPaths = ['/', '/syllabus', '/resources', '/gpa', '/srs', '/community', '/install', '/timer'];
+  const shouldShow = allowedPaths.some(path => {
+    if (path === '/') return pathname === '/';
+    return pathname === path || pathname.startsWith(path + '/');
+  });
+
+  if (!shouldShow) return null;
 
   return <Footer />;
 }

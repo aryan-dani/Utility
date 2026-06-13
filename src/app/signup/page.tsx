@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Layers, Loader2 } from "lucide-react";
@@ -10,8 +10,28 @@ import {
   GoogleAuthProvider,
   GithubAuthProvider,
 } from "firebase/auth";
+import { motion } from "framer-motion";
 
-export default function SignupPage() {
+function getFriendlyErrorMessage(errorCode: string): string {
+  switch (errorCode) {
+    case "auth/invalid-email":
+      return "The email address is not formatted correctly.";
+    case "auth/user-disabled":
+      return "This user account has been disabled.";
+    case "auth/email-already-in-use":
+      return "An account with this email address already exists.";
+    case "auth/weak-password":
+      return "The password is too weak. Please use at least 6 characters.";
+    case "auth/popup-closed-by-user":
+      return "Sign-up was cancelled. Please try again.";
+    case "auth/network-request-failed":
+      return "A network error occurred. Please check your internet connection.";
+    default:
+      return "An unexpected error occurred. Please try again later.";
+  }
+}
+
+function SignupContent() {
   const [error, setError] = useState<string | null>(null);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
@@ -40,7 +60,7 @@ export default function SignupPage() {
         router.push(redirectTo);
       }, 500);
     } catch (err: any) {
-      setError(err.message);
+      setError(getFriendlyErrorMessage(err.code || err.message));
       setGoogleLoading(false);
     }
   };
@@ -56,14 +76,35 @@ export default function SignupPage() {
         router.push(redirectTo);
       }, 500);
     } catch (err: any) {
-      setError(err.message);
+      setError(getFriendlyErrorMessage(err.code || err.message));
       setGithubLoading(false);
     }
   };
 
   return (
-    <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center px-4">
-      <div className="w-full max-w-sm">
+    <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 overflow-hidden">
+      {/* Ambient background animations */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none -z-20">
+        <motion.div
+          animate={{
+            x: [0, 40, -20, 0],
+            y: [0, -30, 40, 0],
+          }}
+          transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
+          className="absolute top-[20%] left-[10%] w-[35vw] h-[35vw] rounded-full bg-accent/5 blur-[80px]"
+        />
+        <motion.div
+          animate={{
+            x: [0, -40, 20, 0],
+            y: [0, 30, -40, 0],
+          }}
+          transition={{ duration: 18, repeat: Infinity, ease: "linear", delay: 1 }}
+          className="absolute bottom-[20%] right-[10%] w-[30vw] h-[30vw] rounded-full bg-indigo-500/5 blur-[80px]"
+        />
+      </div>
+      <div className="noise-overlay opacity-30" />
+
+      <div className="w-full max-w-sm relative z-10">
         <Link
           href="/"
           className="inline-flex items-center gap-1.5 text-sm text-muted hover:text-foreground mb-8 transition-colors"
@@ -72,7 +113,12 @@ export default function SignupPage() {
           Back to home
         </Link>
 
-        <div className="bg-card border border-border rounded-xl p-8 shadow-card">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.98, y: 10 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          className="glass-card rounded-2xl p-8 shadow-popover"
+        >
           <div className="flex items-center gap-2.5 mb-8">
             <div className="flex items-center justify-center">
               <Layers className="w-8 h-8 text-foreground" />
@@ -89,7 +135,7 @@ export default function SignupPage() {
           </p>
 
           {error && (
-            <div className="mb-5 text-sm text-foreground bg-surface border border-border-strong p-3 rounded-lg">
+            <div className="mb-5 text-sm text-destructive bg-destructive/10 border border-destructive/20 p-3 rounded-xl">
               {error}
             </div>
           )}
@@ -99,7 +145,7 @@ export default function SignupPage() {
               type="button"
               onClick={handleGoogleSignup}
               disabled={googleLoading || githubLoading}
-              className="bg-foreground text-background py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
+              className="bg-foreground text-background py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 duration-150 shadow-sm"
             >
               {googleLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-background" />
@@ -114,7 +160,7 @@ export default function SignupPage() {
               type="button"
               onClick={handleGithubSignup}
               disabled={googleLoading || githubLoading}
-              className="bg-foreground text-background py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2"
+              className="bg-foreground text-background py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 duration-150 shadow-sm"
             >
               {githubLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-background" />
@@ -134,7 +180,7 @@ export default function SignupPage() {
               GitHub
             </button>
           </div>
-        </div>
+        </motion.div>
 
         <p className="text-center text-xs text-muted mt-6">
           Already have an account?{" "}
@@ -147,5 +193,17 @@ export default function SignupPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function SignupPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex min-h-[calc(100vh-4rem)] items-center justify-center">
+        <Loader2 className="w-6 h-6 animate-spin text-muted" />
+      </div>
+    }>
+      <SignupContent />
+    </Suspense>
   );
 }

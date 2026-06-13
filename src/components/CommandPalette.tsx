@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo, ComponentType } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -29,10 +29,29 @@ interface CommandItem {
   id: string;
   title: string;
   category: 'Quick Actions' | 'Navigation' | 'Subjects';
-  icon: any;
+  icon: ComponentType<any>;
   action: () => void;
   shortcut?: string;
   badge?: string;
+}
+
+function highlightMatch(text: string, query: string) {
+  if (!query.trim()) return <span>{text}</span>;
+  const regex = new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+  return (
+    <span>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <mark key={i} className="bg-primary/20 text-primary font-bold rounded-sm px-0.5">
+            {part}
+          </mark>
+        ) : (
+          part
+        )
+      )}
+    </span>
+  );
 }
 
 export default function CommandPalette() {
@@ -46,8 +65,10 @@ export default function CommandPalette() {
   const inputRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const lastInteraction = useRef<'key' | 'mouse'>('key');
-  // Fetch dynamic subjects for the current branch & semester
+  // Fetch dynamic subjects for the current branch & semester only when open
   useEffect(() => {
+    if (!isCommandPaletteOpen) return;
+
     const q = firestoreQuery(
       collection(db, 'subjects'),
       where('branch', '==', branch),
@@ -63,7 +84,7 @@ export default function CommandPalette() {
       .catch((error) => {
         console.error("Error fetching subjects in CommandPalette:", error);
       });
-  }, [branch, semester]);
+  }, [branch, semester, isCommandPaletteOpen]);
 
   // Detect Mac vs Windows/Linux for accurate shortcut display
   useEffect(() => {
@@ -328,10 +349,8 @@ export default function CommandPalette() {
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95, y: -10 }}
             transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-2xl overflow-hidden flex flex-col z-10 backdrop-blur-2xl"
-          >
-            {/* Top glowing gradient accent */}
-            <div className="h-1 bg-gradient-to-r from-primary/40 via-muted to-primary/40" />
+            className="relative w-full max-w-2xl bg-card border-2 border-foreground rounded-none shadow-[8px_8px_0px_0px_rgb(var(--foreground))] overflow-hidden flex flex-col z-10"
+        >
 
             {/* Search Input Header */}
             <div className="relative flex items-center px-4 py-3.5 border-b border-border bg-surface/30">
@@ -401,7 +420,7 @@ export default function CommandPalette() {
                           {isSelected && (
                             <motion.div
                               layoutId="activePaletteIndicator"
-                              className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-r-full"
+                              className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-none"
                               transition={{ type: 'spring', stiffness: 300, damping: 30 }}
                             />
                           )}
@@ -416,13 +435,13 @@ export default function CommandPalette() {
                             <Icon className="w-4 h-4" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="truncate">{item.title}</p>
+                            <p className="truncate">{highlightMatch(item.title, query)}</p>
                           </div>
                           {item.badge && (
                             <span
-                              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider transition-colors ${
+                              className={`text-[10px] px-2.5 py-0.5 rounded-none font-bold uppercase tracking-wider transition-colors ${
                                 isSelected
-                                  ? 'bg-background border border-border text-foreground shadow-sm'
+                                  ? 'bg-background border-2 border-foreground text-foreground shadow-[2px_2px_0px_0px_rgb(var(--foreground))]'
                                   : 'bg-surface border border-border text-muted'
                               }`}
                             >

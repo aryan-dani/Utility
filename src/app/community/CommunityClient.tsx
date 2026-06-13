@@ -151,7 +151,7 @@ export default function CommunityClient({
   }, [decks, selectedBranch, searchQuery, sortBy]);
 
   return (
-    <div className="flex-1 w-full px-4 sm:px-6 py-8 min-h-[80vh]">
+    <div className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 min-h-[80vh]">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-border pb-6">
         <div>
@@ -184,25 +184,25 @@ export default function CommunityClient({
 
           <div className="h-6 w-px bg-border hidden sm:block"></div>
 
-          <div className="flex bg-surface border border-border rounded-full p-0.5">
+          <div className="flex bg-surface border-2 border-foreground p-0.5 rounded-none">
             <button
               onClick={() => setSortBy("top")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-none text-xs font-semibold transition-all ${
                 sortBy === "top"
-                  ? "bg-background shadow-sm text-foreground"
+                  ? "bg-foreground text-background font-bold"
                   : "text-muted hover:text-foreground"
               }`}
             >
-              <Flame
-                className={`w-3.5 h-3.5 ${sortBy === "top" ? "text-primary" : ""}`}
+              <ThumbsUp
+                className="w-3.5 h-3.5"
               />
               Top
             </button>
             <button
               onClick={() => setSortBy("newest")}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-none text-xs font-semibold transition-all ${
                 sortBy === "newest"
-                  ? "bg-background shadow-sm text-foreground"
+                  ? "bg-foreground text-background font-bold"
                   : "text-muted hover:text-foreground"
               }`}
             >
@@ -224,7 +224,7 @@ export default function CommunityClient({
           return (
             <div
               key={deck.id}
-              className="bg-card border border-border rounded-2xl p-6 flex flex-col justify-between shadow-card hover:border-muted transition-all group"
+              className="bg-card border-2 border-foreground p-6 flex flex-col justify-between shadow-[3px_3px_0px_0px_rgb(var(--foreground))] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_rgb(var(--foreground))] transition-all group"
             >
               <div>
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -299,7 +299,7 @@ export default function CommunityClient({
                 >
                   {copiedDeckId === deck.id ? (
                     <>
-                      <Check className="w-4 h-4 text-emerald-500" />
+                      <Check className="w-4 h-4 text-foreground" />
                       Copied!
                     </>
                   ) : (
@@ -337,7 +337,7 @@ export default function CommunityClient({
       {/* Modal Flashcard Viewer */}
       {activeDeck && (
         <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-card border border-border rounded-3xl w-full max-w-2xl p-6 sm:p-8 shadow-2xl relative flex flex-col min-h-[400px]">
+          <div className="bg-card border-2 border-foreground w-full max-w-2xl p-6 sm:p-8 shadow-[6px_6px_0px_0px_rgb(var(--foreground))] relative flex flex-col min-h-[400px]">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
               <div>
@@ -362,7 +362,7 @@ export default function CommunityClient({
               activeDeck.flashcards[currentCardIdx] ? (
                 <div
                   onClick={() => setShowAnswer(!showAnswer)}
-                  className="w-full max-w-lg min-h-[220px] p-8 rounded-2xl border border-border-strong bg-surface hover:border-primary/50 transition-all flex flex-col items-center justify-center cursor-pointer shadow-card select-none group relative"
+                  className="w-full max-w-lg min-h-[220px] p-8 border-2 border-foreground bg-surface hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgb(var(--foreground))] transition-all flex flex-col items-center justify-center cursor-pointer shadow-[2px_2px_0px_0px_rgb(var(--foreground))] select-none group relative"
                 >
                   <span className="absolute top-4 right-4 text-[10px] font-mono text-muted uppercase bg-card border border-border px-2 py-1 rounded-md">
                     {showAnswer ? "Answer" : "Question"}

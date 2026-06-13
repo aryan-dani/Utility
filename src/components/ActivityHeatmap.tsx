@@ -49,7 +49,7 @@ export function logActivity(actionType: string, count = 1) {
 export default function ActivityHeatmap() {
   const [activityMap, setActivityMap] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
-  const [hoveredCell, setHoveredCell] = useState<{ date: string; count: number } | null>(null);
+  const [hoveredCell, setHoveredCell] = useState<{ date: string; count: number; top?: number; left?: number } | null>(null);
  
   const fetchActivity = async () => {
     // Load local storage first
@@ -98,12 +98,19 @@ export default function ActivityHeatmap() {
   useEffect(() => {
     fetchActivity();
 
+    let timeoutId: NodeJS.Timeout;
     const handleLocalLog = () => {
-      fetchActivity();
+      clearTimeout(timeoutId);
+      timeoutId = setTimeout(() => {
+        fetchActivity();
+      }, 300);
     };
 
     window.addEventListener('activity_logged', handleLocalLog);
-    return () => window.removeEventListener('activity_logged', handleLocalLog);
+    return () => {
+      window.removeEventListener('activity_logged', handleLocalLog);
+      clearTimeout(timeoutId);
+    };
   }, []);
 
   // Generate last 18 weeks of dates (18 weeks * 7 days = 126 days)
@@ -165,15 +172,15 @@ export default function ActivityHeatmap() {
 
   // Helper for cell color based on count
   const getCellColor = (count: number) => {
-    if (count === 0) return 'bg-surface border-border hover:border-muted';
-    if (count <= 2) return 'bg-emerald-500/20 border-emerald-500/30 text-emerald-500';
-    if (count <= 5) return 'bg-emerald-500/40 border-emerald-500/50 text-emerald-500';
-    if (count <= 8) return 'bg-emerald-500/70 border-emerald-500/80 text-emerald-500';
-    return 'bg-emerald-500 border-emerald-600 text-white shadow-xs';
+    if (count === 0) return 'bg-surface border-foreground/15 hover:border-foreground';
+    if (count <= 2) return 'bg-foreground/10 border-foreground/30 text-foreground';
+    if (count <= 5) return 'bg-foreground/25 border-foreground/50 text-foreground';
+    if (count <= 8) return 'bg-foreground/50 border-foreground/80 text-foreground';
+    return 'bg-foreground border-foreground text-background';
   };
 
   return (
-    <div className="w-full bg-card border border-border rounded-2xl p-6 sm:p-8 shadow-card my-12">
+    <div className="w-full bg-card border-2 border-foreground p-6 sm:p-8 shadow-[4px_4px_0px_0px_rgb(var(--foreground))] my-12">
       {/* Header & Stats */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 pb-6 border-b border-border">
         <div>
@@ -187,31 +194,31 @@ export default function ActivityHeatmap() {
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-surface border border-border rounded-xl p-4 shadow-xs">
-          <div className="flex flex-col items-center text-center px-3 border-r border-border last:border-r-0">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-surface border-2 border-foreground p-4 shadow-[3px_3px_0px_0px_rgb(var(--foreground))] w-full lg:w-auto">
+          <div className="flex flex-col items-center text-center px-3 border-r border-border">
             <span className="text-xs text-muted mb-1 flex items-center gap-1 font-medium">
-              <Zap className="w-3.5 h-3.5 text-amber-500" /> Total
+              <Zap className="w-3.5 h-3.5 text-foreground" /> Total
             </span>
             <span className="text-lg font-bold text-foreground">{totalContributions}</span>
           </div>
 
-          <div className="flex flex-col items-center text-center px-3 border-r border-border last:border-r-0">
+          <div className="flex flex-col items-center text-center px-3 border-r-0 sm:border-r border-border">
             <span className="text-xs text-muted mb-1 flex items-center gap-1 font-medium">
-              <Flame className="w-3.5 h-3.5 text-orange-500" /> Streak
+              <Flame className="w-3.5 h-3.5 text-foreground" /> Streak
             </span>
             <span className="text-lg font-bold text-foreground">{currentStreak} days</span>
           </div>
 
-          <div className="flex flex-col items-center text-center px-3 border-r border-border last:border-r-0">
+          <div className="flex flex-col items-center text-center px-3 border-r border-border">
             <span className="text-xs text-muted mb-1 flex items-center gap-1 font-medium">
-              <Trophy className="w-3.5 h-3.5 text-yellow-500" /> Best
+              <Trophy className="w-3.5 h-3.5 text-foreground" /> Best
             </span>
             <span className="text-lg font-bold text-foreground">{bestStreak} days</span>
           </div>
 
           <div className="flex flex-col items-center text-center px-3">
             <span className="text-xs text-muted mb-1 flex items-center gap-1 font-medium">
-              <Info className="w-3.5 h-3.5 text-blue-500" /> Daily Avg
+              <Info className="w-3.5 h-3.5 text-foreground" /> Daily Avg
             </span>
             <span className="text-lg font-bold text-foreground">
               {(totalContributions / 126).toFixed(1)}
@@ -221,64 +228,91 @@ export default function ActivityHeatmap() {
       </div>
 
       {/* Grid container */}
-      <div className="relative overflow-x-auto pb-4">
-        <div className="min-w-[700px] flex gap-2 items-start justify-center">
-          {/* Day labels (Mon, Wed, Fri) */}
-          <div className="flex flex-col gap-2 pr-2 text-[10px] font-semibold text-muted uppercase tracking-wider py-1">
-            <span className="h-4 flex items-center">Mon</span>
-            <span className="h-4 flex items-center">Tue</span>
-            <span className="h-4 flex items-center">Wed</span>
-            <span className="h-4 flex items-center">Thu</span>
-            <span className="h-4 flex items-center">Fri</span>
-            <span className="h-4 flex items-center">Sat</span>
-            <span className="h-4 flex items-center">Sun</span>
-          </div>
+      <div className="relative">
+        <div className="relative overflow-x-auto pb-4 custom-scrollbar">
+          <div className="min-w-[700px] flex gap-2 items-start justify-center">
+            {/* Day labels (Mon, Wed, Fri) */}
+            <div className="flex flex-col gap-2 pr-2 text-[10px] font-semibold text-muted uppercase tracking-wider py-1 select-none">
+              <span className="h-4 flex items-center">Mon</span>
+              <span className="h-4 flex items-center">Tue</span>
+              <span className="h-4 flex items-center">Wed</span>
+              <span className="h-4 flex items-center">Thu</span>
+              <span className="h-4 flex items-center">Fri</span>
+              <span className="h-4 flex items-center">Sat</span>
+              <span className="h-4 flex items-center">Sun</span>
+            </div>
 
-          {/* 18 Columns of 7 days */}
-          <div className="flex gap-1.5 flex-1 justify-between">
-            {Array.from({ length: Math.ceil(days.length / 7) }).map((_, colIdx) => {
-              const weekDays = days.slice(colIdx * 7, (colIdx + 1) * 7);
-              return (
-                <div key={colIdx} className="flex flex-col gap-1.5">
-                  {weekDays.map((day) => (
-                    <div
-                      key={day.date}
-                      onMouseEnter={() => setHoveredCell({ date: day.label, count: day.count })}
-                      onMouseLeave={() => setHoveredCell(null)}
-                      className={`w-4 h-4 rounded-md border transition-all cursor-pointer ${getCellColor(
-                        day.count
-                      )}`}
-                    />
-                  ))}
+            {/* 18 Columns of 7 days */}
+            <div className="flex gap-1.5 flex-1 justify-between relative">
+              {Array.from({ length: Math.ceil(days.length / 7) }).map((_, colIdx) => {
+                const weekDays = days.slice(colIdx * 7, (colIdx + 1) * 7);
+                return (
+                  <div key={colIdx} className="flex flex-col gap-1.5">
+                    {weekDays.map((day) => (
+                      <div
+                        key={day.date}
+                        role="gridcell"
+                        aria-label={`${day.count} activities on ${day.label}`}
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const parentRect = e.currentTarget.parentElement?.parentElement?.parentElement?.getBoundingClientRect();
+                          if (parentRect) {
+                            const top = rect.top - parentRect.top - 34;
+                            const left = rect.left - parentRect.left + (rect.width / 2);
+                            setHoveredCell({
+                              date: day.label,
+                              count: day.count,
+                              top,
+                              left
+                            });
+                          }
+                        }}
+                        onMouseLeave={() => setHoveredCell(null)}
+                        className={`w-4 h-4 rounded-none border transition-all cursor-pointer ${getCellColor(
+                          day.count
+                        )}`}
+                      />
+                    ))}
+                  </div>
+                );
+              })}
+
+              {/* Floating Tooltip positioned dynamically near hovered cell */}
+              {hoveredCell && hoveredCell.top !== undefined && hoveredCell.left !== undefined && (
+                <div 
+                  style={{ 
+                    top: `${hoveredCell.top}px`, 
+                    left: `${hoveredCell.left}px`,
+                    transform: 'translateX(-50%)'
+                  }}
+                  className="absolute z-30 pointer-events-none text-[10px] font-bold text-foreground bg-card border border-border px-2.5 py-1 rounded-lg shadow-popover whitespace-nowrap animate-fade-in"
+                >
+                  {hoveredCell.date} · <span className="text-primary font-black">{hoveredCell.count} logs</span>
                 </div>
-              );
-            })}
+              )}
+            </div>
           </div>
         </div>
+        
+        {/* Touch scroll indicator gradient for mobile */}
+        <div className="absolute right-0 top-0 bottom-4 w-12 bg-gradient-to-l from-card to-transparent pointer-events-none md:hidden" />
       </div>
 
-      {/* Footer Legend & Tooltip */}
+      {/* Footer Legend */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-border">
-        {/* Active Tooltip Display */}
         <div className="h-6 flex items-center">
-          {hoveredCell ? (
-            <p className="text-xs font-semibold text-foreground bg-surface border border-border px-3 py-1 rounded-md shadow-xs animate-fade-in">
-              {hoveredCell.date} — <span className="text-primary font-bold">{hoveredCell.count} contributions</span>
-            </p>
-          ) : (
-            <p className="text-xs text-muted italic">Hover over any cell to view daily activity.</p>
-          )}
+          <p className="text-xs text-muted italic">Hover over any cell to view daily activity logs.</p>
         </div>
 
         {/* Legend */}
-        <div className="flex items-center gap-2 text-xs text-muted">
+        <div className="flex items-center gap-2 text-xs text-muted select-none">
           <span>Less</span>
           <div className="flex gap-1.5">
-            <div className="w-3.5 h-3.5 rounded bg-surface border border-border" />
-            <div className="w-3.5 h-3.5 rounded bg-emerald-500/20 border border-emerald-500/30" />
-            <div className="w-3.5 h-3.5 rounded bg-emerald-500/40 border border-emerald-500/50" />
-            <div className="w-3.5 h-3.5 rounded bg-emerald-500/70 border border-emerald-500/80" />
-            <div className="w-3.5 h-3.5 rounded bg-emerald-500 border border-emerald-600" />
+            <div className="w-3.5 h-3.5 rounded-none bg-surface border border-foreground/15" />
+            <div className="w-3.5 h-3.5 rounded-none bg-foreground/10 border border-foreground/30" />
+            <div className="w-3.5 h-3.5 rounded-none bg-foreground/25 border border-foreground/50" />
+            <div className="w-3.5 h-3.5 rounded-none bg-foreground/50 border border-foreground/80" />
+            <div className="w-3.5 h-3.5 rounded-none bg-foreground border border-foreground" />
           </div>
           <span>More</span>
         </div>

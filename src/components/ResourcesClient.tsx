@@ -93,7 +93,7 @@ export default function ResourcesClient({
   branch,
   semester,
 }: ResourcesClientProps) {
-  const { searchQuery, aiSearchQuery } = useAcademicStore();
+  const { searchQuery, setSearchQuery, aiSearchQuery, setAiSearchQuery } = useAcademicStore();
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<ResourceFilter>("all");
   const [viewerResource, setViewerResource] = useState<ResourceItem | null>(
@@ -267,7 +267,7 @@ export default function ResourcesClient({
                 {filteredSubjectNames.length}
               </span>
             </div>
-            <div className="flex flex-col max-h-[65vh] overflow-y-auto custom-scrollbar p-2 gap-0.5 relative">
+            <div className="flex flex-col max-h-[65vh] overflow-y-auto scrollbar-none p-2 gap-0.5 relative">
               {filteredSubjectNames.map((subjectName) => {
                 const isActive = selectedSubject === subjectName;
                 const subjectResources = subjectsMap[subjectName] ?? [];
@@ -320,7 +320,14 @@ export default function ResourcesClient({
           {/* ── Content area ── */}
           <div className="flex-1 w-full min-w-0">
             {selectedSubject && subjectsMap[selectedSubject] ? (
-              <div className="space-y-8">
+              <motion.div
+                key={selectedSubject}
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-8"
+              >
                 {/* Subject header + compact filter pills */}
                 <div className="flex flex-col gap-4 border-b border-border pb-5">
                   <div className="flex items-center gap-3">
@@ -328,10 +335,22 @@ export default function ResourcesClient({
                       {selectedSubject}
                     </h2>
                     {(searchQuery || selectedFilter !== "all") && (
-                      <span className="text-xs font-medium text-muted px-2 py-0.5 bg-surface border border-border rounded-md">
-                        {filteredResources.length}{" "}
-                        {filteredResources.length !== 1 ? "results" : "result"}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-medium text-muted px-2 py-0.5 bg-surface border border-border rounded-md">
+                          {filteredResources.length}{" "}
+                          {filteredResources.length !== 1 ? "results" : "result"}
+                        </span>
+                        <button
+                          onClick={() => {
+                            setSearchQuery("");
+                            setAiSearchQuery("");
+                            setSelectedFilter("all");
+                          }}
+                          className="text-xs font-semibold text-foreground hover:text-muted transition-colors underline underline-offset-4"
+                        >
+                          Clear filters
+                        </button>
+                      </div>
                     )}
                   </div>
 
@@ -460,7 +479,7 @@ export default function ResourcesClient({
                     ))}
                   </div>
                 )}
-              </div>
+              </motion.div>
             ) : (
               <div className="flex flex-col items-center justify-center h-full text-center py-24 border border-dashed border-border rounded-2xl bg-surface/30">
                 <Folder className="w-12 h-12 text-muted/30 mb-4" />

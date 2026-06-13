@@ -17,8 +17,8 @@
   --surface: 245 245 245;
   --surface-hover: 229 229 229;
 
-  --border: 229 229 229;
-  --border-strong: 163 163 163;
+  --border: 0 0 0;
+  --border-strong: 0 0 0;
 
   --muted: 115 115 115;
   --muted-hover: 64 64 64;
@@ -27,10 +27,20 @@
   --primary-hover: 64 64 64;
   --primary-foreground: 255 255 255;
 
+  --destructive: 239 68 68;
+  --destructive-foreground: 255 255 255;
+
   --ring: rgba(0, 0, 0, 1);
 
-  --radius: 0.25rem;
-  --radius-lg: 0.5rem;
+  --accent: 82 82 82;
+  --accent-hover: 64 64 64;
+
+  --radius: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
 
   /* Resource type accents - Now strictly grayscale */
   --accent-notes: #000000;
@@ -45,29 +55,42 @@
 }
 
 .dark {
-  /* Dark Mode - Pure black and white */
+  /* Dark Mode - Richer deep darks (Zinc-inspired) */
   --background: 0 0 0;
-  --background-subtle: 10 10 10;
-  --foreground: 255 255 255;
-  --foreground-subtle: 163 163 163;
+  --background-subtle: 9 9 11;
+  --foreground: 250 250 250;
+  --foreground-subtle: 161 161 170;
 
-  --card: 10 10 10;
-  --card-hover: 23 23 23;
+  --card: 9 9 11;
+  --card-hover: 24 24 27;
 
-  --surface: 23 23 23;
-  --surface-hover: 38 38 38;
+  --surface: 24 24 27;
+  --surface-hover: 39 39 42;
 
-  --border: 38 38 38;
-  --border-strong: 82 82 82;
+  --border: 255 255 255;
+  --border-strong: 255 255 255;
 
-  --muted: 115 115 115;
-  --muted-hover: 212 212 212;
+  --muted: 113 113 122;
+  --muted-hover: 228 228 231;
 
   --primary: 255 255 255;
   --primary-hover: 212 212 212;
   --primary-foreground: 0 0 0;
 
+  --destructive: 239 68 68;
+  --destructive-foreground: 255 255 255;
+
   --ring: rgba(255, 255, 255, 1);
+
+  --accent: 212 212 212;
+  --accent-hover: 228 228 231;
+
+  --radius: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --radius-3xl: 0px;
 
   /* Resource type accents - Now strictly grayscale */
   --accent-notes: #ffffff;
@@ -85,6 +108,8 @@
 
 * {
   box-sizing: border-box;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
 }
 
 html {
@@ -94,6 +119,13 @@ html {
 
 body {
   background-color: rgb(var(--background));
+  background-image: repeating-linear-gradient(
+    -45deg,
+    rgb(var(--foreground) / 0.04),
+    rgb(var(--foreground) / 0.04) 1px,
+    transparent 1px,
+    transparent 6px
+  );
   color: rgb(var(--foreground));
   font-family: 'Inter', 'Geist', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -150,11 +182,6 @@ h1, h2, h3, h4, h5, h6 {
 /* ── Utilities ────────────────────────────────────────────────────────────── */
 
 /* Shimmer loading skeleton */
-@keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
-}
-
 .skeleton {
   background: linear-gradient(
     90deg,
@@ -169,22 +196,19 @@ h1, h2, h3, h4, h5, h6 {
 /* Performance & Interaction Enhancements */
 
 .resource-card-hover {
-  border-color: rgb(var(--border));
-  transition: border-color 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              box-shadow 0.2s cubic-bezier(0.4, 0, 0.2, 1),
-              transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  will-change: border-color, box-shadow, transform;
+  border: 2px solid rgb(var(--foreground)) !important;
+  box-shadow: 4px 4px 0px 0px rgb(var(--foreground));
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .resource-card-hover:hover {
-  border-color: var(--card-accent) !important;
-  box-shadow: 0 10px 15px -3px color-mix(in srgb, var(--card-accent) 12%, transparent), 
-              0 4px 6px -4px color-mix(in srgb, var(--card-accent) 12%, transparent) !important;
-  transform: translateY(-2px);
+  transform: translate(-3px, -3px);
+  box-shadow: 7px 7px 0px 0px rgb(var(--foreground));
 }
 
 .resource-card-hover:active {
-  transform: translateY(0);
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px 0px rgb(var(--foreground));
 }
 
 /* GPU Acceleration helper */
@@ -203,7 +227,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* Reduced Motion media queries */
 @media (prefers-reduced-motion: reduce) {
-  * {
+  *:not(.animate-spin):not(.animate-pulse) {
     animation-delay: -1ms !important;
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
@@ -218,3 +242,157 @@ h1, h2, h3, h4, h5, h6 {
     transition: none !important;
   }
 }
+
+/* premium-card — used on home page feature cards */
+.premium-card {
+  background: rgb(var(--card));
+  border: 2px solid rgb(var(--foreground));
+  box-shadow: 4px 4px 0px 0px rgb(var(--foreground));
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.premium-card:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 7px 7px 0px 0px rgb(var(--foreground));
+  background: rgb(var(--card-hover));
+}
+
+/* Micro-interaction utilities */
+.hover-scale {
+  transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.hover-scale:hover {
+  transform: scale(1.02);
+}
+.hover-scale:active {
+  transform: scale(0.97);
+}
+
+/* custom-scrollbar — used in Navigation and ResourcesClient */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgb(var(--border));
+  border-radius: 9999px;
+}
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgb(var(--border-strong));
+}
+
+/* scrollbar-none */
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Subtle glow utility for active elements */
+.active-glow {
+  box-shadow: 0 0 12px 1px rgba(var(--foreground), 0.03);
+  border-color: rgb(var(--border-strong)) !important;
+}
+.dark .active-glow {
+  box-shadow: 0 0 16px 2px rgba(255, 255, 255, 0.05);
+  border-color: rgb(var(--border-strong)) !important;
+}
+
+/* ── Premium Overhaul Additions ────────────────────────────────────────────── */
+
+/* Brutalist cards */
+.glass-card {
+  background: rgb(var(--card));
+  border: 2px solid rgb(var(--foreground));
+  box-shadow: 4px 4px 0px 0px rgb(var(--foreground));
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .glass-card {
+  background: rgb(var(--card));
+  border: 2px solid rgb(var(--foreground));
+  box-shadow: 4px 4px 0px 0px rgb(var(--foreground));
+}
+
+.glass-card-hover:hover {
+  transform: translate(-3px, -3px);
+  box-shadow: 7px 7px 0px 0px rgb(var(--foreground));
+  background: rgb(var(--card-hover));
+  border-color: rgb(var(--foreground));
+}
+
+.dark .glass-card-hover:hover {
+  background: rgb(var(--card-hover));
+  border-color: rgb(var(--foreground));
+}
+
+.glass-card-hover:active {
+  transform: translate(1px, 1px);
+  box-shadow: 2px 2px 0px 0px rgb(var(--foreground));
+}
+
+/* Subtle SVG Noise Overlay */
+.noise-overlay {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0.022;
+  pointer-events: none;
+  z-index: 1;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+}
+
+.dark .noise-overlay {
+  opacity: 0.032;
+}
+
+/* Pulsing border glow for focus or running states */
+.glow-ring {
+  box-shadow: 0 0 20px -2px rgb(var(--foreground) / 0.15);
+  border-color: rgb(var(--foreground) / 0.3) !important;
+}
+
+/* Text Gradients */
+.text-gradient {
+  background: linear-gradient(135deg, rgb(var(--foreground)) 0%, rgb(var(--muted)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.text-gradient-mono {
+  background: linear-gradient(135deg, rgb(var(--foreground)) 0%, rgb(var(--muted)) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Entrance transition helper */
+.page-fade-in {
+  animation: fadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Premium Focus ring animation */
+@keyframes focusRingPulse {
+  0%, 100% { 
+    box-shadow: 0 0 0 0px rgb(var(--foreground) / 0);
+    border-color: rgb(var(--border));
+  }
+  50% { 
+    box-shadow: 0 0 0 3px rgb(var(--foreground) / 0.1);
+    border-color: rgb(var(--foreground) / 0.4);
+  }
+}
+
+.focus-premium:focus-within,
+.focus-premium:focus {
+  animation: focusRingPulse 2s infinite ease-in-out;
+  outline: none !important;
+}
+

@@ -5,7 +5,7 @@ import { Branch, Semester } from "@/store/academicStore";
 import { Suspense } from "react";
 import { Loader2 } from "lucide-react";
 
-export const revalidate = 0;
+export const revalidate = 600;
 
 interface PageProps {
   searchParams: Promise<{

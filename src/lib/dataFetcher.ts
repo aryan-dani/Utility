@@ -271,28 +271,20 @@ async function fetchSyllabusFile(
 
 // ─── Exported Cache-Wrapped API ───────────────────────────────────────────────
 
-const isDev = process.env.NODE_ENV === "development";
+export const getSubjectsFromDB = (branch: string, semester: number) => unstable_cache(
+  () => fetchSubjectsFromDB(branch, semester),
+  ["subjects-cache", branch, semester.toString()],
+  { revalidate: 600, tags: ["subjects"] }
+)();
 
-export const getSubjectsFromDB = isDev
-  ? fetchSubjectsFromDB
-  : unstable_cache(
-      fetchSubjectsFromDB,
-      ["subjects-cache"],
-      { revalidate: 600, tags: ["subjects"] },
-    );
+export const getResourcesFromDB = (branch: string, semester: number) => unstable_cache(
+  () => fetchResourcesFromDB(branch, semester),
+  ["resources-cache", branch, semester.toString()],
+  { revalidate: 600, tags: ["resources"] }
+)();
 
-export const getResourcesFromDB = isDev
-  ? fetchResourcesFromDB
-  : unstable_cache(
-      fetchResourcesFromDB,
-      ["resources-cache"],
-      { revalidate: 600, tags: ["resources"] },
-    );
-
-export const getSyllabusFile = isDev
-  ? fetchSyllabusFile
-  : unstable_cache(
-      fetchSyllabusFile,
-      ["syllabus-cache"],
-      { revalidate: 3600, tags: ["syllabus", "resources"] },
-    );
+export const getSyllabusFile = (branch: string, semester: number) => unstable_cache(
+  () => fetchSyllabusFile(branch, semester),
+  ["syllabus-cache", branch, semester.toString()],
+  { revalidate: 3600, tags: ["syllabus", "resources"] }
+)();

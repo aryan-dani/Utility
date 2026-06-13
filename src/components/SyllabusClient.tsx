@@ -417,7 +417,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
     <div className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 py-8 min-h-[90vh] relative">
       {/* Decorative ambient blurred spots for premium futuristic feel */}
       <div className="absolute top-[-10%] left-[-20%] w-[600px] h-[600px] rounded-full bg-primary/10 blur-[150px] pointer-events-none" />
-      <div className="absolute bottom-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-emerald-500/5 blur-[130px] pointer-events-none" />
+      <div className="absolute bottom-[20%] right-[-10%] w-[500px] h-[500px] rounded-full bg-foreground/5 blur-[130px] pointer-events-none" />
 
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 border-b border-border/60 pb-6 relative z-10">
@@ -440,7 +440,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
               href={syllabusUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-gradient-to-r from-surface to-surface/80 border border-border/80 text-foreground text-sm font-bold hover:border-border-strong hover:scale-[1.01] transition-all shadow-xs shrink-0 backdrop-blur-md"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface border-2 border-foreground text-foreground text-sm font-bold hover:bg-surface-hover hover:translate-x-0.5 hover:translate-y-0.5 transition-all shadow-[2px_2px_0px_0px_rgb(var(--foreground))] shrink-0"
             >
               <FileText className="w-4 h-4 text-primary" />
               Download Official PDF
@@ -451,9 +451,9 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
 
       {/* Premium Dashboard Metrics Panel */}
       {filtered.length > 0 && (
-        <div className="bg-gradient-to-br from-card/85 to-card/60 border border-border/80 rounded-3xl p-6 mb-10 shadow-lg backdrop-blur-xl flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+        <div className="bg-card border-2 border-foreground p-6 mb-10 shadow-[4px_4px_0px_0px_rgb(var(--foreground))] flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
           <div className="flex flex-wrap items-center gap-6 w-full md:w-auto">
-            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-primary/25 to-primary/5 border border-primary/20 flex items-center justify-center shrink-0 shadow-inner">
+            <div className="w-14 h-14 bg-surface border-2 border-foreground flex items-center justify-center shrink-0">
               <Trophy className="w-7 h-7 text-primary animate-pulse" />
             </div>
             
@@ -461,11 +461,11 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
               <h3 className="text-lg font-bold text-foreground tracking-tight">Semester Completion</h3>
               <div className="flex flex-wrap gap-4 text-xs text-muted-foreground font-semibold">
                 <span className="flex items-center gap-1.5">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                  <CheckCircle2 className="w-4 h-4 text-foreground" />
                   {completedModules} / {totalModules} Units Done
                 </span>
                 <span className="flex items-center gap-1.5">
-                  <Clock className="w-4 h-4 text-amber-500" />
+                  <Clock className="w-4 h-4 text-muted-hover" />
                   ~{estimatedHoursLeft} Hours Study Left
                 </span>
               </div>
@@ -477,10 +477,12 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
               <span className="text-muted-foreground">Overall Completion</span>
               <span className="text-primary text-sm font-extrabold">{overallPercentage}%</span>
             </div>
-            <div className="h-3 w-full bg-surface border border-border/60 rounded-full overflow-hidden p-0.5">
-              <div
-                className="h-full bg-gradient-to-r from-primary to-primary-strong transition-all duration-700 rounded-full shadow-[0_0_8px_rgba(var(--primary-rgb),0.3)]"
-                style={{ width: `${overallPercentage}%` }}
+            <div className="h-4 w-full bg-surface border-2 border-foreground p-0.5">
+              <motion.div
+                initial={{ width: 0 }}
+                animate={{ width: `${overallPercentage}%` }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                className="h-full bg-foreground"
               />
             </div>
           </div>
@@ -511,10 +513,10 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
-                className={`bg-gradient-to-br from-card/90 to-card/70 border transition-all rounded-3xl overflow-hidden ${
+                className={`bg-card border-2 border-foreground transition-all overflow-hidden ${
                   isExpanded 
-                    ? 'border-primary/45 shadow-[0_4px_24px_rgba(var(--primary-rgb),0.06)]' 
-                    : 'border-border/80 hover:border-border-strong hover:shadow-md'
+                    ? 'shadow-[5px_5px_0px_0px_rgb(var(--foreground))]' 
+                    : 'shadow-[3px_3px_0px_0px_rgb(var(--foreground))] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_rgb(var(--foreground))]'
                 }`}
               >
                 {/* Subject Header */}
@@ -523,10 +525,10 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                   className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5 cursor-pointer hover:bg-surface/30 transition-colors"
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 border transition-colors ${
+                    <div className={`w-12 h-12 flex items-center justify-center shrink-0 border-2 border-foreground transition-colors ${
                       isExpanded 
-                        ? 'bg-primary/10 border-primary/25 text-primary' 
-                        : 'bg-surface border-border text-foreground'
+                        ? 'bg-foreground text-background' 
+                        : 'bg-surface text-foreground'
                     }`}>
                       <SubjectIcon className="w-6 h-6" />
                     </div>
@@ -619,9 +621,9 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                                 key={modIdx}
                                 className={`flex flex-col p-5 rounded-2xl border transition-all relative overflow-hidden group ${
                                   isDone
-                                    ? 'bg-emerald-500/5 dark:bg-emerald-500/10 border-emerald-500/25 text-emerald-600 dark:text-emerald-400 shadow-[0_0_12px_rgba(16,185,129,0.03)]'
+                                    ? 'bg-foreground/5 border-foreground/20 text-foreground shadow-xs'
                                     : isInProgress
-                                    ? 'bg-amber-500/5 dark:bg-amber-500/10 border-amber-500/25 text-amber-600 dark:text-amber-400 shadow-[0_0_12px_rgba(245,158,11,0.03)]'
+                                    ? 'bg-surface border-border-strong text-muted-hover shadow-3xs'
                                     : 'bg-card border-border/80 hover:border-border-strong hover:scale-[1.005] hover:shadow-xs text-foreground'
                                 }`}
                               >
@@ -638,9 +640,9 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                                     }}
                                     className={`w-6 h-6 rounded-lg border flex items-center justify-center shrink-0 mt-0.5 transition-all ${
                                       isDone 
-                                        ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs' 
+                                        ? 'bg-foreground border-foreground text-background shadow-xs' 
                                         : isInProgress
-                                        ? 'bg-amber-500 border-amber-500 text-white shadow-xs'
+                                        ? 'bg-foreground/70 border-foreground/70 text-background shadow-xs'
                                         : 'bg-surface border-border hover:border-border-strong text-transparent'
                                     }`}
                                   >
@@ -698,9 +700,9 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                                           className={`px-2.5 py-1 text-[10px] font-bold rounded-lg transition-all ${
                                             active
                                               ? s === 'mastered'
-                                                ? 'bg-emerald-600 text-white shadow-xs'
+                                                ? 'bg-foreground text-background shadow-xs'
                                                 : s === 'in-progress'
-                                                ? 'bg-amber-500 text-white shadow-xs'
+                                                ? 'bg-foreground/75 text-background shadow-xs'
                                                 : 'bg-muted text-background'
                                               : 'text-muted hover:text-foreground'
                                           }`}
@@ -775,7 +777,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
 
       {/* Empty states */}
       {filtered.length === 0 && (
-        <div className="flex flex-col items-center justify-center p-20 text-center border-2 border-dashed border-border/80 rounded-3xl bg-card my-12 relative z-10">
+        <div className="flex flex-col items-center justify-center p-20 text-center border-2 border-dashed border-border/80 rounded-2xl bg-card my-12 relative z-10">
           <BookMarked className="w-12 h-12 text-muted-foreground/30 mb-4 animate-bounce" />
           <p className="text-lg font-bold text-foreground mb-1">No matching courses found</p>
           <p className="text-sm text-muted-foreground max-w-sm">
@@ -802,12 +804,19 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
       {/* Add to Planner Scheduler Modal */}
       <AnimatePresence>
         {plannerModalOpen && schedulingModule && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+          <div
+            onClick={() => {
+              setPlannerModalOpen(false);
+              setSchedulingModule(null);
+            }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+          >
             <motion.div
+              onClick={(e) => e.stopPropagation()}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="w-full max-w-md bg-card border border-border rounded-3xl shadow-popover overflow-hidden"
+              className="w-full max-w-md bg-card border border-border rounded-2xl shadow-popover overflow-hidden"
             >
               <div className="px-6 py-4 border-b border-border flex justify-between items-center">
                 <h3 className="font-bold text-foreground text-sm flex items-center gap-2">

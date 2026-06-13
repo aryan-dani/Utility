@@ -50,10 +50,10 @@ type Collaborator = {
 };
 
 const CATEGORY_COLORS: Record<string, { bg: string, text: string, border: string }> = {
-  'Exam Prep': { bg: 'bg-red-500/10 dark:bg-red-500/20', text: 'text-red-600 dark:text-red-400', border: 'border-red-500/20' },
-  'Assignment': { bg: 'bg-blue-500/10 dark:bg-blue-500/20', text: 'text-blue-600 dark:text-blue-400', border: 'border-blue-500/20' },
-  'Project': { bg: 'bg-purple-500/10 dark:bg-purple-500/20', text: 'text-purple-600 dark:text-purple-400', border: 'border-purple-500/20' },
-  'Revision': { bg: 'bg-green-500/10 dark:bg-green-500/20', text: 'text-green-600 dark:text-green-400', border: 'border-green-500/20' },
+  'Exam Prep': { bg: 'bg-foreground/10 dark:bg-foreground/15', text: 'text-foreground font-bold', border: 'border-foreground/30' },
+  'Assignment': { bg: 'bg-surface-hover/80 dark:bg-surface-hover/60', text: 'text-muted-hover', border: 'border-border-strong/50' },
+  'Project': { bg: 'bg-foreground text-background dark:bg-foreground dark:text-background', text: 'text-background dark:text-background font-semibold', border: 'border-transparent' },
+  'Revision': { bg: 'bg-surface', text: 'text-foreground', border: 'border-border-strong' },
   'General': { bg: 'bg-surface', text: 'text-muted', border: 'border-border' },
 };
 
@@ -175,12 +175,12 @@ function TaskItem({
           {task.text}
         </span>
         {task.category && task.category !== 'General' && (
-          <span className={`w-1 h-1 rounded-full shrink-0 ${
-            task.category === 'Exam Prep' ? 'bg-red-500' :
-            task.category === 'Assignment' ? 'bg-blue-500' :
-            task.category === 'Project' ? 'bg-purple-500' :
-            task.category === 'Revision' ? 'bg-green-500' :
-            'bg-muted'
+          <span className={`w-1.5 h-1.5 rounded-none shrink-0 ${
+            task.category === 'Exam Prep' ? 'bg-foreground' :
+            task.category === 'Assignment' ? 'bg-muted' :
+            task.category === 'Project' ? 'bg-foreground-subtle' :
+            task.category === 'Revision' ? 'bg-border-strong' :
+            'bg-border'
           }`} />
         )}
       </div>
@@ -320,7 +320,7 @@ function TaskItem({
       {/* Subtask progress */}
       {task.subtasks.length > 0 && (
         <div className="ml-7 mt-2 flex items-center gap-2">
-          <div className="flex-1 h-1 bg-surface rounded-full overflow-hidden">
+          <div className="flex-1 h-1.5 bg-surface rounded-none overflow-hidden border border-foreground/30">
             <div
               className="h-full bg-foreground transition-all duration-300"
               style={{ width: `${(subtasksDone / task.subtasks.length) * 100}%` }}
@@ -399,7 +399,7 @@ function PromptModal({
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="bg-card border border-border rounded-2xl w-full max-w-2xl shadow-popover flex flex-col max-h-[90vh]"
+        className="bg-card border-2 border-foreground w-full max-w-2xl shadow-[6px_6px_0px_0px_rgb(var(--foreground))] flex flex-col max-h-[90vh]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -455,7 +455,7 @@ function PromptModal({
           {parsed.length > 0 && (
             <div className="mt-6 border-t border-border pt-4">
               <div className="flex items-center gap-2 mb-3">
-                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                <CheckCircle2 className="w-3.5 h-3.5 text-foreground" />
                 <span className="text-xs font-bold text-foreground">Preview — {parsed.reduce((s, e) => s + e.tasks.length, 0)} tasks across {parsed.length} days</span>
               </div>
               <div className="grid gap-2 max-h-[240px] overflow-y-auto pr-1">
@@ -580,7 +580,7 @@ function ShareModal({
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-popover"
+        className="bg-card border-2 border-foreground w-full max-w-lg shadow-[6px_6px_0px_0px_rgb(var(--foreground))]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -613,7 +613,7 @@ function ShareModal({
               {/* Public toggle */}
               <div className="flex items-center justify-between bg-surface rounded-xl border border-border p-4">
                 <div className="flex items-center gap-3">
-                  {isPublic ? <Globe className="w-4 h-4 text-emerald-500" /> : <Lock className="w-4 h-4 text-muted" />}
+                  {isPublic ? <Globe className="w-4 h-4 text-foreground" /> : <Lock className="w-4 h-4 text-muted" />}
                   <div>
                     <p className="text-sm font-semibold text-foreground">
                       {isPublic ? 'Public link enabled' : 'Private plan'}
@@ -625,9 +625,9 @@ function ShareModal({
                 </div>
                 <button
                   onClick={onTogglePublic}
-                  className={`relative w-11 h-6 rounded-full transition-colors ${isPublic ? 'bg-emerald-500' : 'bg-surface-hover border border-border-strong'}`}
+                  className={`relative w-11 h-6 rounded-none border-2 border-foreground transition-colors ${isPublic ? 'bg-foreground' : 'bg-surface-hover'}`}
                 >
-                  <div className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-transform ${isPublic ? 'left-[22px]' : 'left-0.5'}`} />
+                  <div className={`absolute top-0.5 w-4 h-4 rounded-none border border-foreground bg-white transition-transform ${isPublic ? 'left-[22px]' : 'left-0.5'}`} />
                 </button>
               </div>
 
@@ -689,7 +689,7 @@ function ShareModal({
                     {collaborators.map((c) => (
                       <div key={c.id} className="flex items-center justify-between bg-surface rounded-lg border border-border px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-full bg-background border border-border flex items-center justify-center text-[10px] font-bold text-foreground uppercase">
+                          <div className="w-6 h-6 rounded-none bg-background border-2 border-foreground flex items-center justify-center text-[10px] font-bold text-foreground uppercase">
                             {c.user_email[0]}
                           </div>
                           <span className="text-xs text-foreground">{c.user_email}</span>
@@ -763,7 +763,7 @@ function DayPanel({
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-card border border-border rounded-2xl w-full max-w-lg shadow-popover flex flex-col max-h-[85vh]"
+        className="bg-card border-2 border-foreground w-full max-w-lg shadow-[6px_6px_0px_0px_rgb(var(--foreground))] flex flex-col max-h-[85vh]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -791,9 +791,9 @@ function DayPanel({
         {/* Progress */}
         {tasks.length > 0 && (
           <div className="px-6 pt-3">
-            <div className="h-1.5 bg-surface rounded-full overflow-hidden">
+            <div className="h-2 bg-surface rounded-none overflow-hidden border-2 border-foreground">
               <div
-                className="h-full bg-foreground transition-all duration-500 rounded-full"
+                className="h-full bg-foreground transition-all duration-500"
                 style={{ width: `${(done / tasks.length) * 100}%` }}
               />
             </div>
@@ -1283,7 +1283,7 @@ export default function PlannerClient() {
   if (!mounted) return null;
 
   return (
-    <div className="flex-1 w-full px-4 sm:px-6 py-6 max-w-[1400px] mx-auto">
+    <div className="flex-1 w-full px-6 py-8 max-w-7xl mx-auto min-h-[80vh]">
       {/* ── Header ── */}
       <div className="flex flex-col gap-4 mb-6 pb-5 border-b border-border">
         {/* Title row */}
@@ -1320,7 +1320,7 @@ export default function PlannerClient() {
                   </>
                 ) : lastSynced ? (
                   <>
-                    <Cloud className="w-3.5 h-3.5 text-emerald-500" />
+                    <Cloud className="w-3.5 h-3.5 text-foreground" />
                     <span>Synced {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </>
                 ) : (
@@ -1727,7 +1727,7 @@ export default function PlannerClient() {
           <div className="bg-surface/40 border border-border rounded-xl p-4 flex flex-col max-h-[80vh]">
             <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-3">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-amber-400" />
+                <span className="w-2 h-2 rounded-full bg-muted" />
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">In Progress</h3>
               </div>
               <span className="text-[10px] font-bold bg-surface border border-border text-muted px-2 py-0.5 rounded-full">
@@ -1778,7 +1778,7 @@ export default function PlannerClient() {
           <div className="bg-surface/40 border border-border rounded-xl p-4 flex flex-col max-h-[80vh]">
             <div className="flex items-center justify-between pb-3 border-b border-border/60 mb-3">
               <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                <span className="w-2 h-2 rounded-full bg-foreground" />
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Completed</h3>
               </div>
               <span className="text-[10px] font-bold bg-surface border border-border text-muted px-2 py-0.5 rounded-full">

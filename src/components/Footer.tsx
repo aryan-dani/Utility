@@ -1,23 +1,31 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { BookOpen } from 'lucide-react';
+import { Suspense } from 'react';
 
-export default function Footer() {
-  const pathname = usePathname();
-  
-  // Hide footer on workspace-like pages to maximize space
-  const hideFooter = pathname === '/ask' || pathname === '/admin' || pathname === '/planner';
-  
-  if (hideFooter) return null;
+function FooterInner() {
+  const searchParams = useSearchParams();
+  const branch = searchParams.get('branch');
+  const semester = searchParams.get('semester');
+
+  const getLinkWithParams = (href: string) => {
+    if (href.startsWith('http') || href.startsWith('//')) return href;
+    const params = new URLSearchParams();
+    if (branch) params.set('branch', branch);
+    if (semester) params.set('semester', semester);
+    const queryString = params.toString();
+    return queryString ? `${href}?${queryString}` : href;
+  };
 
   return (
-    <footer className="w-full border-t border-border/50 bg-background-subtle/50 backdrop-blur-sm mt-auto">
+    <footer className="w-full border-t border-border/40 bg-background-subtle/30 backdrop-blur-md mt-auto relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-50 pointer-events-none" />
       <div className="max-w-7xl mx-auto px-6 py-12">
         <div className="flex flex-col md:flex-row justify-between items-start gap-12 mb-12">
           <div className="max-w-xs">
-            <Link href="/" className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2 mb-3">
+            <Link href={getLinkWithParams('/')} className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2 mb-3">
               <div className="w-6 h-6 rounded bg-foreground flex items-center justify-center">
                 <BookOpen className="w-3 h-3 text-background" />
               </div>
@@ -32,23 +40,23 @@ export default function Footer() {
             <div className="space-y-4">
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Workspace</h4>
               <nav className="flex flex-col gap-2.5">
-                <Link href="/syllabus" className="text-sm text-muted hover:text-foreground transition-colors">Syllabus</Link>
-                <Link href="/resources" className="text-sm text-muted hover:text-foreground transition-colors">Resources</Link>
-                <Link href="/ask" className="text-sm text-muted hover:text-foreground transition-colors">Ask AI</Link>
+                <Link href={getLinkWithParams('/syllabus')} className="text-sm text-muted hover:text-foreground transition-colors">Syllabus</Link>
+                <Link href={getLinkWithParams('/resources')} className="text-sm text-muted hover:text-foreground transition-colors">Resources</Link>
+                <Link href={getLinkWithParams('/ask')} className="text-sm text-muted hover:text-foreground transition-colors">Ask AI</Link>
               </nav>
             </div>
             <div className="space-y-4">
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Tools</h4>
               <nav className="flex flex-col gap-2.5">
-                <Link href="/gpa" className="text-sm text-muted hover:text-foreground transition-colors">GPA Calculator</Link>
-                <Link href="/planner" className="text-sm text-muted hover:text-foreground transition-colors">Weekly Planner</Link>
-                <Link href="/timer" className="text-sm text-muted hover:text-foreground transition-colors">Focus Timer</Link>
+                <Link href={getLinkWithParams('/gpa')} className="text-sm text-muted hover:text-foreground transition-colors">GPA Calculator</Link>
+                <Link href={getLinkWithParams('/planner')} className="text-sm text-muted hover:text-foreground transition-colors">Weekly Planner</Link>
+                <Link href={getLinkWithParams('/timer')} className="text-sm text-muted hover:text-foreground transition-colors">Focus Timer</Link>
               </nav>
             </div>
             <div className="space-y-4">
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Company</h4>
               <nav className="flex flex-col gap-2.5">
-                <Link href="/admin" className="text-sm text-muted hover:text-foreground transition-colors">Admin</Link>
+                <Link href={getLinkWithParams('/admin')} className="text-sm text-muted hover:text-foreground transition-colors">Admin</Link>
                 <a href="https://www.aryandani.com" target="_blank" rel="noopener noreferrer" className="text-sm text-muted hover:text-foreground transition-colors">Portfolio</a>
               </nav>
             </div>
@@ -73,5 +81,13 @@ export default function Footer() {
         </div>
       </div>
     </footer>
+  );
+}
+
+export default function Footer() {
+  return (
+    <Suspense fallback={null}>
+      <FooterInner />
+    </Suspense>
   );
 }
