@@ -172,15 +172,15 @@ export default function ActivityHeatmap() {
 
   // Helper for cell color based on count
   const getCellColor = (count: number) => {
-    if (count === 0) return 'bg-surface border-foreground/15 hover:border-foreground';
-    if (count <= 2) return 'bg-foreground/10 border-foreground/30 text-foreground';
-    if (count <= 5) return 'bg-foreground/25 border-foreground/50 text-foreground';
-    if (count <= 8) return 'bg-foreground/50 border-foreground/80 text-foreground';
+    if (count === 0) return 'bg-surface border-border hover:border-border-strong';
+    if (count <= 2) return 'bg-foreground/10 border-border/80 text-foreground';
+    if (count <= 5) return 'bg-foreground/25 border-border text-foreground';
+    if (count <= 8) return 'bg-foreground/50 border-border text-foreground';
     return 'bg-foreground border-foreground text-background';
   };
 
   return (
-    <div className="w-full bg-card border-2 border-foreground p-6 sm:p-8 shadow-[4px_4px_0px_0px_rgb(var(--foreground))] my-12">
+    <div className="w-full bg-card border border-border p-6 sm:p-8 rounded-2xl shadow-sm my-12">
       {/* Header & Stats */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-8 pb-6 border-b border-border">
         <div>
@@ -194,7 +194,7 @@ export default function ActivityHeatmap() {
         </div>
 
         {/* Stats strip */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-surface border-2 border-foreground p-4 shadow-[3px_3px_0px_0px_rgb(var(--foreground))] w-full lg:w-auto">
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-surface border border-border p-4 rounded-xl shadow-xs w-full lg:w-auto">
           <div className="flex flex-col items-center text-center px-3 border-r border-border">
             <span className="text-xs text-muted mb-1 flex items-center gap-1 font-medium">
               <Zap className="w-3.5 h-3.5 text-foreground" /> Total
@@ -268,7 +268,7 @@ export default function ActivityHeatmap() {
                           }
                         }}
                         onMouseLeave={() => setHoveredCell(null)}
-                        className={`w-4 h-4 rounded-none border transition-all cursor-pointer ${getCellColor(
+                        className={`w-4 h-4 rounded-sm border transition-all cursor-pointer ${getCellColor(
                           day.count
                         )}`}
                       />
@@ -308,11 +308,11 @@ export default function ActivityHeatmap() {
         <div className="flex items-center gap-2 text-xs text-muted select-none">
           <span>Less</span>
           <div className="flex gap-1.5">
-            <div className="w-3.5 h-3.5 rounded-none bg-surface border border-foreground/15" />
-            <div className="w-3.5 h-3.5 rounded-none bg-foreground/10 border border-foreground/30" />
-            <div className="w-3.5 h-3.5 rounded-none bg-foreground/25 border border-foreground/50" />
-            <div className="w-3.5 h-3.5 rounded-none bg-foreground/50 border border-foreground/80" />
-            <div className="w-3.5 h-3.5 rounded-none bg-foreground border border-foreground" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-surface border border-foreground/15" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-foreground/10 border border-foreground/30" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-foreground/25 border border-foreground/50" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-foreground/50 border border-foreground/80" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-foreground border border-foreground" />
           </div>
           <span>More</span>
         </div>

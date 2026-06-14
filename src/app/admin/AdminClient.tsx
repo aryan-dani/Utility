@@ -193,7 +193,7 @@ export default function AdminClient() {
 
   if (loadingAuth) {
     return (
-      <div className="flex-1 flex items-center justify-center min-h-[60vh] w-full bg-background">
+      <div className="flex-1 flex items-center justify-center min-h-[60vh] w-full">
         <div className="flex flex-col items-center gap-3">
           <Loader2 className="w-6 h-6 animate-spin text-muted" />
           <p className="text-xs text-muted font-semibold">Verifying admin access...</p>
@@ -204,7 +204,7 @@ export default function AdminClient() {
 
   if (!isAdmin) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center min-h-screen w-full p-6 text-center bg-background">
+      <div className="flex-1 flex flex-col items-center justify-center min-h-screen w-full p-6 text-center">
         <div className="max-w-md w-full bg-card border border-border p-8 rounded-2xl shadow-sm flex flex-col items-center">
           <ShieldAlert className="w-12 h-12 text-destructive mb-4 animate-pulse" />
           <h2 className="text-xl font-extrabold tracking-tight text-foreground mb-2">Access Denied</h2>
@@ -223,7 +223,7 @@ export default function AdminClient() {
   }
 
   return (
-    <div className="flex w-full min-h-screen bg-background">
+    <div className="flex w-full min-h-screen">
       {/* Sidebar */}
       <div className="w-64 border-r border-border bg-card p-6 flex-col hidden md:flex h-screen sticky top-0 justify-between">
         <div className="flex flex-col flex-1 min-h-0">
@@ -243,13 +243,13 @@ export default function AdminClient() {
             </h2>
           </div>
 
-          <nav className="flex-1 space-y-2">
+          <nav className="flex flex-col gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm shrink-0">
             <button
               onClick={() => setTab("drive")}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors bg-card ${
                 tab === "drive"
-                  ? "bg-surface text-foreground border border-border-strong shadow-xs"
-                  : "text-muted hover:text-foreground hover:bg-surface border border-transparent"
+                  ? "bg-surface text-foreground font-semibold"
+                  : "text-muted hover:text-foreground hover:bg-surface/50"
               }`}
             >
               <CloudFog className="w-4 h-4" />
@@ -258,10 +258,10 @@ export default function AdminClient() {
 
             <button
               onClick={() => setTab("manage")}
-              className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-colors ${
+              className={`w-full flex items-center gap-3 px-4 py-3 text-sm font-medium transition-colors bg-card ${
                 tab === "manage"
-                  ? "bg-surface text-foreground border border-border-strong shadow-xs"
-                  : "text-muted hover:text-foreground hover:bg-surface border border-transparent"
+                  ? "bg-surface text-foreground font-semibold"
+                  : "text-muted hover:text-foreground hover:bg-surface/50"
               }`}
             >
               <HardDrive className="w-4 h-4" />
@@ -310,18 +310,18 @@ export default function AdminClient() {
             <ShieldCheck className="w-5 h-5 text-foreground" /> Admin
           </h2>
 
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto flex items-center gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm shrink-0">
             <button
               onClick={() => setTab("drive")}
-              className={`p-2 rounded-lg ${tab === "drive" ? "bg-surface text-foreground border border-border-strong shadow-xs" : "text-muted"} `}
+              className={`p-2 bg-card ${tab === "drive" ? "bg-surface text-foreground" : "text-muted hover:bg-surface/50"} `}
             >
-              <CloudFog className="w-4 h-4" />
+              <CloudFog className="w-4.5 h-4.5" />
             </button>
             <button
               onClick={() => setTab("manage")}
-              className={`p-2 rounded-lg ${tab === "manage" ? "bg-surface text-foreground border border-border-strong shadow-xs" : "text-muted"} `}
+              className={`p-2 bg-card ${tab === "manage" ? "bg-surface text-foreground" : "text-muted hover:bg-surface/50"} `}
             >
-              <HardDrive className="w-4 h-4" />
+              <HardDrive className="w-4.5 h-4.5" />
             </button>
           </div>
         </div>
@@ -379,7 +379,7 @@ export default function AdminClient() {
 
         {tab === "manage" && (
           <div className="flex flex-col gap-6 animate-fade-in flex-1 min-h-0">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface/50 p-5 rounded-2xl border border-border shadow-sm shrink-0">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-surface p-5 rounded-2xl border border-border shadow-sm shrink-0">
               <div className="relative">
                 <label className="block text-[10px] font-bold uppercase tracking-widest text-muted mb-2 ml-1">
                   Branch

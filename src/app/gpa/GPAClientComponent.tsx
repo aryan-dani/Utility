@@ -389,14 +389,14 @@ export default function GPAClient() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm">
             {Object.entries(COURSE_DATA).map(([key, data]) => (
               <ScaleButton
                 key={key}
                 onClick={() => setSelectedBranch(key)}
-                className="group relative bg-card border-2 border-foreground p-8 shadow-[4px_4px_0px_0px_rgb(var(--foreground))] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgb(var(--foreground))] transition-all text-left"
+                className="group relative bg-card p-8 hover:bg-surface/50 transition-all text-left w-full h-full"
               >
-                <div className="w-12 h-12 bg-surface border-2 border-foreground flex items-center justify-center mb-6 transition-transform">
+                <div className="w-12 h-12 bg-surface border border-border rounded-xl flex items-center justify-center mb-6 transition-transform shadow-xs">
                   <GraduationCap className="w-6 h-6 text-foreground" />
                 </div>
                 <h3 className="text-xl font-bold text-foreground mb-2 leading-tight">
@@ -510,9 +510,9 @@ export default function GPAClient() {
                       Completed Subjects
                     </h2>
                   </div>
-                  <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border/60">
                     {currentBranch?.completed.map(sub => (
-                      <div key={sub.id} className="space-y-2">
+                      <div key={sub.id} className="bg-card p-6 space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-muted block pl-1">
                           {sub.name} <span className="opacity-50">({sub.credits} Cr)</span>
                         </label>
@@ -537,9 +537,9 @@ export default function GPAClient() {
                       Finals Preparation
                     </h2>
                   </div>
-                  <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border/60">
                     {currentBranch?.finals.map(sub => (
-                      <div key={sub.id} className="space-y-2">
+                      <div key={sub.id} className="bg-card p-6 space-y-2">
                         <label className="text-[10px] font-black uppercase tracking-widest text-muted block pl-1">
                           {sub.name} <span className="opacity-50">({sub.credits} Cr)</span>
                         </label>
@@ -557,7 +557,7 @@ export default function GPAClient() {
                   <div className="p-4 bg-surface/20 border-t border-border">
                     <button
                       onClick={calculateStrategy}
-                      className="w-full bg-foreground text-background py-4 border-2 border-foreground font-black text-sm uppercase tracking-widest hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgb(var(--foreground))] active:translate-x-[1px] active:translate-y-[1px] active:shadow-[1px_1px_0px_0px_rgb(var(--foreground))] transition-all flex items-center justify-center gap-3"
+                      className="w-full bg-foreground text-background py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-3 shadow-md"
                     >
                       <TrendingUp className="w-5 h-5" />
                       Calculate Strategy
@@ -570,7 +570,7 @@ export default function GPAClient() {
                 <div id="strategy-results" className="space-y-12 pb-20">
                   {/* Best Case Summary */}
                   <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    <div className="lg:col-span-1 bg-foreground text-background border-2 border-foreground p-8 flex flex-col items-center justify-center text-center shadow-[4px_4px_0px_0px_rgba(var(--foreground),0.3)] relative overflow-hidden">
+                    <div className="lg:col-span-1 bg-foreground text-background p-8 rounded-2xl flex flex-col items-center justify-center text-center shadow-card relative overflow-hidden">
                       <div className="absolute top-0 right-0 w-32 h-32 bg-background/10 rounded-none -mr-16 -mt-16 blur-2xl" />
                       <p className="text-background/60 text-[10px] font-black uppercase tracking-widest mb-2">Absolute Best-Case GPA</p>
                       <div className="text-8xl font-black tracking-tighter mb-4">{bestCaseGPA.toFixed(2)}</div>
@@ -579,7 +579,7 @@ export default function GPAClient() {
                       </p>
                     </div>
 
-                    <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm">
                       {currentBranch?.finals.map(sub => {
                         const current = marks[sub.id] || 0;
                         const maxPossible = current + 40;
@@ -587,10 +587,10 @@ export default function GPAClient() {
                         const requiredForBest = Math.max(16, getThreshold(bestGP) - current);
                         
                         return (
-                          <div key={sub.id} className="bg-card border-2 border-foreground p-5 flex flex-col justify-between shadow-[3px_3px_0px_0px_rgb(var(--foreground))]">
+                          <div key={sub.id} className="bg-card p-5 flex flex-col justify-between">
                             <div className="flex justify-between items-start mb-4">
                               <h3 className="font-black text-sm uppercase text-foreground">{sub.name}</h3>
-                              <div className="bg-surface px-2 py-1 rounded-none text-[10px] font-black text-muted border border-foreground/20">{sub.credits} Cr</div>
+                              <div className="bg-surface px-2 py-1 rounded-md text-[10px] font-black text-muted border border-border">{sub.credits} Cr</div>
                             </div>
                             <div className="space-y-1">
                               <p className="text-[10px] font-bold text-muted uppercase tracking-wider">Target Pointer</p>
@@ -605,7 +605,7 @@ export default function GPAClient() {
                   </div>
 
                   {/* Interactive Simulator */}
-                  <div className="bg-card border-2 border-foreground p-8 shadow-[4px_4px_0px_0px_rgb(var(--foreground))] border-dashed">
+                  <div className="bg-card border border-border p-8 rounded-2xl shadow-sm border-dashed">
                     <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-6">
                       <div>
                         <h2 className="text-2xl font-black text-foreground flex items-center gap-3">
@@ -614,7 +614,7 @@ export default function GPAClient() {
                         </h2>
                         <p className="text-muted text-sm mt-1 uppercase tracking-widest font-bold">Select realistic targets to see your projected GPA</p>
                       </div>
-                      <div className="bg-surface border-2 border-foreground px-10 py-6 text-center min-w-[200px] shadow-[2px_2px_0px_0px_rgb(var(--foreground))]">
+                      <div className="bg-surface border border-border px-10 py-6 text-center min-w-[200px] rounded-xl shadow-xs">
                         <p className="text-[10px] font-black uppercase tracking-widest text-muted mb-1">Projected GPA</p>
                         <div className="text-5xl font-black text-foreground tracking-tighter">{simulatedGPA.toFixed(2)}</div>
                       </div>
@@ -632,7 +632,7 @@ export default function GPAClient() {
                               <span className="text-sm font-black uppercase text-foreground min-w-[120px]">{sub.name}</span>
                               <div className="h-px flex-1 bg-border/50" />
                             </div>
-                            <div className="flex flex-wrap gap-2">
+                            <div className="grid grid-cols-4 sm:grid-cols-7 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 max-w-xl">
                               {[10, 9, 8, 7, 6, 5, 0].map(gp => {
                                 const isDisabled = gp > bestGP;
                                 const isActive = simSelections[sub.id] === gp;
@@ -643,9 +643,9 @@ export default function GPAClient() {
                                     disabled={isDisabled}
                                     onClick={() => setSimSelections(prev => ({ ...prev, [sub.id]: gp }))}
                                     className={`
-                                      px-4 py-2 text-xs font-bold transition-all
-                                      ${isDisabled ? 'opacity-10 grayscale cursor-not-allowed border-transparent' : ''}
-                                      ${isActive ? 'bg-foreground text-background border-2 border-foreground shadow-[2px_2px_0px_0px_rgb(var(--foreground))]' : 'bg-surface border-2 border-foreground/30 text-muted hover:border-foreground'}
+                                      py-2.5 text-center text-xs font-bold transition-all
+                                      ${isDisabled ? 'bg-card opacity-20 cursor-not-allowed' : ''}
+                                      ${isActive ? 'bg-foreground text-background font-black' : 'bg-surface text-muted hover:text-foreground hover:bg-surface-hover'}
                                     `}
                                   >
                                     {gp} GP
@@ -668,14 +668,14 @@ export default function GPAClient() {
                       </div>
                       <ChevronLeft className="w-5 h-5 text-muted group-open:-rotate-90 transition-transform" />
                     </summary>
-                    <div className="p-8 pt-0 grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="p-8 pt-0 grid grid-cols-1 md:grid-cols-2 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm bg-card">
                       {currentBranch?.finals.map(sub => {
                         const currentMarks = marks[sub.id] || 0;
                         const rawPassReq = 40 - currentMarks;
                         const actualPassReq = Math.max(16, rawPassReq);
                         
                         return (
-                          <div key={sub.id} className="bg-card border-2 border-foreground p-6 space-y-4 shadow-[3px_3px_0px_0px_rgb(var(--foreground))]">
+                          <div key={sub.id} className="bg-card p-6 space-y-4">
                             <h3 className="font-black text-sm uppercase text-foreground border-b border-border pb-3">{sub.name}</h3>
                             
                             <div className="space-y-3">
@@ -730,9 +730,9 @@ export default function GPAClient() {
           {activeTab === 'roadmap' && (
             <div className="space-y-8 pb-20">
               {/* CGPA Dashboard Metrics */}
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm">
                 {/* Metric 1: Current CGPA */}
-                <div className="bg-card border-2 border-foreground p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgb(var(--foreground))] relative overflow-hidden">
+                <div className="bg-card p-6 flex flex-col justify-between relative overflow-hidden">
                   <div className="absolute top-0 right-0 w-24 h-24 bg-foreground/5 rounded-none -mr-12 -mt-12 blur-xl" />
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted block mb-1">
@@ -748,7 +748,7 @@ export default function GPAClient() {
                 </div>
 
                 {/* Metric 2: Progress to Goal */}
-                <div className="bg-card border-2 border-foreground p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgb(var(--foreground))]">
+                <div className="bg-card p-6 flex flex-col justify-between">
                   <div>
                     <span className="text-[10px] font-black uppercase tracking-widest text-muted block mb-1">
                       Target CGPA Goal
@@ -765,9 +765,9 @@ export default function GPAClient() {
                       <span>Progress</span>
                       <span>{currentCGPA > 0 ? Math.min(100, Math.round((currentCGPA / targetCGPA) * 100)) : 0}%</span>
                     </div>
-                    <div className="w-full bg-surface border-2 border-foreground h-4 overflow-hidden p-0.5">
+                    <div className="w-full bg-surface border border-border h-4 overflow-hidden rounded-full p-0.5">
                       <div 
-                        className="bg-foreground h-full transition-all duration-500"
+                        className="bg-foreground h-full transition-all duration-500 rounded-full"
                         style={{ width: `${currentCGPA > 0 ? Math.min(100, (currentCGPA / targetCGPA) * 100) : 0}%` }}
                       />
                     </div>
@@ -775,7 +775,7 @@ export default function GPAClient() {
                 </div>
 
                 {/* Metric 3: Required SGPA Target */}
-                <div className={`bg-card border-2 border-foreground p-6 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgb(var(--foreground))] relative overflow-hidden transition-all ${
+                <div className={`bg-card p-6 flex flex-col justify-between relative overflow-hidden transition-all ${
                   !isPossible 
                     ? 'bg-foreground/5' 
                     : remainingCredits > 0 && requiredSGPA > 9.0 
@@ -815,16 +815,16 @@ export default function GPAClient() {
               </div>
 
               {/* Goal Tracker Settings Card */}
-              <div className="bg-card border-2 border-foreground p-6 shadow-[4px_4px_0px_0px_rgb(var(--foreground))] space-y-6">
-                <div className="flex items-center gap-3">
+              <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
+                <div className="p-6 border-b border-border flex items-center gap-3">
                   <Target className="w-5 h-5 text-foreground" />
                   <h2 className="text-sm font-black uppercase tracking-widest text-foreground">
                     CGPA Goal Tracker settings
                   </h2>
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                  <div className="space-y-2">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border/60">
+                  <div className="p-6 space-y-2 bg-card">
                     <label className="text-[10px] font-black uppercase tracking-widest text-muted block pl-1">
                       Target CGPA Goal
                     </label>
@@ -842,7 +842,7 @@ export default function GPAClient() {
                     />
                   </div>
 
-                  <div className="space-y-2 relative">
+                  <div className="p-6 space-y-2 bg-card relative">
                     <label className="text-[10px] font-black uppercase tracking-widest text-muted block pl-1">
                       Target Semester Horizon
                     </label>
@@ -892,7 +892,7 @@ export default function GPAClient() {
                   Semester Scoreboards (1 - 8)
                 </h2>
                 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm">
                   {Array.from({ length: 8 }, (_, i) => i + 1).map((semNum) => {
                     const sem = semestersData[semNum] || { sgpa: 0, credits: 20, active: false, completed: false };
                     const isSyncedSem4 = semNum === 4 && isCalculated;
@@ -900,10 +900,10 @@ export default function GPAClient() {
                     return (
                       <div 
                         key={semNum}
-                        className={`bg-card border rounded-2xl p-5 transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
+                        className={`bg-card p-5 transition-all duration-300 relative overflow-hidden flex flex-col justify-between ${
                           sem.active 
-                            ? 'border-foreground/30 shadow-lg ring-1 ring-foreground/5' 
-                            : 'border-border opacity-60 hover:opacity-100'
+                            ? 'relative z-10 shadow-sm' 
+                            : 'opacity-65 hover:opacity-100'
                         }`}
                       >
                         <div>

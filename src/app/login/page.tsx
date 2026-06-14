@@ -145,7 +145,7 @@ function LoginContent() {
           initial={{ opacity: 0, scale: 0.98, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-          className="glass-card rounded-2xl p-8 shadow-popover"
+          className="bg-card border border-border rounded-2xl p-8 shadow-md"
         >
           {/* Logo */}
           <div className="flex items-center gap-2.5 mb-8">

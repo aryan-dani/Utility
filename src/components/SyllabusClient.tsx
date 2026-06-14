@@ -440,7 +440,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
               href={syllabusUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface border-2 border-foreground text-foreground text-sm font-bold hover:bg-surface-hover hover:translate-x-0.5 hover:translate-y-0.5 transition-all shadow-[2px_2px_0px_0px_rgb(var(--foreground))] shrink-0"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-surface border border-border text-foreground text-sm font-bold hover:bg-surface-hover hover:-translate-y-0.5 rounded-xl transition-all shadow-xs shrink-0"
             >
               <FileText className="w-4 h-4 text-primary" />
               Download Official PDF
@@ -451,9 +451,9 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
 
       {/* Premium Dashboard Metrics Panel */}
       {filtered.length > 0 && (
-        <div className="bg-card border-2 border-foreground p-6 mb-10 shadow-[4px_4px_0px_0px_rgb(var(--foreground))] flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+        <div className="bg-card border border-border p-6 mb-10 rounded-2xl shadow-sm flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
           <div className="flex flex-wrap items-center gap-6 w-full md:w-auto">
-            <div className="w-14 h-14 bg-surface border-2 border-foreground flex items-center justify-center shrink-0">
+            <div className="w-14 h-14 bg-surface border border-border rounded-xl flex items-center justify-center shrink-0 shadow-xs">
               <Trophy className="w-7 h-7 text-primary animate-pulse" />
             </div>
             
@@ -477,12 +477,12 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
               <span className="text-muted-foreground">Overall Completion</span>
               <span className="text-primary text-sm font-extrabold">{overallPercentage}%</span>
             </div>
-            <div className="h-4 w-full bg-surface border-2 border-foreground p-0.5">
+            <div className="h-4 w-full bg-surface border border-border p-0.5 rounded-full overflow-hidden">
               <motion.div
                 initial={{ width: 0 }}
                 animate={{ width: `${overallPercentage}%` }}
                 transition={{ duration: 0.8, ease: "easeOut" }}
-                className="h-full bg-foreground"
+                className="h-full bg-foreground rounded-full"
               />
             </div>
           </div>
@@ -490,7 +490,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
       )}
 
       {/* Subject Cards List */}
-      <div className="space-y-6 relative z-10">
+      <div className="flex flex-col gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm relative z-10">
         <AnimatePresence mode="popLayout">
           {filtered.map((subject, i) => {
             const isExpanded = expandedSubject === subject.id;
@@ -513,10 +513,10 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
                 transition={{ duration: 0.3 }}
-                className={`bg-card border-2 border-foreground transition-all overflow-hidden ${
+                className={`bg-card transition-all overflow-hidden ${
                   isExpanded 
-                    ? 'shadow-[5px_5px_0px_0px_rgb(var(--foreground))]' 
-                    : 'shadow-[3px_3px_0px_0px_rgb(var(--foreground))] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_rgb(var(--foreground))]'
+                    ? 'shadow-md relative z-20 border-y border-border-strong' 
+                    : 'hover:bg-surface/30'
                 }`}
               >
                 {/* Subject Header */}
@@ -525,9 +525,9 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
                   className="p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-5 cursor-pointer hover:bg-surface/30 transition-colors"
                 >
                   <div className="flex items-center gap-4 min-w-0">
-                    <div className={`w-12 h-12 flex items-center justify-center shrink-0 border-2 border-foreground transition-colors ${
+                    <div className={`w-12 h-12 flex items-center justify-center shrink-0 border border-border rounded-xl transition-colors ${
                       isExpanded 
-                        ? 'bg-foreground text-background' 
+                        ? 'bg-foreground text-background shadow-sm' 
                         : 'bg-surface text-foreground'
                     }`}>
                       <SubjectIcon className="w-6 h-6" />
@@ -809,7 +809,7 @@ export default function SyllabusClient({ subjects, branch, semester, syllabusUrl
               setPlannerModalOpen(false);
               setSchedulingModule(null);
             }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm"
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95"
           >
             <motion.div
               onClick={(e) => e.stopPropagation()}

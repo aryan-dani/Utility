@@ -374,7 +374,7 @@ export default function SrsClient() {
           )}
 
           {/* Decks Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm">
             {decks.map(deck => {
               const stat = deckStats.find(s => s.id === deck.id);
               const due = stat?.due || 0;
@@ -382,7 +382,7 @@ export default function SrsClient() {
               const mastery = stat?.mastery || 0;
 
               return (
-                <div key={deck.id} className="group flex flex-col justify-between bg-card border-2 border-foreground p-5 transition-all shadow-[3px_3px_0px_0px_rgb(var(--foreground))] relative overflow-hidden">
+                <div key={deck.id} className="group flex flex-col justify-between bg-card p-5 transition-all relative overflow-hidden">
                   
                   {/* Mastery Progress Bar */}
                   <div className="absolute top-0 left-0 right-0 h-1 bg-surface">
@@ -452,7 +452,9 @@ export default function SrsClient() {
                         <div className="mt-4 space-y-1">
                           <div className="flex justify-between items-center text-[9px] text-muted font-bold uppercase select-none">
                             <span>Leitner Boxes (1-5)</span>
-                            <span>{deckCards.filter(c => c.starred).length} ⭐</span>
+                            <span className="flex items-center gap-0.5">
+                              {deckCards.filter(c => c.starred).length} <Star className="w-3 h-3 fill-foreground text-foreground inline-block" />
+                            </span>
                           </div>
                           <div className="h-1.5 w-full flex rounded-full overflow-hidden bg-surface border border-border">
                             {dist.map((count, idx) => {
@@ -553,7 +555,7 @@ export default function SrsClient() {
             >
               
               {/* Front Side (Question) */}
-              <div className="absolute inset-0 w-full h-full bg-card border-2 border-foreground p-8 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgb(var(--foreground))] [backface-visibility:hidden] group-hover:shadow-[6px_6px_0px_0px_rgb(var(--foreground))]">
+              <div className="absolute inset-0 w-full h-full bg-card border border-border p-8 flex flex-col justify-between rounded-2xl shadow-card [backface-visibility:hidden] group-hover:shadow-card-hover">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-bold text-muted uppercase tracking-widest flex items-center gap-1">
                     <HelpCircle className="w-3.5 h-3.5" /> Question
@@ -594,7 +596,7 @@ export default function SrsClient() {
               </div>
 
               {/* Back Side (Answer) */}
-              <div className="absolute inset-0 w-full h-full bg-card border-2 border-foreground p-8 flex flex-col justify-between shadow-[4px_4px_0px_0px_rgb(var(--foreground))] [backface-visibility:hidden] [transform:rotateY(180deg)] group-hover:shadow-[6px_6px_0px_0px_rgb(var(--foreground))]">
+              <div className="absolute inset-0 w-full h-full bg-card border border-border p-8 flex flex-col justify-between rounded-2xl shadow-card [backface-visibility:hidden] [transform:rotateY(180deg)] group-hover:shadow-card-hover">
                 <div className="flex justify-between items-center">
                   <span className="text-[10px] font-bold text-primary uppercase tracking-widest flex items-center gap-1">
                     <Check className="w-3.5 h-3.5" /> Answer
@@ -640,7 +642,7 @@ export default function SrsClient() {
           <div className="w-full flex flex-col sm:flex-row justify-center items-center gap-4">
             <button
               onClick={() => handleGrade(false)}
-              className="w-full sm:w-44 flex items-center justify-center gap-2 border-2 border-foreground bg-card hover:bg-foreground/5 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgb(var(--foreground))] text-foreground py-3 text-xs font-bold transition-all"
+              className="w-full sm:w-44 flex items-center justify-center gap-2 border border-border bg-card hover:bg-surface-hover text-foreground py-3 text-xs font-bold rounded-xl shadow-xs transition-all hover:-translate-y-0.5"
             >
               <X className="w-4 h-4" />
               <span>Forgot (Key 1)</span>
@@ -648,7 +650,7 @@ export default function SrsClient() {
             
             <button
               onClick={() => handleGrade(true)}
-              className="w-full sm:w-44 flex items-center justify-center gap-2 border-2 border-foreground bg-card hover:bg-foreground/10 hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[3px_3px_0px_0px_rgb(var(--foreground))] text-foreground py-3 text-xs font-bold transition-all"
+              className="w-full sm:w-44 flex items-center justify-center gap-2 border border-border bg-card hover:bg-surface-hover text-foreground py-3 text-xs font-bold rounded-xl shadow-xs transition-all hover:-translate-y-0.5"
             >
               <Check className="w-4 h-4" />
               <span>Got it (Key 2)</span>
@@ -687,7 +689,7 @@ export default function SrsClient() {
             
             {/* Create Card Form */}
             <div className="lg:col-span-1">
-              <div className="bg-card border-2 border-foreground p-5 space-y-4 shadow-[4px_4px_0px_0px_rgb(var(--foreground))] sticky top-24">
+              <div className="bg-card border border-border p-5 space-y-4 rounded-2xl shadow-sm sticky top-24">
                 <h3 className="text-xs font-bold uppercase tracking-wider text-foreground flex items-center gap-1.5">
                   <PlusCircle className="w-4.5 h-4.5" />
                   Add New Card
@@ -730,7 +732,7 @@ export default function SrsClient() {
 
             {/* Decks Cards Table */}
             <div className="lg:col-span-2 space-y-4">
-              <div className="bg-card border-2 border-foreground overflow-hidden shadow-[4px_4px_0px_0px_rgb(var(--foreground))]">
+              <div className="bg-card border border-border overflow-hidden rounded-2xl shadow-sm">
                 
                 <div className="px-5 py-4 border-b border-border bg-surface/30">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Cards in Deck</h3>
@@ -789,11 +791,11 @@ export default function SrsClient() {
 
       {/* ── 4. CREATE DECK MODAL ─────────────────────────────────────────── */}
       {showCreateDeckModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-sm bg-card border-2 border-foreground shadow-[6px_6px_0px_0px_rgb(var(--foreground))] overflow-hidden"
+            className="w-full max-w-sm bg-card border border-border shadow-popover rounded-2xl overflow-hidden"
           >
             <div className="px-6 py-4 border-b border-border flex justify-between items-center">
               <h2 className="font-bold text-foreground text-sm">Create New Deck</h2>
@@ -847,7 +849,7 @@ export default function SrsClient() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95, y: 15 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            className="w-full bg-card border-2 border-foreground p-8 shadow-[6px_6px_0px_0px_rgb(var(--foreground))] relative overflow-hidden flex flex-col items-center text-center"
+            className="w-full bg-card border border-border p-8 shadow-card rounded-2xl relative overflow-hidden flex flex-col items-center text-center"
           >
             {/* Background dynamic light effect */}
             <div className="absolute -top-12 -left-12 w-32 h-32 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
@@ -893,10 +895,10 @@ export default function SrsClient() {
             <div className="bg-primary/5 border border-primary/10 rounded-2xl p-4 w-full mb-8 text-center text-xs font-semibold text-foreground/95 leading-relaxed">
               {(() => {
                 const pct = (reviewSummary.gotIt / (reviewSummary.gotIt + reviewSummary.forgot || 1)) * 100;
-                if (pct === 100) return "🎉 Incredible! A perfect session! Your active recall is top tier.";
-                if (pct >= 80) return "💪 Fantastic retention! You are locking in these concepts.";
-                if (pct >= 50) return "⚡ Good job! Spaced repetition is a process. Keep reinforcing.";
-                return "🧠 Spaced repetition takes time. Let's practice the ones you forgot to build memory paths.";
+                if (pct === 100) return "Incredible! A perfect session! Your active recall is top tier.";
+                if (pct >= 80) return "Fantastic retention! You are locking in these concepts.";
+                if (pct >= 50) return "Good job! Spaced repetition is a process. Keep reinforcing.";
+                return "Spaced repetition takes time. Let's practice the ones you forgot to build memory paths.";
               })()}
             </div>
 

@@ -4,7 +4,7 @@ export const revalidate = 3600;
 
 export default async function GPAPage() {
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen">
       <GPAClient />
     </div>
   );

@@ -74,7 +74,7 @@ export default function ResourceSection({
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             className="overflow-hidden"
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-1 pb-1">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm">
               {items.map((item, index) => (
                 <motion.div
                   key={item.id}
@@ -85,6 +85,7 @@ export default function ResourceSection({
                     delay: Math.min(index * 0.03, 0.15), 
                     ease: 'easeOut' 
                   }}
+                  className="h-full bg-card"
                   style={{ willChange: 'transform, opacity' }}
                 >
                   <ResourceCard 

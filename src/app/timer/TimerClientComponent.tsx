@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Play, 
   Pause, 
@@ -14,7 +15,10 @@ import {
   CheckCircle2,
   X,
   Flame,
-  BarChart3
+  BarChart3,
+  ShieldCheck,
+  Music,
+  CloudRain
 } from 'lucide-react';
 import { FadeIn, ScaleButton } from '@/components/Animations';
 import { auth, db } from '@/lib/firebase';
@@ -58,6 +62,11 @@ export default function TimerClient() {
   const [breakTime, setBreakTime] = useState<number | string>(5);
   const [longBreakTime, setLongBreakTime] = useState<number | string>(15);
 
+  // Focus Mode Guardrails
+  const [isFocusMode, setIsFocusMode] = useState(false);
+  const [distractions, setDistractions] = useState(0);
+  const [showFocusWarning, setShowFocusWarning] = useState(false);
+
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -67,9 +76,9 @@ export default function TimerClient() {
   const soundAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const soundUrls = useMemo(() => ({
-    lofi: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
-    rain: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-8.mp3',
-    cafe: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-3.mp3',
+    lofi: 'https://raw.githubusercontent.com/Saumya-patel-31/Moodmap/main/public/audio/lofi.mp3',
+    rain: 'https://raw.githubusercontent.com/stu442/pomodoro-web/main/public/sounds/rain.mp3',
+    cafe: 'https://raw.githubusercontent.com/stu442/pomodoro-web/main/public/sounds/coffeeshop.mp3',
   }), []);
 
   useEffect(() => {
@@ -111,6 +120,91 @@ export default function TimerClient() {
         .catch(() => {});
     }
   }, [isActive, soundscape, soundPlaying]);
+
+  // Handle initial query parameters (mode and start)
+  useEffect(() => {
+    const modeParam = searchParams.get('mode') as TimerMode | null;
+    const startParam = searchParams.get('start') === 'true';
+
+    if (modeParam && ['work', 'break', 'longBreak'].includes(modeParam)) {
+      setMode(modeParam);
+      setIsActive(startParam);
+      
+      const duration = modeParam === 'work' 
+        ? sanitizeDuration(workTime) 
+        : modeParam === 'break' 
+          ? sanitizeDuration(breakTime) 
+          : sanitizeDuration(longBreakTime);
+      setTimeLeft(duration * 60);
+    }
+  }, [searchParams]);
+
+  // Handle Focus Mode activity & fullscreen changes
+  useEffect(() => {
+    if (!isFocusMode) return;
+
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        setDistractions((prev) => prev + 1);
+        setShowFocusWarning(true);
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setDistractions((prev) => prev + 1);
+        setShowFocusWarning(true);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    document.body.classList.add('focus-mode-active');
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+      document.body.classList.remove('focus-mode-active');
+    };
+  }, [isFocusMode]);
+
+  const enterFocusMode = async () => {
+    try {
+      await document.documentElement.requestFullscreen();
+      setIsFocusMode(true);
+      setDistractions(0);
+      setShowFocusWarning(false);
+    } catch (err) {
+      console.error("Failed to enter fullscreen:", err);
+      setIsFocusMode(true);
+      setDistractions(0);
+      setShowFocusWarning(false);
+    }
+  };
+
+  const exitFocusMode = async () => {
+    setIsFocusMode(false);
+    setShowFocusWarning(false);
+    if (document.fullscreenElement) {
+      try {
+        await document.exitFullscreen();
+      } catch (err) {
+        console.error("Failed to exit fullscreen:", err);
+      }
+    }
+  };
+
+  const resumeFocus = async () => {
+    setShowFocusWarning(false);
+    if (!document.fullscreenElement) {
+      try {
+        await document.documentElement.requestFullscreen();
+      } catch (err) {
+        console.error("Failed to re-enter fullscreen:", err);
+      }
+    }
+  };
 
   useEffect(() => {
     return () => {
@@ -330,13 +424,37 @@ export default function TimerClient() {
       
       {/* Left panel: Pomodoro timer */}
       <div className="flex-1 flex flex-col items-center max-w-md w-full">
-        <FadeIn className="w-full text-center mb-8">
-          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-none text-[10px] font-bold uppercase tracking-wider mb-4 border-2 border-foreground transition-all duration-300 ${themeColorClass}`}>
+        <FadeIn className="w-full text-center mb-6 flex flex-col items-center">
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider mb-4 border border-border transition-all duration-300 ${themeColorClass}`}>
             {mode === 'work' ? <Brain className="w-3 h-3" /> : <Coffee className="w-3 h-3" />}
             {mode === 'work' ? 'Deep Work Session' : mode === 'break' ? 'Short Break' : 'Long Break'}
           </div>
           <h1 className="text-3xl font-extrabold tracking-tight text-foreground">Stay Focused</h1>
-          <p className="text-xs text-muted mt-1.5">Pomodoro tracker optimized for your weekly targets.</p>
+          <p className="text-xs text-muted mt-1.5 mb-5">Pomodoro tracker optimized for your weekly targets.</p>
+
+          {/* Mode Selector Tabs */}
+          <div className="flex bg-surface/50 border border-border/80 rounded-xl p-1 w-full max-w-[280px] shadow-xs">
+            {(['work', 'break', 'longBreak'] as const).map((m) => {
+              const labelMap = {
+                work: 'Focus',
+                break: 'Break',
+                longBreak: 'Long Break',
+              };
+              return (
+                <button
+                  key={m}
+                  onClick={() => switchMode(m)}
+                  className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
+                    mode === m
+                      ? 'bg-background border border-border/80 text-foreground shadow-sm font-bold'
+                      : 'text-muted hover:text-foreground'
+                  }`}
+                >
+                  {labelMap[m]}
+                </button>
+              );
+            })}
+          </div>
         </FadeIn>
 
         {/* Active Task Callout */}
@@ -381,7 +499,7 @@ export default function TimerClient() {
                 {[...Array(4)].map((_, i) => (
                   <div 
                     key={i} 
-                    className={`w-2.5 h-2.5 rounded-none border-2 border-foreground transition-colors duration-300 ${
+                    className={`w-2.5 h-2.5 rounded-full border border-foreground/30 transition-colors duration-300 ${
                       i < (sessions % 4) 
                         ? 'bg-foreground border-foreground' 
                         : 'bg-transparent'
@@ -394,11 +512,11 @@ export default function TimerClient() {
         </FadeIn>
 
         {/* Controls */}
-        <FadeIn delay={0.2} className="w-full space-y-6">
+        <FadeIn delay={0.2} className="w-full space-y-6 flex flex-col items-center">
           <div className="flex items-center justify-center gap-4">
             <button
               onClick={resetTimer}
-              className="w-12 h-12 rounded-none border-2 border-foreground bg-card flex items-center justify-center text-foreground hover:translate-x-[-2px] hover:translate-y-[-2px] active:translate-x-[0px] active:translate-y-[0px] shadow-[2px_2px_0px_0px_rgb(var(--foreground))] transition-all"
+              className="w-12 h-12 rounded-xl border border-border bg-card flex items-center justify-center text-foreground hover:scale-105 active:scale-95 shadow-sm transition-all duration-200"
               title="Reset"
               aria-label="Reset timer"
             >
@@ -407,10 +525,10 @@ export default function TimerClient() {
             
             <button
               onClick={toggleTimer}
-              className={`w-28 h-12 rounded-none border-2 border-foreground flex items-center justify-center shadow-[4px_4px_0px_0px_rgb(var(--foreground))] hover:translate-x-[-2px] hover:translate-y-[-2px] active:translate-x-[0px] active:translate-y-[0px] transition-all duration-150 ${
+              className={`w-28 h-12 rounded-xl border border-transparent flex items-center justify-center shadow-md hover:scale-105 active:scale-95 transition-all duration-200 ${
                 isActive 
-                  ? 'bg-destructive text-destructive-foreground' 
-                  : 'bg-foreground text-background'
+                  ? 'bg-destructive text-destructive-foreground hover:bg-destructive/95' 
+                  : 'bg-primary text-primary-foreground hover:bg-primary/95'
               }`}
               aria-label={isActive ? "Pause timer" : "Start timer"}
             >
@@ -419,13 +537,25 @@ export default function TimerClient() {
 
             <button
               onClick={() => setShowSettings(true)}
-              className="w-12 h-12 rounded-none border-2 border-foreground bg-card flex items-center justify-center text-foreground hover:translate-x-[-2px] hover:translate-y-[-2px] active:translate-x-[0px] active:translate-y-[0px] shadow-[2px_2px_0px_0px_rgb(var(--foreground))] transition-all"
+              className="w-12 h-12 rounded-xl border border-border bg-card flex items-center justify-center text-foreground hover:scale-105 active:scale-95 shadow-sm transition-all duration-200"
               title="Settings"
               aria-label="Timer settings"
             >
               <Settings2 className="w-5 h-5" />
             </button>
           </div>
+
+          <button
+            onClick={isFocusMode ? exitFocusMode : enterFocusMode}
+            className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all duration-300 border flex items-center gap-2 shadow-xs ${
+              isFocusMode
+                ? 'bg-destructive/10 border-destructive/30 text-destructive hover:bg-destructive/20'
+                : 'bg-surface/50 border-border text-foreground hover:bg-surface-hover/80 hover:border-border-strong'
+            }`}
+          >
+            <ShieldCheck className="w-4 h-4" />
+            {isFocusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}
+          </button>
         </FadeIn>
       </div>
 
@@ -465,9 +595,9 @@ export default function TimerClient() {
                   <div className="absolute -top-8 bg-foreground text-background text-[10px] font-bold rounded px-1.5 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-md z-10">
                     {d.minutes}m
                   </div>
-                  <div className="w-5 bg-surface border border-border rounded-none overflow-hidden flex items-end h-20 transition-all group-hover:border-foreground/30">
+                  <div className="w-5 bg-surface border border-border rounded-full overflow-hidden flex items-end h-20 transition-all group-hover:border-foreground/30">
                     <div 
-                      className="w-full bg-foreground transition-all duration-500 ease-out" 
+                      className="w-full bg-foreground transition-all duration-500 ease-out rounded-full" 
                       style={{ height: `${pct}%` }}
                     />
                   </div>
@@ -497,20 +627,29 @@ export default function TimerClient() {
           </div>
           
           <div className="grid grid-cols-3 gap-2 mb-4">
-            {(['lofi', 'rain', 'cafe'] as const).map((s) => (
-              <button
-                key={s}
-                onClick={() => setSoundscape(soundscape === s ? 'none' : s)}
-                className={`px-3 py-2 rounded-xl text-xs font-semibold capitalize transition-all border ${
-                  soundscape === s
-                    ? 'bg-foreground text-background border-transparent font-bold'
-                    : 'bg-surface/50 border-border text-muted hover:border-border-strong hover:text-foreground'
-                }`}
-                aria-label={`Select ${s} soundscape`}
-              >
-                {s}
-              </button>
-            ))}
+            {(['lofi', 'rain', 'cafe'] as const).map((s) => {
+              const soundMap = {
+                lofi: { label: 'Lo-fi', icon: Music },
+                rain: { label: 'Rain', icon: CloudRain },
+                cafe: { label: 'Café', icon: Coffee },
+              };
+              const { label, icon: Icon } = soundMap[s];
+              return (
+                <button
+                  key={s}
+                  onClick={() => setSoundscape(soundscape === s ? 'none' : s)}
+                  className={`flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
+                    soundscape === s
+                      ? 'bg-primary text-primary-foreground border-transparent font-bold shadow-xs'
+                      : 'bg-surface/40 border-border text-muted hover:border-border-strong hover:text-foreground'
+                  }`}
+                  aria-label={`Select ${s} soundscape`}
+                >
+                  <Icon className="w-3.5 h-3.5 shrink-0" />
+                  <span>{label}</span>
+                </button>
+              );
+            })}
           </div>
 
           {soundscape !== 'none' && (
@@ -526,7 +665,7 @@ export default function TimerClient() {
                 step="0.01"
                 value={soundVolume}
                 onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
-                className="w-full accent-foreground bg-surface border border-border rounded-lg appearance-none h-1.5 cursor-pointer"
+                className="w-full accent-slider cursor-pointer"
                 aria-label="Soundscape volume slider"
               />
             </div>
@@ -536,7 +675,7 @@ export default function TimerClient() {
 
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95">
           <FadeIn className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
             <div className="px-6 py-4 border-b border-border flex justify-between items-center">
               <h2 className="font-bold text-foreground">Timer Settings</h2>
@@ -596,6 +735,62 @@ export default function TimerClient() {
           </FadeIn>
         </div>
       )}
+
+      {/* Focus Mode Interrupted Modal */}
+      <AnimatePresence>
+        {showFocusWarning && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[150] flex flex-col items-center justify-center p-4 bg-background/95"
+          >
+            <motion.div
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              className="max-w-md w-full text-center space-y-6 p-8 border border-destructive/20 bg-card rounded-2xl shadow-2xl"
+            >
+              <div className="w-16 h-16 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto text-destructive animate-bounce">
+                <X className="w-8 h-8" />
+              </div>
+              
+              <div className="space-y-2">
+                <h2 className="text-2xl font-black text-destructive tracking-tight uppercase">
+                  Focus Interrupted!
+                </h2>
+                <p className="text-sm text-foreground-subtle">
+                  You navigated away or exited fullscreen mode. Stay focused on your targets to finish the session!
+                </p>
+              </div>
+
+              <div className="py-3 px-4 bg-surface/50 border border-border rounded-xl inline-block">
+                <p className="text-xs font-bold uppercase tracking-wider text-muted">
+                  Distractions Count
+                </p>
+                <p className="text-3xl font-black text-foreground mt-1 animate-warning-pulse">
+                  {distractions}
+                </p>
+              </div>
+
+              <div className="pt-2 flex flex-col gap-2.5">
+                <button
+                  onClick={resumeFocus}
+                  className="w-full py-3 bg-foreground text-background font-bold rounded-xl text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
+                >
+                  Resume Focus Mode
+                </button>
+                <button
+                  onClick={exitFocusMode}
+                  className="w-full py-2.5 bg-surface border border-border text-foreground font-semibold rounded-xl text-xs hover:bg-surface-hover transition-all"
+                >
+                  Exit Focus Mode
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

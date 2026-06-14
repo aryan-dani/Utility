@@ -5,19 +5,19 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        background: 'rgb(var(--background) / <alpha-value>)',
-        'background-subtle': 'rgb(var(--background-subtle) / <alpha-value>)',
+        background: 'rgb(var(--background))',
+        'background-subtle': 'rgb(var(--background-subtle))',
         foreground: 'rgb(var(--foreground) / <alpha-value>)',
         'foreground-subtle': 'rgb(var(--foreground-subtle) / <alpha-value>)',
 
-        card: 'rgb(var(--card) / <alpha-value>)',
-        'card-hover': 'rgb(var(--card-hover) / <alpha-value>)',
+        card: 'rgb(var(--card))',
+        'card-hover': 'rgb(var(--card-hover))',
 
-        surface: 'rgb(var(--surface) / <alpha-value>)',
-        'surface-hover': 'rgb(var(--surface-hover) / <alpha-value>)',
+        surface: 'rgb(var(--surface))',
+        'surface-hover': 'rgb(var(--surface-hover))',
 
-        border: 'rgb(var(--border) / <alpha-value>)',
-        'border-strong': 'rgb(var(--border-strong) / <alpha-value>)',
+        border: 'rgb(var(--border))',
+        'border-strong': 'rgb(var(--border-strong))',
 
         muted: 'rgb(var(--muted) / <alpha-value>)',
         'muted-hover': 'rgb(var(--muted-hover) / <alpha-value>)',
@@ -44,7 +44,7 @@ module.exports = {
         '3xl': 'var(--radius-3xl)',
       },
       borderWidth: {
-        DEFAULT: '2px',
+        DEFAULT: '1px',
         0: '0px',
         1: '1px',
         2: '2px',
@@ -54,18 +54,18 @@ module.exports = {
         8: '8px',
       },
       boxShadow: {
-        DEFAULT: '4px 4px 0px 0px rgb(var(--foreground))',
-        sm: '2px 2px 0px 0px rgb(var(--foreground))',
-        md: '4px 4px 0px 0px rgb(var(--foreground))',
-        lg: '6px 6px 0px 0px rgb(var(--foreground))',
-        xl: '8px 8px 0px 0px rgb(var(--foreground))',
-        '2xl': '12px 12px 0px 0px rgb(var(--foreground))',
-        '3xs': '1px 1px 0px 0px rgb(var(--foreground))',
-        'xs': '2px 2px 0px 0px rgb(var(--foreground))',
-        'card': '4px 4px 0px 0px rgb(var(--foreground))',
-        'card-hover': '6px 6px 0px 0px rgb(var(--foreground))',
-        'popover': '4px 4px 0px 0px rgb(var(--foreground))',
-        'glow': '0 0 0px 0px transparent',
+        DEFAULT: '0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px -1px rgba(0, 0, 0, 0.05)',
+        sm: '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+        md: '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -2px rgba(0, 0, 0, 0.05)',
+        lg: '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -4px rgba(0, 0, 0, 0.05)',
+        xl: '0 20px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05)',
+        '2xl': '0 25px 50px -12px rgba(0, 0, 0, 0.15)',
+        '3xs': '0 1px 1px 0 rgba(0, 0, 0, 0.02)',
+        'xs': '0 1px 2px 0 rgba(0, 0, 0, 0.03)',
+        'card': '0 4px 12px -2px rgba(0, 0, 0, 0.03)',
+        'card-hover': '0 12px 24px -4px rgba(0, 0, 0, 0.06)',
+        'popover': '0 10px 25px -5px rgba(0, 0, 0, 0.08), 0 8px 16px -6px rgba(0, 0, 0, 0.08)',
+        'glow': '0 0 16px 2px rgba(var(--foreground), 0.08)',
       },
       animation: {
         'fade-in': 'fadeIn 0.2s ease-out forwards',

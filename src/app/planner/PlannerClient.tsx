@@ -175,7 +175,7 @@ function TaskItem({
           {task.text}
         </span>
         {task.category && task.category !== 'General' && (
-          <span className={`w-1.5 h-1.5 rounded-none shrink-0 ${
+          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${
             task.category === 'Exam Prep' ? 'bg-foreground' :
             task.category === 'Assignment' ? 'bg-muted' :
             task.category === 'Project' ? 'bg-foreground-subtle' :
@@ -320,9 +320,9 @@ function TaskItem({
       {/* Subtask progress */}
       {task.subtasks.length > 0 && (
         <div className="ml-7 mt-2 flex items-center gap-2">
-          <div className="flex-1 h-1.5 bg-surface rounded-none overflow-hidden border border-foreground/30">
+          <div className="flex-1 h-1.5 bg-surface rounded-full overflow-hidden border border-border">
             <div
-              className="h-full bg-foreground transition-all duration-300"
+              className="h-full bg-foreground transition-all duration-300 rounded-full"
               style={{ width: `${(subtasksDone / task.subtasks.length) * 100}%` }}
             />
           </div>
@@ -394,12 +394,12 @@ function PromptModal({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4 animate-fade-in">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="bg-card border-2 border-foreground w-full max-w-2xl shadow-[6px_6px_0px_0px_rgb(var(--foreground))] flex flex-col max-h-[90vh]"
+        className="bg-card border border-border w-full max-w-2xl shadow-popover rounded-2xl flex flex-col max-h-[90vh]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -575,12 +575,12 @@ function ShareModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
+    <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4 animate-fade-in">
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
-        className="bg-card border-2 border-foreground w-full max-w-lg shadow-[6px_6px_0px_0px_rgb(var(--foreground))]"
+        className="bg-card border border-border w-full max-w-lg shadow-popover rounded-2xl overflow-hidden"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -625,9 +625,9 @@ function ShareModal({
                 </div>
                 <button
                   onClick={onTogglePublic}
-                  className={`relative w-11 h-6 rounded-none border-2 border-foreground transition-colors ${isPublic ? 'bg-foreground' : 'bg-surface-hover'}`}
+                  className={`relative w-11 h-6 rounded-full border border-border transition-colors ${isPublic ? 'bg-foreground' : 'bg-surface-hover'}`}
                 >
-                  <div className={`absolute top-0.5 w-4 h-4 rounded-none border border-foreground bg-white transition-transform ${isPublic ? 'left-[22px]' : 'left-0.5'}`} />
+                  <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full border border-border bg-white transition-transform ${isPublic ? 'left-[22px]' : 'left-0.5'}`} />
                 </button>
               </div>
 
@@ -689,7 +689,7 @@ function ShareModal({
                     {collaborators.map((c) => (
                       <div key={c.id} className="flex items-center justify-between bg-surface rounded-lg border border-border px-3 py-2">
                         <div className="flex items-center gap-2">
-                          <div className="w-6 h-6 rounded-none bg-background border-2 border-foreground flex items-center justify-center text-[10px] font-bold text-foreground uppercase">
+                          <div className="w-6 h-6 rounded-lg bg-background border border-border flex items-center justify-center text-[10px] font-bold text-foreground uppercase">
                             {c.user_email[0]}
                           </div>
                           <span className="text-xs text-foreground">{c.user_email}</span>
@@ -757,13 +757,13 @@ function DayPanel({
   const done = tasks.filter(t => t.done).length;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+    <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 10 }}
         onClick={(e) => e.stopPropagation()}
-        className="bg-card border-2 border-foreground w-full max-w-lg shadow-[6px_6px_0px_0px_rgb(var(--foreground))] flex flex-col max-h-[85vh]"
+        className="bg-card border border-border w-full max-w-lg shadow-popover rounded-2xl flex flex-col max-h-[85vh]"
       >
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border">
@@ -791,9 +791,9 @@ function DayPanel({
         {/* Progress */}
         {tasks.length > 0 && (
           <div className="px-6 pt-3">
-            <div className="h-2 bg-surface rounded-none overflow-hidden border-2 border-foreground">
+            <div className="h-2 bg-surface rounded-full overflow-hidden border border-border">
               <div
-                className="h-full bg-foreground transition-all duration-500"
+                className="h-full bg-foreground transition-all duration-500 rounded-full"
                 style={{ width: `${(done / tasks.length) * 100}%` }}
               />
             </div>

@@ -184,10 +184,10 @@ export default function CommunityClient({
 
           <div className="h-6 w-px bg-border hidden sm:block"></div>
 
-          <div className="flex bg-surface border-2 border-foreground p-0.5 rounded-none">
+          <div className="flex bg-surface border border-border p-0.5 rounded-xl shadow-xs">
             <button
               onClick={() => setSortBy("top")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-none text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 sortBy === "top"
                   ? "bg-foreground text-background font-bold"
                   : "text-muted hover:text-foreground"
@@ -200,7 +200,7 @@ export default function CommunityClient({
             </button>
             <button
               onClick={() => setSortBy("newest")}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-none text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                 sortBy === "newest"
                   ? "bg-foreground text-background font-bold"
                   : "text-muted hover:text-foreground"
@@ -214,7 +214,7 @@ export default function CommunityClient({
       </div>
 
       {/* Decks Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm">
         {filteredDecks.map((deck) => {
           const cardCount = Array.isArray(deck.flashcards)
             ? deck.flashcards.length
@@ -224,7 +224,7 @@ export default function CommunityClient({
           return (
             <div
               key={deck.id}
-              className="bg-card border-2 border-foreground p-6 flex flex-col justify-between shadow-[3px_3px_0px_0px_rgb(var(--foreground))] hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[5px_5px_0px_0px_rgb(var(--foreground))] transition-all group"
+              className="bg-card p-6 flex flex-col justify-between transition-all group"
             >
               <div>
                 <div className="flex items-start justify-between gap-4 mb-3">
@@ -336,8 +336,8 @@ export default function CommunityClient({
 
       {/* Modal Flashcard Viewer */}
       {activeDeck && (
-        <div className="fixed inset-0 z-50 bg-background/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in">
-          <div className="bg-card border-2 border-foreground w-full max-w-2xl p-6 sm:p-8 shadow-[6px_6px_0px_0px_rgb(var(--foreground))] relative flex flex-col min-h-[400px]">
+        <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-card border border-border w-full max-w-2xl p-6 sm:p-8 shadow-popover rounded-2xl relative flex flex-col min-h-[400px]">
             {/* Modal Header */}
             <div className="flex items-center justify-between border-b border-border pb-4 mb-6">
               <div>
@@ -362,7 +362,7 @@ export default function CommunityClient({
               activeDeck.flashcards[currentCardIdx] ? (
                 <div
                   onClick={() => setShowAnswer(!showAnswer)}
-                  className="w-full max-w-lg min-h-[220px] p-8 border-2 border-foreground bg-surface hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[4px_4px_0px_0px_rgb(var(--foreground))] transition-all flex flex-col items-center justify-center cursor-pointer shadow-[2px_2px_0px_0px_rgb(var(--foreground))] select-none group relative"
+                  className="w-full max-w-lg min-h-[220px] p-8 border border-border bg-surface hover:shadow-card-hover rounded-2xl transition-all flex flex-col items-center justify-center cursor-pointer shadow-sm select-none group relative hover:-translate-y-0.5"
                 >
                   <span className="absolute top-4 right-4 text-[10px] font-mono text-muted uppercase bg-card border border-border px-2 py-1 rounded-md">
                     {showAnswer ? "Answer" : "Question"}

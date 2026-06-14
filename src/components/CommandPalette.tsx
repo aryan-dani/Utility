@@ -91,18 +91,75 @@ export default function CommandPalette() {
     setIsMac(typeof navigator !== 'undefined' && (navigator.userAgent.includes('Mac') || navigator.platform.includes('Mac')));
   }, []);
 
-  // Global keydown listener for ⌘K / Ctrl+K
+  // Global keydown listener for ⌘K / Ctrl+K and other shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // 1. Check for Ctrl+K / Meta+K
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
         setCommandPaletteOpen(!isCommandPaletteOpen);
+        return;
+      }
+
+      // 2. Check for other shortcuts (Alt+Letter)
+      const isModifier = e.altKey;
+      if (!isModifier) return;
+
+      const activeEl = document.activeElement;
+      const isInsideCommandPaletteInput = activeEl === inputRef.current;
+
+      // Do not hijack Alt combinations when user is in input/textarea, except when inside command palette itself
+      if (
+        activeEl &&
+        !isInsideCommandPaletteInput &&
+        (activeEl.tagName === 'INPUT' ||
+         activeEl.tagName === 'TEXTAREA' ||
+         activeEl.getAttribute('contenteditable') === 'true')
+      ) {
+        return;
+      }
+
+      const key = e.key.toLowerCase();
+      const shortcutMap: Record<string, () => void> = {
+        t: () => {
+          router.push('/timer?mode=work&start=true');
+          setCommandPaletteOpen(false);
+        },
+        b: () => {
+          router.push('/timer?mode=break&start=true');
+          setCommandPaletteOpen(false);
+        },
+        a: () => {
+          router.push('/ask');
+          setCommandPaletteOpen(false);
+        },
+        g: () => {
+          router.push('/gpa');
+          setCommandPaletteOpen(false);
+        },
+        r: () => {
+          router.push('/srs');
+          setCommandPaletteOpen(false);
+        },
+        s: () => {
+          router.push('/srs');
+          setCommandPaletteOpen(false);
+        },
+        c: () => {
+          router.push('/community');
+          setCommandPaletteOpen(false);
+        }
+      };
+
+      if (shortcutMap[key]) {
+        e.preventDefault();
+        shortcutMap[key]();
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCommandPaletteOpen, setCommandPaletteOpen]);
+  }, [isCommandPaletteOpen, setCommandPaletteOpen, router]);
 
   // Focus input when modal opens
   useEffect(() => {
@@ -126,7 +183,7 @@ export default function CommandPalette() {
         shortcut: 'T',
         badge: 'Focus',
         action: () => {
-          router.push('/timer');
+          router.push('/timer?mode=work&start=true');
           setCommandPaletteOpen(false);
         },
       },
@@ -138,7 +195,7 @@ export default function CommandPalette() {
         shortcut: 'B',
         badge: 'Rest',
         action: () => {
-          router.push('/timer');
+          router.push('/timer?mode=break&start=true');
           setCommandPaletteOpen(false);
         },
       },
@@ -340,38 +397,38 @@ export default function CommandPalette() {
             exit={{ opacity: 0 }}
             transition={{ duration: 0.15 }}
             onClick={() => setCommandPaletteOpen(false)}
-            className="fixed inset-0 bg-background/80 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/50"
           />
 
           {/* Modal */}
           <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: -10 }}
+            initial={{ opacity: 0, scale: 0.97, y: -8 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: -10 }}
-            transition={{ duration: 0.15, ease: 'easeOut' }}
-            className="relative w-full max-w-2xl bg-card border-2 border-foreground rounded-none shadow-[8px_8px_0px_0px_rgb(var(--foreground))] overflow-hidden flex flex-col z-10"
-        >
+            exit={{ opacity: 0, scale: 0.97, y: -8 }}
+            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-popover overflow-hidden flex flex-col z-10"
+          >
 
             {/* Search Input Header */}
-            <div className="relative flex items-center px-4 py-3.5 border-b border-border bg-surface/30">
-              <Search className="w-5 h-5 text-primary shrink-0 mr-3 animate-pulse" />
+            <div className="relative flex items-center px-4 py-3.5 border-b border-border bg-surface">
+              <Search className="w-5 h-5 text-muted shrink-0 mr-3" />
               <input
                 ref={inputRef}
                 type="text"
                 placeholder="Type a command or search (e.g. 'timer', 'DBMS', 'Ask AI')..."
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                className="flex-1 bg-transparent border-none outline-none text-base font-medium text-foreground placeholder:text-muted pr-4 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
+                className="flex-1 bg-transparent border-none outline-none text-base font-medium text-foreground placeholder:text-muted/50 pr-4 focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0"
               />
               {query && (
                 <button
                   onClick={() => setQuery('')}
-                  className="p-1.5 text-muted hover:text-foreground rounded-md transition-colors mr-2 bg-surface/50 hover:bg-surface"
+                  className="p-1.5 text-muted hover:text-foreground rounded-md transition-colors mr-2 bg-surface/40 hover:bg-surface"
                 >
                   <X className="w-4 h-4" />
                 </button>
               )}
-              <span className="hidden sm:inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-surface border border-border text-muted rounded shadow-sm">
+              <span className="hidden sm:inline-flex px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-surface/55 border border-border/80 text-muted rounded shadow-sm">
                 ESC
               </span>
             </div>
@@ -410,18 +467,18 @@ export default function CommandPalette() {
                               setSelectedIndex(globalIdx);
                             }
                           }}
-                          className={`relative w-full flex items-center gap-3 px-3.5 py-3 rounded-xl text-left transition-colors duration-150 text-sm group border focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ${
+                          className={`relative w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all duration-150 text-sm group border focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0 ${
                             isSelected
-                              ? 'bg-surface-hover border-border-strong text-foreground shadow-md font-semibold'
-                              : 'border-transparent text-foreground hover:bg-surface/60'
+                              ? 'bg-surface-hover border-border-strong text-foreground shadow-sm font-semibold'
+                              : 'border-transparent text-foreground-subtle hover:bg-surface/30 hover:text-foreground'
                           }`}
                         >
                           {/* Active Left Indicator Bar */}
                           {isSelected && (
                             <motion.div
                               layoutId="activePaletteIndicator"
-                              className="absolute left-0 top-2 bottom-2 w-1 bg-primary rounded-none"
-                              transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                              className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-primary rounded-full"
+                              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
                             />
                           )}
 
@@ -429,7 +486,7 @@ export default function CommandPalette() {
                             className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
                               isSelected
                                 ? 'bg-background border border-border text-primary shadow-sm'
-                                : 'bg-surface border border-border text-muted group-hover:text-foreground'
+                                : 'bg-surface/60 border border-border/50 text-muted group-hover:text-foreground'
                             }`}
                           >
                             <Icon className="w-4 h-4" />
@@ -439,10 +496,10 @@ export default function CommandPalette() {
                           </div>
                           {item.badge && (
                             <span
-                              className={`text-[10px] px-2.5 py-0.5 rounded-none font-bold uppercase tracking-wider transition-colors ${
+                              className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider transition-colors ${
                                 isSelected
-                                  ? 'bg-background border-2 border-foreground text-foreground shadow-[2px_2px_0px_0px_rgb(var(--foreground))]'
-                                  : 'bg-surface border border-border text-muted'
+                                  ? 'bg-background border border-border text-foreground shadow-sm'
+                                  : 'bg-surface border border-border/80 text-muted'
                               }`}
                             >
                               {item.badge}
@@ -453,13 +510,13 @@ export default function CommandPalette() {
                               className={`hidden sm:inline-flex px-2 py-0.5 text-[10px] font-bold rounded shadow-sm transition-colors ${
                                 isSelected
                                   ? 'bg-background border border-border text-foreground shadow-sm'
-                                  : 'bg-surface border border-border text-muted'
+                                  : 'bg-surface border border-border/85 text-muted'
                               }`}
                             >
-                              {isMac ? '⌘' : 'Ctrl+'}{item.shortcut}
+                              Alt+{item.shortcut}
                             </kbd>
                           )}
-                          {isSelected && <ArrowRight className="w-4 h-4 shrink-0 animate-in fade-in text-muted" />}
+                          {isSelected && <ArrowRight className="w-4 h-4 shrink-0 text-muted animate-pulse" />}
                         </button>
                       );
                     })}

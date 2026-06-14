@@ -28,7 +28,7 @@ export default function GlobalError({
         initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="glass-card max-w-lg w-full rounded-2xl p-8 sm:p-10 shadow-popover relative z-10 text-center"
+        className="bg-card border border-border max-w-lg w-full rounded-2xl p-8 sm:p-10 shadow-md relative z-10 text-center"
       >
         <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mb-6 mx-auto shadow-sm">
           <motion.div

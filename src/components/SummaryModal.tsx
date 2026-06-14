@@ -67,7 +67,7 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="absolute inset-0 bg-background/80 backdrop-blur-sm"
+          className="absolute inset-0 bg-background/95"
         />
 
         {/* Modal */}
@@ -78,7 +78,7 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
           role="dialog"
           aria-modal="true"
           aria-labelledby="summary-title"
-          className="relative w-full max-w-2xl bg-card border-2 border-foreground rounded-none shadow-[6px_6px_0px_0px_rgb(var(--foreground))] overflow-hidden flex flex-col max-h-[85vh] z-10"
+          className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-popover overflow-hidden flex flex-col max-h-[85vh] z-10"
         >
           {/* Header */}
           <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface/50">
@@ -93,7 +93,7 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
             </div>
             <button
               onClick={onClose}
-              className="p-2 hover:bg-surface border border-foreground rounded-none text-muted hover:text-foreground transition-colors"
+              className="p-2 hover:bg-surface hover:text-foreground rounded-xl transition-colors text-muted"
               aria-label="Close summary modal"
             >
               <X className="w-5 h-5" />
@@ -117,7 +117,7 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
               </div>
             ) : error ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
-                <div className="w-12 h-12 rounded-none border-2 border-destructive bg-destructive/10 flex items-center justify-center mb-4">
+                <div className="w-12 h-12 rounded-xl border border-destructive/20 bg-destructive/5 flex items-center justify-center mb-4">
                   <Info className="w-6 h-6 text-destructive" />
                 </div>
                 <h4 className="text-base font-semibold text-foreground">Couldn't Generate Summary</h4>
@@ -135,7 +135,7 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
                 animate={{ opacity: 1 }}
                 className="prose prose-sm dark:prose-invert max-w-none prose-headings:text-foreground prose-p:text-muted prose-li:text-muted"
               >
-                <div className="flex items-center gap-2 mb-6 text-xs font-bold uppercase tracking-widest text-foreground bg-foreground/5 px-3 py-1.5 rounded-none border-2 border-foreground w-fit">
+                <div className="flex items-center gap-2 mb-6 text-xs font-bold uppercase tracking-widest text-primary bg-primary/5 px-3 py-1.5 rounded-lg border border-primary/10 w-fit">
                   AI-Generated Intelligence
                 </div>
                 

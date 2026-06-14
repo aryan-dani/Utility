@@ -99,8 +99,8 @@ export default function SharedPlanView({ plan }: { plan: Plan }) {
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="flex-1 h-3 bg-surface overflow-hidden border-2 border-foreground">
-            <div className="h-full bg-foreground transition-all duration-500" style={{ width: `${progressPct}%` }} />
+          <div className="flex-1 h-3 bg-surface overflow-hidden border border-border rounded-full p-0.5">
+            <div className="h-full bg-foreground transition-all duration-500 rounded-full" style={{ width: `${progressPct}%` }} />
           </div>
           <span className="text-xs font-semibold text-muted whitespace-nowrap">{doneTasks}/{totalTasks} tasks</span>
         </div>
@@ -157,8 +157,8 @@ export default function SharedPlanView({ plan }: { plan: Plan }) {
 
               {tasks.length > 0 && (
                 <div className="mt-auto pt-1">
-                  <div className="h-1 bg-surface border border-foreground overflow-hidden">
-                    <div className="h-full bg-foreground transition-all duration-300" style={{ width: `${(done / tasks.length) * 100}%` }} />
+                  <div className="h-1.5 bg-surface border border-border overflow-hidden rounded-full p-0.5">
+                    <div className="h-full bg-foreground transition-all duration-300 rounded-full" style={{ width: `${(done / tasks.length) * 100}%` }} />
                   </div>
                 </div>
               )}

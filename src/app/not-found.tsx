@@ -12,13 +12,13 @@ export default function NotFound() {
       <div className="noise-overlay" />
       
       {/* Subtle Grid Pattern */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(var(--border)/0.2)_1px,transparent_1px),linear-gradient(to_bottom,rgb(var(--border)/0.2)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(var(--foreground)/0.1)_1px,transparent_1px),linear-gradient(to_bottom,rgb(var(--foreground)/0.1)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none" />
 
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
-        className="glass-card max-w-md w-full rounded-2xl p-8 sm:p-10 shadow-popover relative z-10 text-center"
+        className="bg-card border border-border max-w-md w-full rounded-2xl p-8 sm:p-10 shadow-md relative z-10 text-center"
       >
         <div className="relative mb-6">
           <span className="text-[100px] sm:text-[120px] font-black tracking-tighter leading-none select-none text-gradient-purple opacity-90 block">

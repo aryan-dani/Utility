@@ -75,7 +75,7 @@ export default function ResourceCard({
   return (
     <div
       onClick={handleOpen}
-      className="group bg-card border rounded-2xl p-4 flex flex-col gap-3 text-left shadow-sm cursor-pointer relative overflow-hidden resource-card-hover"
+      className="group bg-card p-4 flex flex-col gap-3 text-left cursor-pointer relative overflow-hidden h-full hover:bg-surface/50 transition-colors"
       style={{
         ["--card-accent" as any]: config.color,
       }}

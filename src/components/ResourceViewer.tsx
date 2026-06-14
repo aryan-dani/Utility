@@ -175,16 +175,16 @@ export default function ResourceViewer({
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.2 }}
-      className="fixed inset-0 z-[100] bg-background/95 backdrop-blur-md outline-none flex flex-col overscroll-none"
+      className="fixed inset-0 z-[100] bg-background outline-none flex flex-col overscroll-none"
     >
       {/* Left Floating Pill */}
       <motion.div 
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.3 }}
-        className="absolute top-4 left-4 z-10 flex items-center gap-3 bg-card border-2 border-foreground rounded-none p-2 pr-4 shadow-[4px_4px_0px_0px_rgb(var(--foreground))]"
+        className="absolute top-4 left-4 z-10 flex items-center gap-3 bg-card border border-border rounded-2xl p-2 pr-4 shadow-popover"
       >
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-none border-2 border-foreground bg-surface">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-border bg-surface shadow-xs">
           <FileIcon className="h-5 w-5 text-foreground" />
         </div>
         <div className="min-w-0">
@@ -205,7 +205,7 @@ export default function ResourceViewer({
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.1, duration: 0.3 }}
-        className="absolute top-4 right-4 z-10 flex items-center gap-1.5 bg-card border-2 border-foreground rounded-none p-1.5 shadow-[4px_4px_0px_0px_rgb(var(--foreground))]"
+        className="absolute top-4 right-4 z-10 flex items-center gap-1.5 bg-card border border-border rounded-2xl p-1.5 shadow-popover"
       >
         <div className="hidden sm:flex items-center gap-2 px-3 border-r border-border/50 mr-1 text-[10px] font-bold tracking-wide text-muted uppercase">
           <span>O: Open</span>
@@ -264,7 +264,7 @@ export default function ResourceViewer({
           initial={{ scale: 0.97, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.15, duration: 0.3 }}
-          className="h-full w-full overflow-hidden rounded-none border-2 border-foreground bg-card relative"
+          className="h-full w-full overflow-hidden rounded-2xl border border-border bg-card relative shadow-md"
         >
           {isLoading && (
             <div className="absolute inset-0 flex flex-col items-between justify-between p-8 bg-background z-20">

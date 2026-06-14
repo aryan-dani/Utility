@@ -121,7 +121,7 @@ function WorkspaceSelectInner<T extends string | number>({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 4, scale: 0.95 }}
             transition={{ duration: 0.1, ease: "easeOut" }}
-            className="absolute left-0 right-0 top-full mt-1.5 bg-card border border-border rounded-xl shadow-popover overflow-hidden z-[110] backdrop-blur-xl p-1 flex flex-col gap-0.5"
+            className="absolute left-0 right-0 top-full mt-1.5 bg-card border border-border rounded-xl shadow-popover overflow-hidden z-[110] p-1 flex flex-col gap-0.5"
           >
             {options.map((opt) => (
               <button
@@ -332,7 +332,7 @@ function NavigationInner() {
         {active && (
           <motion.div
             layoutId="activeIndicator"
-            className="absolute left-0 top-1.5 bottom-1.5 w-[4px] bg-foreground"
+            className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-full bg-foreground"
             transition={{ type: "spring", stiffness: 380, damping: 30 }}
           />
         )}
@@ -586,7 +586,7 @@ function NavigationInner() {
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: -4, scale: 0.95 }}
                     transition={{ duration: 0.1, ease: "easeOut" }}
-                    className={`absolute bottom-full mb-2 bg-card border border-border rounded-xl shadow-popover overflow-hidden z-50 backdrop-blur-xl p-1 ${isCollapsed ? "w-28 left-1/2 -translate-x-1/2" : "left-0 right-0"}`}
+                    className={`absolute bottom-full mb-2 bg-card border border-border rounded-xl shadow-popover overflow-hidden z-50 p-1 ${isCollapsed ? "w-28 left-1/2 -translate-x-1/2" : "left-0 right-0"}`}
                   >
                     <button
                       onClick={handleLogout}
@@ -644,16 +644,16 @@ function NavigationInner() {
     <>
       {/* 1. Desktop Sticky Sidebar with collapse transition */}
       <aside
-        className={`h-screen sticky top-0 left-0 border-r border-border bg-background/60 backdrop-blur-3xl z-40 hidden md:flex flex-col shrink-0 transition-all duration-400 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
+        className={`h-screen sticky top-0 left-0 border-r border-border bg-background z-40 hidden md:flex flex-col shrink-0 transition-all duration-400 ease-[cubic-bezier(0.2,0.8,0.2,1)] ${
           collapsed ? "w-16" : "w-64"
         }`}
         style={{ willChange: "width" }}
       >
         {renderSidebarContent(false)}
       </aside>
-
+ 
       {/* 2. Mobile Top Header */}
-      <header className="h-14 fixed top-0 left-0 right-0 border-b border-border bg-background/70 backdrop-blur-2xl z-30 flex items-center justify-between px-4 md:hidden transition-colors">
+      <header className="h-14 fixed top-0 left-0 right-0 border-b border-border bg-background z-30 flex items-center justify-between px-4 md:hidden transition-colors">
         <Link
           href="/"
           onClick={() => setSearchQuery("")}
@@ -664,7 +664,7 @@ function NavigationInner() {
           </div>
           <span className="font-extrabold">Utility</span>
         </Link>
-
+ 
         <button
           className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface/50 border border-transparent transition-colors"
           onClick={() => setMobileOpen(true)}
@@ -673,27 +673,27 @@ function NavigationInner() {
           <Menu className="w-5 h-5" />
         </button>
       </header>
-
+ 
       {/* 3. Mobile Navigation Drawer Overlay */}
       <AnimatePresence>
         {mobileOpen && (
           <>
-            {/* Backdrop Blur */}
+            {/* Backdrop Overlay */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 0.5 }}
               exit={{ opacity: 0 }}
               onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 bg-black/60 backdrop-blur-xs z-[100] md:hidden"
+              className="fixed inset-0 bg-black/60 z-[100] md:hidden"
             />
-
+ 
             {/* Sidebar drawer content */}
             <motion.aside
               initial={{ x: "-100%" }}
               animate={{ x: 0 }}
               exit={{ x: "-100%" }}
               transition={{ type: "spring", damping: 25, stiffness: 300, mass: 0.8 }}
-              className="fixed top-0 bottom-0 left-0 w-72 bg-background/90 backdrop-blur-3xl border-r border-border shadow-popover z-[101] md:hidden flex flex-col"
+              className="fixed top-0 bottom-0 left-0 w-72 bg-background border-r border-border shadow-popover z-[101] md:hidden flex flex-col"
             >
               {renderSidebarContent(true)}
             </motion.aside>
@@ -703,12 +703,12 @@ function NavigationInner() {
     </>
   );
 }
-
+ 
 export default function Navigation() {
   return (
     <Suspense
       fallback={
-        <div className="w-64 h-screen sticky top-0 left-0 border-r border-border bg-card/60 backdrop-blur-xl z-40 hidden md:block" />
+        <div className="w-64 h-screen sticky top-0 left-0 border-r border-border bg-card z-40 hidden md:block" />
       }
     >
       <NavigationInner />
