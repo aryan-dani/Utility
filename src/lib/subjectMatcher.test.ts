@@ -32,6 +32,10 @@ describe("isSubjectMatch", () => {
     expect(isSubjectMatch("CNM", "Computer Networks")).toBe(false);
   });
 
+  it("matches OS to Operating System Concepts", () => {
+    expect(isSubjectMatch("OS", "Operating System Concepts")).toBe(true);
+  });
+
   it("returns false for empty strings", () => {
     expect(isSubjectMatch("", "OS")).toBe(false);
     expect(isSubjectMatch("OS", "")).toBe(false);

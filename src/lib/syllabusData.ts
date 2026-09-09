@@ -11,29 +11,186 @@ export type SyllabusOfficialSubject = {
 
 export const AIDS_SEM_3_SUBJECTS_2026: SyllabusOfficialSubject[] = [
   {
-    id: 'aid-sem3-dbms',
-    code: 'DBMS',
-    name: 'Database Management Systems',
-    type: 'PM',
-    credits: 3,
-    modules: [
-      { title: 'Unit I: Introduction to DBMS', desc: 'Database system concepts, architecture, ER model, and relational data model.' },
-      { title: 'Unit II: SQL & Relational Algebra', desc: 'DDL, DML, constraints, joins, views, and relational algebra operations.' },
-      { title: 'Unit III: Normalization & Design', desc: 'Functional dependencies, normal forms, and schema design principles.' },
-      { title: 'Unit IV: Transactions & Recovery', desc: 'ACID properties, concurrency control, locking, and recovery techniques.' },
-    ],
-  },
-  {
     id: 'aid-sem3-ds',
     code: 'DS',
     name: 'Data Structures',
     type: 'PM',
     credits: 3,
     modules: [
-      { title: 'Unit I: Arrays, Stacks & Queues', desc: 'Linear data structures, applications, and complexity analysis.' },
-      { title: 'Unit II: Linked Lists & Trees', desc: 'Singly/doubly linked lists, binary trees, BST, and tree traversals.' },
-      { title: 'Unit III: Graphs & Hashing', desc: 'Graph representations, BFS/DFS, shortest paths, and hash tables.' },
-      { title: 'Unit IV: Sorting & Searching', desc: 'Classic sorting algorithms, search strategies, and performance trade-offs.' },
+      {
+        title: 'Unit I: Introduction to Data Structures',
+        desc: 'Data, ADTs, linear/non-linear and static/dynamic structures; algorithm analysis, asymptotic notations, and complexity of programming constructs.',
+      },
+      {
+        title: 'Unit II: Linear Data Structures',
+        desc: 'Arrays as ADTs, row/column-major storage, multidimensional arrays, polynomial representation and operations, sparse matrices, transpose, and time–space trade-offs.',
+      },
+      {
+        title: 'Unit III: Searching and Sorting',
+        desc: 'Linear/sentinel/binary search; internal vs external sorting; bubble, insertion, selection, quick, merge, shell, radix, and bucket sort with complexity comparison.',
+      },
+      {
+        title: 'Unit IV: Stacks and Queues',
+        desc: 'Stack ADT, expression conversion/evaluation, recursion; queue ADT, circular queue, deque types, and applications such as job scheduling.',
+      },
+      {
+        title: 'Unit V: Linked Lists',
+        desc: 'Singly, circular, doubly, and doubly-circular lists; polynomial operations; generalized linked lists (GLL); garbage-collection case study.',
+      },
+    ],
+  },
+  {
+    id: 'aid20210',
+    code: 'AID20210',
+    name: 'Data Structures - I Laboratory',
+    type: 'PR',
+    credits: 1,
+    modules: [
+      {
+        title: 'Arrays, Matrices & Sparse Operations',
+        desc: 'Matrix arithmetic and sparse-matrix realization with transpose and fast transpose in C.',
+      },
+      {
+        title: 'Structures, Searching & Sorting',
+        desc: 'Student database with array of structures; linear/binary search and insertion/selection/shell sort.',
+      },
+      {
+        title: 'Linked Lists & Polynomials',
+        desc: 'Singly linked list enrollment system; circular linked list polynomial create/display/addition.',
+      },
+      {
+        title: 'Stacks, Queues & Applications',
+        desc: 'Stack ADT for expression conversion/evaluation; circular queue printer-job simulation.',
+      },
+    ],
+  },
+  {
+    id: 'aid-sem3-oop',
+    code: 'OOP',
+    name: 'Object Oriented Programming Laboratory',
+    type: 'PR',
+    credits: 1,
+    modules: [
+      {
+        title: 'OOP Foundations & C++ Basics',
+        desc: 'Procedural vs OOP; encapsulation, abstraction, inheritance, polymorphism; C++ types, control flow, functions, and arrays.',
+      },
+      {
+        title: 'Classes, Objects & Encapsulation',
+        desc: 'Constructors/destructors, member access, friend class/function, and class design for real entities (e.g. bank account, shapes).',
+      },
+      {
+        title: 'Inheritance, Polymorphism & Exceptions',
+        desc: 'Inheritance types, virtual functions, overloading, exception handling, abstract classes, and file I/O with objects.',
+      },
+      {
+        title: 'Templates, STL & Mini Project',
+        desc: 'Function/class templates, STL vectors and iterators, and a group mini-project applying OOP principles.',
+      },
+    ],
+  },
+  {
+    id: 'aid-sem3-dbms',
+    code: 'DBMS',
+    name: 'Database Management Systems',
+    type: 'PM',
+    credits: 3,
+    modules: [
+      {
+        title: 'Unit I: Introduction to DBMS and Data Modelling',
+        desc: 'DBMS vs file systems, architectures, data abstraction/independence, DDL/DML, ER/EER modelling, keys, and reduction of ER diagrams to tables.',
+      },
+      {
+        title: 'Unit II: Relational Design and Normalisation',
+        desc: 'Relational model, integrity constraints, Codd’s rules, 1NF–BCNF, functional dependency, decomposition, and query-cost overview.',
+      },
+      {
+        title: 'Unit III: Relational Algebra and SQL',
+        desc: 'Relational algebra/calculus, SQL DDL/DCL/DML, views, indexes, joins, set operations, aggregation, and nested queries.',
+      },
+      {
+        title: 'Unit IV: PL/SQL',
+        desc: 'PL/SQL blocks, procedures and functions, cursors, triggers, exception handling, and DBMS applications.',
+      },
+      {
+        title: 'Unit V: Transactions and Recovery',
+        desc: 'ACID properties, serializability, lock-based concurrency, deadlocks, log-based recovery, and shadow paging.',
+      },
+    ],
+  },
+  {
+    id: 'aid20050',
+    code: 'AID20050',
+    name: 'Database Management Systems Laboratory',
+    type: 'PR',
+    credits: 1,
+    modules: [
+      {
+        title: 'ER Modelling & DDL/DCL',
+        desc: 'ER case study to schemas; SQL DDL (create/alter/drop/…) and DCL (grant/revoke).',
+      },
+      {
+        title: 'DML, Queries & Joins',
+        desc: 'Insert/update/delete, select clauses, functions, grouping, set operations, views, TCL, and join types.',
+      },
+      {
+        title: 'PL/SQL Programming',
+        desc: 'Procedures, functions, triggers, and cursors for real-world applications.',
+      },
+      {
+        title: 'End-to-End Database Build',
+        desc: 'Develop a database system from scratch for a real-world challenge (external practical with separate pass criteria).',
+      },
+    ],
+  },
+  {
+    id: 'aid20220',
+    code: 'AID20220',
+    name: 'Operating System Concepts',
+    type: 'PM',
+    credits: 2,
+    modules: [
+      {
+        title: 'Unit I: Introduction to Operating Systems',
+        desc: 'OS types and services; process/memory/storage/I/O/protection; Linux commands, file system, shell, and shell programming case study.',
+      },
+      {
+        title: 'Unit II: Process Management',
+        desc: 'Processes, PCB, context switching, threads/multithreading, and CPU scheduling (FCFS, SJF, RR) with performance metrics.',
+      },
+      {
+        title: 'Unit III: Concurrency and Deadlocks',
+        desc: 'Critical sections, semaphores, monitors, message passing, classical IPC problems, and deadlock prevention/avoidance/detection/recovery.',
+      },
+      {
+        title: 'Unit IV: Memory and I/O Management',
+        desc: 'Partitioning, paging, segmentation, virtual memory, page replacement, file systems, allocation methods, and disk scheduling.',
+      },
+    ],
+  },
+  {
+    id: 'aid20230',
+    code: 'AID20230',
+    name: 'Operating System Concepts Laboratory',
+    type: 'PR',
+    credits: 1,
+    modules: [
+      {
+        title: 'Linux & Shell Scripting',
+        desc: 'Linux commands and shell scripts including arithmetic operations.',
+      },
+      {
+        title: 'Process Control & Scheduling',
+        desc: 'fork, orphan/zombie processes, and FCFS/SRTF scheduling simulation.',
+      },
+      {
+        title: 'IPC & Synchronization',
+        desc: 'Pipes/shared memory; Banker’s algorithm; readers–writers or producer–consumer with semaphores.',
+      },
+      {
+        title: 'Memory Management Labs',
+        desc: 'Simulate FIFO and LRU page-replacement algorithms.',
+      },
     ],
   },
   {
@@ -43,36 +200,22 @@ export const AIDS_SEM_3_SUBJECTS_2026: SyllabusOfficialSubject[] = [
     type: 'PM',
     credits: 3,
     modules: [
-      { title: 'Unit I: Linear Differential Equations', desc: 'Higher-order LDEs with constant coefficients, complementary functions, and particular integrals.' },
-      { title: 'Unit II: Laplace Transforms', desc: 'Laplace and inverse Laplace transforms, properties, and applications to differential equations.' },
-      { title: 'Unit III: Fourier Series & Transforms', desc: 'Fourier series, half-range expansions, and Fourier transform fundamentals.' },
-      { title: 'Unit IV: Numerical Methods', desc: 'Root finding, interpolation, numerical differentiation/integration, and solving ODEs numerically.' },
-    ],
-  },
-  {
-    id: 'aid-sem3-oop',
-    code: 'OOP',
-    name: 'Object Oriented Programming',
-    type: 'PM',
-    credits: 3,
-    modules: [
-      { title: 'Unit I: OOP Foundations', desc: 'Classes, objects, encapsulation, inheritance, and polymorphism.' },
-      { title: 'Unit II: Advanced OOP Concepts', desc: 'Abstraction, interfaces, exception handling, and design patterns intro.' },
-      { title: 'Unit III: STL & File I/O', desc: 'Standard template library containers, iterators, and file operations.' },
-      { title: 'Unit IV: Practical Applications', desc: 'Problem solving with OOP, mini projects, and code organization.' },
-    ],
-  },
-  {
-    id: 'aid-sem3-os',
-    code: 'OS',
-    name: 'Operating Systems',
-    type: 'PM',
-    credits: 3,
-    modules: [
-      { title: 'Unit I: OS Overview & Processes', desc: 'OS services, process concepts, scheduling, and inter-process communication.' },
-      { title: 'Unit II: Memory Management', desc: 'Paging, segmentation, virtual memory, and page replacement.' },
-      { title: 'Unit III: Storage & File Systems', desc: 'Disk scheduling, file system structure, and allocation methods.' },
-      { title: 'Unit IV: Synchronization & Deadlocks', desc: 'Critical sections, semaphores, monitors, and deadlock handling.' },
+      {
+        title: 'Unit I: Linear Differential Equations',
+        desc: 'Higher-order LDEs with constant coefficients; complementary function and particular integral; auxiliary equation and solution cases.',
+      },
+      {
+        title: 'Unit II: Laplace Transforms',
+        desc: 'Laplace and inverse Laplace transforms, properties, and applications to differential equations.',
+      },
+      {
+        title: 'Unit III: Fourier Series & Transforms',
+        desc: 'Fourier series, half-range expansions, and Fourier transform fundamentals.',
+      },
+      {
+        title: 'Unit IV: Numerical Methods',
+        desc: 'Root finding, interpolation, numerical differentiation/integration, and numerical solution of ODEs.',
+      },
     ],
   },
 ];
@@ -396,6 +539,13 @@ export function getAidsGpaData(semester: number): GpaBranchData | null {
       "AI & Data Science (AIDS), Sem 4",
       4,
       AIDS_SEM_4_SUBJECTS,
+    );
+  }
+  if (semester === 3) {
+    return gpaDataFromSyllabus(
+      "AI & Data Science (AIDS), Sem 3",
+      3,
+      AIDS_SEM_3_SUBJECTS_2026,
     );
   }
   return null;

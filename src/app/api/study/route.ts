@@ -125,9 +125,11 @@ CRITICAL DOMAIN NOTICE:
 - "PBL" stands for Project-Based Learning.
 - "DAA" stands for Design and Analysis of Algorithms (a core computer science subject covering dynamic programming, greedy algorithms, complexity, etc.).
 - "DBMS" stands for Database Management Systems.
+- "DS" stands for Data Structures.
 - "CNM" stands for Calculus and Numerical Methods.
+- "OOP" stands for Object Oriented Programming.
+- "OS" / "Operating System Concepts" stands for Operating Systems.
 - "COA" stands for Computer Organization & Architecture.
-- "OS" stands for Operating Systems.
 - "ML" stands for Machine Learning.
 - "DVP" stands for Data Visualization using Python.
 - "GML" stands for Graph Machine Learning.

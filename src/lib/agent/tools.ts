@@ -1,4 +1,5 @@
 import {
+  AIDS_SEM_3_SUBJECTS_2026,
   AIDS_SEM_4_SUBJECTS,
   AIDS_SEM_5_SUBJECTS,
   type SyllabusOfficialSubject,
@@ -66,7 +67,11 @@ export async function compareTopics(
 }
 
 function allSyllabusSubjects(): SyllabusOfficialSubject[] {
-  return [...AIDS_SEM_4_SUBJECTS, ...AIDS_SEM_5_SUBJECTS];
+  return [
+    ...AIDS_SEM_3_SUBJECTS_2026,
+    ...AIDS_SEM_4_SUBJECTS,
+    ...AIDS_SEM_5_SUBJECTS,
+  ];
 }
 
 export function getSyllabusUnit(
