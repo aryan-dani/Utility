@@ -39,14 +39,14 @@ export const AIDS_SEM_3_SUBJECTS_2026: SyllabusOfficialSubject[] = [
   {
     id: 'aid-sem3-cnm',
     code: 'CNM',
-    name: 'Computer Networks and Mobile Computing',
+    name: 'Calculus and Numerical Methods',
     type: 'PM',
     credits: 3,
     modules: [
-      { title: 'Unit I: Network Fundamentals', desc: 'OSI/TCP-IP models, physical and data link layer concepts.' },
-      { title: 'Unit II: Network Layer', desc: 'IP addressing, routing algorithms, and subnetting.' },
-      { title: 'Unit III: Transport & Application Layer', desc: 'TCP/UDP, DNS, HTTP, and common application protocols.' },
-      { title: 'Unit IV: Mobile & Wireless Networks', desc: 'Wireless LANs, cellular basics, and mobile computing overview.' },
+      { title: 'Unit I: Linear Differential Equations', desc: 'Higher-order LDEs with constant coefficients, complementary functions, and particular integrals.' },
+      { title: 'Unit II: Laplace Transforms', desc: 'Laplace and inverse Laplace transforms, properties, and applications to differential equations.' },
+      { title: 'Unit III: Fourier Series & Transforms', desc: 'Fourier series, half-range expansions, and Fourier transform fundamentals.' },
+      { title: 'Unit IV: Numerical Methods', desc: 'Root finding, interpolation, numerical differentiation/integration, and solving ODEs numerically.' },
     ],
   },
   {

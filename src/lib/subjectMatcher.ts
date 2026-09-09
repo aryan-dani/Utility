@@ -80,6 +80,7 @@ export const isSubjectMatch = (nameA: string, nameB: string): boolean => {
     det: ["data engineering techniques", "data engineering"],
     pbl: ["project based learning"],
     cn: ["computer networks", "computer networks and security"],
+    cnm: ["calculus and numerical methods"],
     dbms: ["database management systems", "database"],
     coa: ["computer organization and architecture", "computer organization"],
     os: ["operating systems"],

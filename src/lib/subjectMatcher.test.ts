@@ -27,6 +27,11 @@ describe("isSubjectMatch", () => {
     ).toBe(false);
   });
 
+  it("matches CNM to Calculus and Numerical Methods", () => {
+    expect(isSubjectMatch("CNM", "Calculus and Numerical Methods")).toBe(true);
+    expect(isSubjectMatch("CNM", "Computer Networks")).toBe(false);
+  });
+
   it("returns false for empty strings", () => {
     expect(isSubjectMatch("", "OS")).toBe(false);
     expect(isSubjectMatch("OS", "")).toBe(false);
