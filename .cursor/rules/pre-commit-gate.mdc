@@ -1,0 +1,29 @@
+---
+description: Never commit or push unless lint, typecheck, and tests pass
+alwaysApply: true
+---
+
+# Pre-commit gate (hard rule)
+
+CI rejects broken lint. **Never** create a git commit or push until these all exit 0 locally:
+
+```bash
+npm run lint
+npm run typecheck
+npm run test
+```
+
+## Required workflow
+
+1. Finish code changes.
+2. Run `npm run lint`, `npm run typecheck`, and `npm run test`.
+3. Fix every failure before staging/committing.
+4. Only then `git commit` / `git push` when the user asks.
+
+## Do not
+
+- Commit “to get it up” while lint/tests are red
+- Skip or weaken ESLint/CI to land a change
+- Assume green because “it looks fine” — run the commands
+
+If the user asks to commit/push and checks are failing, fix first, then commit.

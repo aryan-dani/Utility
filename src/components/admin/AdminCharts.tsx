@@ -131,7 +131,6 @@ export function DonutChart({
   const stroke = 18;
   const r = (size - stroke) / 2;
   const c = 2 * Math.PI * r;
-  let offset = 0;
 
   const tones = [
     "rgb(var(--foreground))",
@@ -141,6 +140,14 @@ export function DonutChart({
     "rgb(var(--foreground) / 0.22)",
     "rgb(var(--muted))",
   ];
+
+  const slices = items.map((item, i) => {
+    const len = (item.value / total) * c;
+    const offset = items
+      .slice(0, i)
+      .reduce((sum, prev) => sum + (prev.value / total) * c, 0);
+    return { item, i, len, offset };
+  });
 
   return (
     <div className={cn("flex flex-col sm:flex-row items-center gap-6", className)}>
@@ -154,26 +161,21 @@ export function DonutChart({
             stroke="rgb(var(--border))"
             strokeWidth={stroke}
           />
-          {items.map((item, i) => {
-            const len = (item.value / total) * c;
-            const el = (
-              <circle
-                key={item.key}
-                cx={size / 2}
-                cy={size / 2}
-                r={r}
-                fill="none"
-                stroke={tones[i % tones.length]}
-                strokeWidth={stroke}
-                strokeDasharray={`${len} ${c - len}`}
-                strokeDashoffset={-offset}
-                strokeLinecap="butt"
-                transform={`rotate(-90 ${size / 2} ${size / 2})`}
-              />
-            );
-            offset += len;
-            return el;
-          })}
+          {slices.map(({ item, i, len, offset }) => (
+            <circle
+              key={item.key}
+              cx={size / 2}
+              cy={size / 2}
+              r={r}
+              fill="none"
+              stroke={tones[i % tones.length]}
+              strokeWidth={stroke}
+              strokeDasharray={`${len} ${c - len}`}
+              strokeDashoffset={-offset}
+              strokeLinecap="butt"
+              transform={`rotate(-90 ${size / 2} ${size / 2})`}
+            />
+          ))}
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none px-6">
           <p className="text-2xl font-display tracking-tight text-foreground tabular-nums leading-none">
