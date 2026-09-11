@@ -17,7 +17,7 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 import { FadeIn, ScaleButton } from '@/components/Animations';
-import Link from 'next/link';
+import AppLink from '@/components/ui/AppLink';
 import { useAcademicStore } from '@/store/academicStore';
 import { getAidsGpaData } from '@/lib/syllabusData';
 import { Segmented, Select, PageHeader } from '@/components/ui';
@@ -173,7 +173,6 @@ function loadGpaStrategyStorage() {
   let courseKeyOverride: string | null = null;
   let marks: Record<string, number> = {};
   let corrupt = false;
-  if (typeof window === 'undefined') return { courseKeyOverride, marks, corrupt };
   try {
     const saved = localStorage.getItem('gpa_strategy_v1');
     if (saved) {
@@ -202,9 +201,6 @@ function loadGpaRoadmapStorage() {
   let targetCGPA = 8.5;
   let targetSemester = 8;
   let corrupt = false;
-  if (typeof window === 'undefined') {
-    return { semestersData, targetCGPA, targetSemester, corrupt };
-  }
   try {
     const savedRoadmap = localStorage.getItem('gpa_roadmap_v1');
     if (savedRoadmap) {
@@ -232,43 +228,36 @@ function loadGpaRoadmapStorage() {
   return { semestersData, targetCGPA, targetSemester, corrupt };
 }
 
-function readInitialGpaClientState() {
-  const strategy = loadGpaStrategyStorage();
-  const roadmap = loadGpaRoadmapStorage();
-  return {
-    courseKeyOverride: strategy.courseKeyOverride,
-    marks: strategy.marks,
-    semestersData: roadmap.semestersData,
-    targetCGPA: roadmap.targetCGPA,
-    targetSemester: roadmap.targetSemester,
-    corrupt: strategy.corrupt || roadmap.corrupt,
-  };
-}
-
 export default function GPAClient() {
   const { branch: workspaceBranch, semester: workspaceSemester } = useAcademicStore();
-  const [boot] = useState(() => readInitialGpaClientState());
-  const [courseKeyOverride, setCourseKeyOverride] = useState<string | null>(
-    () => boot.courseKeyOverride,
-  );
-  const [marks, setMarks] = useState<Record<string, number>>(
-    () => boot.marks,
-  );
+  const [courseKeyOverride, setCourseKeyOverride] = useState<string | null>(null);
+  const [marks, setMarks] = useState<Record<string, number>>({});
   const [simSelections, setSimSelections] = useState<Record<string, number>>({});
   const [isCalculated, setIsCalculated] = useState(false);
   const [activeTab, setActiveTab] = useState<'semester' | 'roadmap'>('semester');
   const [showCoursePicker, setShowCoursePicker] = useState(false);
-  const [storageCorrupt, setStorageCorrupt] = useState(() => boot.corrupt);
+  const [storageCorrupt, setStorageCorrupt] = useState(false);
 
   const [semestersData, setSemestersData] = useState<
     Record<number, { sgpa: number; credits: number; active: boolean; completed: boolean }>
-  >(() => boot.semestersData);
-  const [targetCGPA, setTargetCGPA] = useState<number>(
-    () => boot.targetCGPA,
-  );
-  const [targetSemester, setTargetSemester] = useState<number>(
-    () => boot.targetSemester,
-  );
+  >(() => ({ ...DEFAULT_SEMESTERS_DATA }));
+  const [targetCGPA, setTargetCGPA] = useState<number>(8.5);
+  const [targetSemester, setTargetSemester] = useState<number>(8);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      const strategy = loadGpaStrategyStorage();
+      const roadmap = loadGpaRoadmapStorage();
+      setCourseKeyOverride(strategy.courseKeyOverride);
+      setMarks(strategy.marks);
+      setSemestersData(roadmap.semestersData);
+      setTargetCGPA(roadmap.targetCGPA);
+      setTargetSemester(roadmap.targetSemester);
+      setStorageCorrupt(strategy.corrupt || roadmap.corrupt);
+      setHydrated(true);
+    });
+  }, []);
 
   const targetSemesterOptions = useMemo(
     () =>
@@ -278,7 +267,6 @@ export default function GPAClient() {
       })),
     [],
   );
-  const hydrated = true;
 
   const currentBranch = useMemo(
     () => resolveWorkspaceCourse(workspaceBranch, workspaceSemester, courseKeyOverride),
@@ -883,13 +871,13 @@ export default function GPAClient() {
                                 })}
                               </div>
 
-                              <Link
+                              <AppLink
                                 href={`/ask?tab=chat&prompt=${encodeURIComponent(`I want to achieve a high grade in my Semester ${calcSemester} course: "${sub.name}". Based on my current class resources, can you explain the most critical units, concepts, and formulas I should focus on to score 90+? Please break down a study schedule and list some potential exam questions.`)}`}
                                 className="w-full mt-4 flex items-center justify-center gap-1.5 py-2 bg-foreground text-background hover:opacity-90 rounded-xl text-[10px] font-bold uppercase tracking-wider transition-opacity text-center block"
                               >
                                 <Target className="w-3.5 h-3.5" />
                                 Generate AI Study Guide
-                              </Link>
+                              </AppLink>
                             </div>
                           </div>
                         );
@@ -1168,7 +1156,9 @@ export default function GPAClient() {
       <div className="hidden print:block p-8 bg-white text-black min-h-screen">
         <div className="text-center border-b-2 border-black pb-4 mb-6">
           <h1 className="text-3xl font-extrabold tracking-tight">Academic Performance & Strategy Report</h1>
-          <p className="text-sm text-gray-600 mt-1">Generated on {new Date().toLocaleDateString()} - Study Hub Workspace</p>
+          <p className="text-sm text-gray-600 mt-1" suppressHydrationWarning>
+            Generated on {new Date().toLocaleDateString('en-GB')} - Study Hub Workspace
+          </p>
         </div>
 
         {/* Branch Info */}

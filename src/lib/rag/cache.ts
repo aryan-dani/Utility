@@ -1,6 +1,7 @@
 import { createHash } from "crypto";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { FieldValue, type Query } from "firebase-admin/firestore";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academic/scope";
 import {
   RETRIEVAL_CACHE_TTL_MS,
   SEMANTIC_CACHE_DISTANCE,
@@ -30,7 +31,7 @@ export function semanticCacheDocId(params: {
 }): string {
   const key = [
     normalizeQuery(params.query),
-    params.academicYear || "2026-2027",
+    params.academicYear || DEFAULT_ACADEMIC_YEAR,
     params.branch,
     String(params.semester),
     params.resourceId || "",
@@ -102,7 +103,7 @@ export async function lookupSemanticCache(params: {
 
     let ref: Query = db
       .collection("semantic_cache")
-      .where("academic_year", "==", params.academicYear || "2026-2027")
+      .where("academic_year", "==", params.academicYear || DEFAULT_ACADEMIC_YEAR)
       .where("branch", "==", params.branch)
       .where("semester", "==", params.semester);
 
@@ -177,7 +178,7 @@ export async function storeSemanticCache(params: {
       {
         uid: params.uid,
         prompt: params.query,
-        academic_year: params.academicYear || "2026-2027",
+        academic_year: params.academicYear || DEFAULT_ACADEMIC_YEAR,
         branch: params.branch,
         semester: params.semester,
         resource_id: params.resourceId || null,

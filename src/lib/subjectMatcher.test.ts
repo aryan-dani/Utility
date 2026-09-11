@@ -27,6 +27,12 @@ describe("isSubjectMatch", () => {
     ).toBe(false);
   });
 
+  it("matches OOP to Object Oriented Programming Laboratory", () => {
+    expect(
+      isSubjectMatch("OOP", "Object Oriented Programming Laboratory"),
+    ).toBe(true);
+  });
+
   it("matches CNM to Calculus and Numerical Methods", () => {
     expect(isSubjectMatch("CNM", "Calculus and Numerical Methods")).toBe(true);
     expect(isSubjectMatch("CNM", "Computer Networks")).toBe(false);

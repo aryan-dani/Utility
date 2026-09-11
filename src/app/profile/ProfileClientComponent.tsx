@@ -18,7 +18,7 @@ import { useAcademicStore, AcademicYear, Branch, Semester } from "@/store/academ
 import { DEFAULT_ACADEMIC_YEAR, DEFAULT_SEMESTER, workspaceQuery } from "@/lib/workspace";
 import { BRANCH_OPTIONS_LONG, isAcademicYear } from "@/lib/academic/scope";
 import { notify } from "@/lib/toast";
-import Link from "next/link";
+import AppLink from "@/components/ui/AppLink";
 import { useTheme } from "next-themes";
 import { useIsClient } from "@/lib/clientHooks";
 import {
@@ -498,13 +498,13 @@ export default function ProfileClientComponent() {
 
       <div className="max-w-4xl mx-auto">
         {/* Navigation Link */}
-        <Link
+        <AppLink
           href="/planner"
           className="inline-flex items-center gap-1.5 text-sm font-semibold text-muted hover:text-foreground mb-8 transition-colors"
         >
           <ArrowLeft className="w-4 h-4" />
           Back to Workspace
-        </Link>
+        </AppLink>
 
         <PageHeader
           className="mb-8"
@@ -569,13 +569,13 @@ export default function ProfileClientComponent() {
               <p className="text-[10px] text-muted leading-relaxed">
                 Resources, syllabus, and AI answers follow this scope after you save.
               </p>
-              <Link
+              <AppLink
                 href={`/resources?${workspaceQs}`}
                 className="inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-foreground hover:text-foreground/80 border border-border rounded-xl px-3 py-2.5 bg-background hover:bg-surface/50 transition-colors"
               >
                 Open resources
                 <ExternalLink className="w-3 h-3" />
-              </Link>
+              </AppLink>
             </div>
 
             {/* Appearance */}
@@ -705,7 +705,7 @@ export default function ProfileClientComponent() {
                 {quickLinks.map((item) => {
                   const Icon = item.icon;
                   return (
-                    <Link
+                    <AppLink
                       key={item.href}
                       href={item.href}
                       className="group flex items-start gap-3 rounded-xl border border-border/80 bg-background/60 p-3.5 hover:border-border-strong hover:bg-surface/40 transition-colors"
@@ -717,7 +717,7 @@ export default function ProfileClientComponent() {
                         <span className="block text-xs font-bold text-foreground">{item.label}</span>
                         <span className="block text-[10px] text-muted mt-0.5">{item.desc}</span>
                       </span>
-                    </Link>
+                    </AppLink>
                   );
                 })}
               </div>

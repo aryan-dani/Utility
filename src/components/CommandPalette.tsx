@@ -28,9 +28,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import { useAcademicStore } from '../store/academicStore';
-import { matchesAcademicYear } from '@/lib/academic/scope';
-import { db } from '../lib/firebase';
-import { collection, query as firestoreQuery, where, getDocs } from 'firebase/firestore';
+import { loadWorkspaceResources } from '@/lib/useWorkspaceResources';
 import { startNavigationProgress } from './NavigationProgress';
 import { subjectToSlug } from '@/lib/resourceUrl';
 import { fetchAdminStatus } from '@/lib/adminStatus';
@@ -149,25 +147,25 @@ export default function CommandPalette() {
       return;
     }
 
-    const q = firestoreQuery(
-      collection(db, 'subjects'),
-      where('branch', '==', branch),
-      where('semester', '==', semester)
-    );
-
-    getDocs(q)
-      .then((snapshot) => {
-        const data = snapshot.docs
-          .map(doc => ({ id: doc.id, name: doc.data().name as string, academic_year: doc.data().academic_year as string | undefined }))
-          .filter((s) => matchesAcademicYear(s.academic_year, academicYear));
-        data.sort((a, b) => a.name.localeCompare(b.name));
-        const filtered = data.filter(s => s.name.toUpperCase() !== 'SYLLABUS').map(({ id, name }) => ({ id, name }));
+    let cancelled = false;
+    loadWorkspaceResources(academicYear, branch, semester)
+      .then((entry) => {
+        if (cancelled) return;
+        const filtered = entry.subjects
+          .filter((name) => name.toUpperCase() !== 'SYLLABUS')
+          .map((name) => ({ id: subjectToSlug(name), name }));
         subjectCache.set(cacheKey, { fetchedAt: Date.now(), subjects: filtered });
         setDynamicSubjects(filtered);
       })
       .catch((error) => {
-        console.error("Error fetching subjects in CommandPalette:", error);
+        if (!cancelled) {
+          console.error("Error fetching subjects in CommandPalette:", error);
+        }
       });
+
+    return () => {
+      cancelled = true;
+    };
   }, [academicYear, branch, semester, isCommandPaletteOpen]);
 
   // Global keydown listener for ⌘K / Ctrl+K and other shortcuts

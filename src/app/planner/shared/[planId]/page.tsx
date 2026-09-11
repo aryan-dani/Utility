@@ -2,6 +2,7 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { notFound } from "next/navigation";
 import SharedPlanView from "@/app/planner/shared/[planId]/SharedPlanView";
 import type { Metadata } from "next";
+import { cache } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +21,7 @@ const MONTHS = [
   "December",
 ];
 
-async function getPublicPlan(planId: string) {
+const getPublicPlan = cache(async (planId: string) => {
   const db = adminDb();
   const docSnap = await db.collection("planner_plans").doc(planId).get();
   if (!docSnap.exists) return null;
@@ -38,7 +39,7 @@ async function getPublicPlan(planId: string) {
     >,
     is_public: true as const,
   };
-}
+});
 
 export async function generateMetadata({
   params,

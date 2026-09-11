@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import AppLink from "@/components/ui/AppLink";
 import { ResourceItem } from "@/lib/dataFetcher";
 import { useAcademicStore } from "@/store/academicStore";
 import { isSubjectMatch } from "@/lib/subjectMatcher";
@@ -107,6 +107,8 @@ export default function ResourcesClient() {
   const {
     resources,
     loading: catalogLoading,
+    error: catalogError,
+    retry: retryCatalog,
     academicYear,
     branch,
     semester,
@@ -126,12 +128,8 @@ export default function ResourcesClient() {
     null,
   );
   const [viewerPage, setViewerPage] = useState<number | null>(null);
-  const [recentResources, setRecentResources] = useState<RecentResource[]>(() =>
-    getRecentResources(),
-  );
-  const [favoriteResources, setFavoriteResources] = useState<FavoriteResource[]>(
-    () => getFavoriteResources(),
-  );
+  const [recentResources, setRecentResources] = useState<RecentResource[]>([]);
+  const [favoriteResources, setFavoriteResources] = useState<FavoriteResource[]>([]);
   const [summarizingResource, setSummarizingResource] =
     useState<ResourceItem | null>(null);
   const [contentResults, setContentResults] = useState<RAGSearchResult[]>([]);
@@ -168,6 +166,13 @@ export default function ResourcesClient() {
     };
   }, []);
 
+  useEffect(() => {
+    queueMicrotask(() => {
+      setRecentResources(getRecentResources());
+      setFavoriteResources(getFavoriteResources());
+    });
+  }, []);
+
   const syncUrl = useCallback(
     (next: {
       subject?: string | null;
@@ -201,6 +206,7 @@ export default function ResourcesClient() {
       else params.delete("view");
 
       const current = new URLSearchParams(searchParams.toString());
+      current.set("year", academicYear);
       current.set("branch", branch);
       current.set("semester", String(semester));
       if (
@@ -208,6 +214,7 @@ export default function ResourcesClient() {
         current.get("filter") === params.get("filter") &&
         current.get("folder") === params.get("folder") &&
         current.get("view") === params.get("view") &&
+        current.get("year") === params.get("year") &&
         current.get("branch") === params.get("branch") &&
         current.get("semester") === params.get("semester")
       ) {
@@ -856,26 +863,45 @@ export default function ResourcesClient() {
           </>
         )}
         <span className="hidden sm:inline mx-2 text-border">|</span>
-        <Link
+        <AppLink
           href={`/syllabus?year=${encodeURIComponent(academicYear)}&branch=${branch}&semester=${semester}`}
           className="hidden sm:inline hover:text-foreground transition-colors"
         >
           Syllabus
-        </Link>
+        </AppLink>
         <span className="hidden sm:inline text-border">·</span>
-        <Link
+        <AppLink
           href={`/ask?year=${encodeURIComponent(academicYear)}&branch=${branch}&semester=${semester}`}
           className="hidden sm:inline hover:text-foreground transition-colors"
         >
           Ask AI
-        </Link>
+        </AppLink>
       </nav>
 
       <NotesDisclaimer className="mb-8" />
 
       <div className="border-b border-border mb-8" />
 
-      {resources.length === 0 ? (
+      {catalogError ? (
+        <Card
+          padding="lg"
+          className="flex flex-col items-center justify-center p-10 text-center border-dashed border-red-500/30 bg-surface"
+        >
+          <p className="text-base font-semibold text-foreground mb-1">
+            Couldn’t load the vault catalog
+          </p>
+          <p className="text-sm text-muted mb-4 max-w-md">
+            {catalogError}. This isn’t an empty semester — try again.
+          </p>
+          <button
+            type="button"
+            onClick={retryCatalog}
+            className="px-4 py-2 rounded-lg bg-foreground text-background text-sm font-semibold hover:opacity-90"
+          >
+            Retry
+          </button>
+        </Card>
+      ) : resources.length === 0 ? (
         <Card
           padding="lg"
           className="flex flex-col items-center justify-center p-16 text-center border-dashed bg-surface"

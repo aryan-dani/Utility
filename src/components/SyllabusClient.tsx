@@ -38,7 +38,7 @@ import { notify } from '@/lib/toast';
 import { parseUnitKey, unitFolderId } from '@/lib/resourceGroups';
 import { buildResourcesHref } from '@/lib/resourceUrl';
 import AcademicBreadcrumb from '@/components/AcademicBreadcrumb';
-import Link from 'next/link';
+import AppLink from '@/components/ui/AppLink';
 import { Button, Card, Badge, Input, Select, Segmented, Modal, PageHeader } from '@/components/ui';
 import { useWorkspaceResources } from '@/lib/useWorkspaceResources';
 import { generateId } from '@/lib/id';
@@ -254,6 +254,8 @@ export default function SyllabusClient() {
     subjects: subjectNames,
     syllabusUrl,
     loading: catalogLoading,
+    error: catalogError,
+    retry: retryCatalog,
     academicYear,
     branch,
     semester,
@@ -520,6 +522,29 @@ export default function SyllabusClient() {
         <NotesDisclaimer compact className="max-w-xl" />
       </div>
 
+      {catalogError && (
+        <Card
+          padding="md"
+          className="mb-8 relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-dashed border-red-500/30"
+        >
+          <div>
+            <p className="text-sm font-semibold text-foreground">
+              Couldn’t load course materials
+            </p>
+            <p className="text-xs text-muted mt-0.5">
+              {catalogError}. Vault links may be missing until this succeeds.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={retryCatalog}
+            className="shrink-0 px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-semibold hover:opacity-90"
+          >
+            Retry
+          </button>
+        </Card>
+      )}
+
       {/* Progress */}
       {filtered.length > 0 && (
         <Card padding="md" className="mb-10 relative z-10 flex flex-col md:flex-row items-center justify-between gap-6">
@@ -738,7 +763,7 @@ export default function SyllabusClient() {
                                         view: file.id,
                                       });
                                       return (
-                                        <Link
+                                        <AppLink
                                           key={file.id}
                                           href={href}
                                           className="inline-flex items-center gap-1.5 text-xs font-bold bg-surface/50 hover:bg-surface hover:border-foreground/30 border border-border/80 px-3 py-1.5 rounded-xl text-foreground transition-all shadow-3xs hover:-translate-y-0.5"
@@ -747,7 +772,7 @@ export default function SyllabusClient() {
                                           <span className="truncate max-w-[150px]" title={file.title}>
                                             {cleanResourceTitle(file.title)}
                                           </span>
-                                        </Link>
+                                        </AppLink>
                                       );
                                     })}
                                   </div>
@@ -843,7 +868,7 @@ export default function SyllabusClient() {
                         <div className="pt-4 flex items-center justify-between border-t border-border/40 mt-6 pl-1 gap-3 flex-wrap">
                           <span className="text-xs text-muted-foreground italic font-medium">Click any unit block to log completion progress.</span>
                           <div className="flex items-center gap-3">
-                            <Link
+                            <AppLink
                               href={buildResourcesHref({
                                 academicYear,
                                 branch,
@@ -854,7 +879,7 @@ export default function SyllabusClient() {
                             >
                               Open vault
                               <ChevronRight className="w-4 h-4" />
-                            </Link>
+                            </AppLink>
                             <a
                               href={`/ask?topic=${encodeURIComponent(subject.name)}`}
                               className="inline-flex items-center gap-1 text-xs font-bold text-foreground hover:underline hover:gap-1.5 transition-all"

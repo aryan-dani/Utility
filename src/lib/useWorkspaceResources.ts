@@ -94,7 +94,25 @@ async function loadWorkspace(
 }
 
 /** Client-side workspace catalog with module-level cache (shared across Resources/Ask/Syllabus). */
-export function useWorkspaceResources(): WorkspaceResourcesState {
+export async function loadWorkspaceResources(
+  academicYear: string,
+  branch: string,
+  semester: number,
+): Promise<CacheEntry> {
+  return loadWorkspace(academicYear, branch, semester);
+}
+
+export function clearWorkspaceResourcesCache(
+  academicYear: string,
+  branch: string,
+  semester: number,
+): void {
+  cache.delete(cacheKey(academicYear, branch, semester));
+}
+
+export function useWorkspaceResources(): WorkspaceResourcesState & {
+  retry: () => void;
+} {
   const { academicYear, branch, semester } = useAcademicStore();
   const key = cacheKey(academicYear, branch, semester);
 
@@ -109,6 +127,7 @@ export function useWorkspaceResources(): WorkspaceResourcesState {
   );
   const [loading, setLoading] = useState(() => !cache.has(key));
   const [error, setError] = useState<string | null>(null);
+  const [retryNonce, setRetryNonce] = useState(0);
 
   const [prevKey, setPrevKey] = useState(key);
   if (prevKey !== key) {
@@ -131,6 +150,7 @@ export function useWorkspaceResources(): WorkspaceResourcesState {
 
   useEffect(() => {
     // Cache hits are applied during render via the prevKey pattern above.
+    // retry() deletes the cache entry before bumping retryNonce.
     if (cache.has(key)) return;
 
     let cancelled = false;
@@ -152,7 +172,14 @@ export function useWorkspaceResources(): WorkspaceResourcesState {
     return () => {
       cancelled = true;
     };
-  }, [key, academicYear, branch, semester]);
+  }, [key, academicYear, branch, semester, retryNonce]);
+
+  const retry = () => {
+    cache.delete(key);
+    setError(null);
+    setLoading(true);
+    setRetryNonce((n) => n + 1);
+  };
 
   return {
     resources,
@@ -163,5 +190,6 @@ export function useWorkspaceResources(): WorkspaceResourcesState {
     academicYear,
     branch,
     semester,
+    retry,
   };
 }

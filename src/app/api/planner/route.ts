@@ -1,7 +1,10 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { isAuthFailure, requireUser } from "@/lib/apiAuth";
+import { enforceUserRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
+
+const PRIVATE_NO_STORE = { "Cache-Control": "private, no-store" };
 
 export const dynamic = "force-dynamic";
 
@@ -93,7 +96,10 @@ export async function GET(request: Request) {
     }
 
     if (planSnapshot.empty) {
-      return NextResponse.json({ plan: null, collaborators: [] });
+      return NextResponse.json(
+        { plan: null, collaborators: [] },
+        { headers: PRIVATE_NO_STORE },
+      );
     }
 
     const docSnap = planSnapshot.docs[0];
@@ -109,15 +115,18 @@ export async function GET(request: Request) {
       ...d.data(),
     }));
 
-    return NextResponse.json({
-      plan: {
-        id: docSnap.id,
-        ...data,
+    return NextResponse.json(
+      {
+        plan: {
+          id: docSnap.id,
+          ...data,
+        },
+        collaborators,
+        isCollaborator,
+        collaboratorRole,
       },
-      collaborators,
-      isCollaborator,
-      collaboratorRole,
-    });
+      { headers: PRIVATE_NO_STORE },
+    );
   } catch (error: unknown) {
     console.error("Error fetching planner plan:", error);
     return NextResponse.json({ error: "Failed to fetch plan" }, { status: 500 });
@@ -129,6 +138,14 @@ export async function POST(request: Request) {
   try {
     const auth = await requireUser(request);
     if (isAuthFailure(auth)) return auth;
+
+    const rate = await enforceUserRateLimit(auth.uid, "planner", 30, 60_000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+      );
+    }
 
     const userId = auth.uid;
     const email = auth.email?.toLowerCase() || "";

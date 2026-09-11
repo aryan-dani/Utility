@@ -59,25 +59,26 @@ export default function TimerClient() {
   const [mode, setMode] = useState<TimerMode>('work');
   const [timeLeft, setTimeLeft] = useState(25 * 60);
   const [isActive, setIsActive] = useState(false);
-  const [sessions, setSessions] = useState(() => {
-    try {
-      const sessionsSaved = localStorage.getItem('utility_focus_sessions');
-      if (sessionsSaved) {
-        const n = parseInt(sessionsSaved, 10);
-        if (Number.isFinite(n) && n >= 0) return n;
-      }
-    } catch {}
-    return 0;
-  });
+  const [sessions, setSessions] = useState(0);
   const [muted, setMuted] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
-  const [focusLogs, setFocusLogs] = useState<FocusLog[]>(() => {
-    try {
-      const logsSaved = localStorage.getItem('utility_focus_logs');
-      if (logsSaved) return JSON.parse(logsSaved) as FocusLog[];
-    } catch {}
-    return [];
-  });
+  const [focusLogs, setFocusLogs] = useState<FocusLog[]>([]);
+
+  useEffect(() => {
+    queueMicrotask(() => {
+      try {
+        const sessionsSaved = localStorage.getItem('utility_focus_sessions');
+        if (sessionsSaved) {
+          const n = parseInt(sessionsSaved, 10);
+          if (Number.isFinite(n) && n >= 0) setSessions(n);
+        }
+      } catch { /* ignore */ }
+      try {
+        const logsSaved = localStorage.getItem('utility_focus_logs');
+        if (logsSaved) setFocusLogs(JSON.parse(logsSaved) as FocusLog[]);
+      } catch { /* ignore */ }
+    });
+  }, []);
   
   // Settings
   const [workTime, setWorkTime] = useState<number | string>(25);

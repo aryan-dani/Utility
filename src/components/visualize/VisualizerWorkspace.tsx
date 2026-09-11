@@ -2,7 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { Suspense, useEffect, useState } from "react";
-import Link from "next/link";
+import AppLink from "@/components/ui/AppLink";
 import { useSearchParams } from "next/navigation";
 import { StructureToggle } from "@/components/visualize/StructureToggle";
 import { structureFromParam } from "@/lib/visualize/structure";
@@ -130,12 +130,12 @@ function VisualizerWorkspaceInner({ algorithm }: VisualizerWorkspaceProps) {
         className="max-w-2xl mb-8"
       >
         <motion.div variants={fadeUp}>
-          <Link
+          <AppLink
             href="/visualize"
             className="text-xs text-muted hover:text-foreground animated-underline"
           >
             ← Visualize
-          </Link>
+          </AppLink>
         </motion.div>
         <motion.h1
           variants={fadeUp}

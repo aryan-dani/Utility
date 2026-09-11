@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import AppLink from "@/components/ui/AppLink";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
 import {
@@ -71,12 +71,12 @@ export function ProgressClient() {
         className="max-w-2xl mb-10"
       >
         <motion.div variants={fadeUp}>
-          <Link
+          <AppLink
             href="/visualize"
             className="text-xs text-muted hover:text-foreground animated-underline"
           >
             ← Visualize
-          </Link>
+          </AppLink>
         </motion.div>
         <motion.h1
           variants={fadeUp}
@@ -107,12 +107,12 @@ export function ProgressClient() {
           <p className="text-sm text-muted mt-1 leading-relaxed">
             Completions and saved mazes stay on your account across devices.
           </p>
-          <Link
+          <AppLink
             href="/login"
             className="inline-flex items-center justify-center min-h-11 px-5 mt-4 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
           >
             Sign in
-          </Link>
+          </AppLink>
         </div>
       )}
 
@@ -140,7 +140,7 @@ export function ProgressClient() {
                 const record = progress.find((p) => p.algorithmId === algo.id);
                 return (
                   <li key={algo.id}>
-                    <Link
+                    <AppLink
                       href={`/visualize/${algo.id}`}
                       className="flex items-baseline justify-between gap-4 py-3.5 px-4 hover:bg-surface/60"
                     >
@@ -157,7 +157,7 @@ export function ProgressClient() {
                       <span className="text-xs text-muted">
                         {done ? "Done" : "Open"}
                       </span>
-                    </Link>
+                    </AppLink>
                   </li>
                 );
               })}
@@ -189,12 +189,12 @@ export function ProgressClient() {
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Link
+                      <AppLink
                         href={`/visualize/a-star?grid=${grid.id}`}
                         className="min-h-11 px-3 text-sm text-foreground underline underline-offset-4"
                       >
                         Open in A*
-                      </Link>
+                      </AppLink>
                       <GhostAction onClick={() => handleDelete(grid.id)}>
                         Delete
                       </GhostAction>

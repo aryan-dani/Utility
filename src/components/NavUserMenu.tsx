@@ -123,7 +123,18 @@ export default function NavUserMenu({
                 if (data.branch) setBranch(data.branch as Branch);
                 if (data.semester) setSemester(data.semester as Semester);
               }
-              await setDoc(userPrefsRef, updateData, { merge: true });
+
+              const existing = data;
+              const profileUnchanged =
+                existing.uid === updateData.uid &&
+                existing.email === updateData.email &&
+                existing.photoURL === updateData.photoURL &&
+                existing.displayName === updateData.displayName &&
+                existing.provider === updateData.provider &&
+                !("lastActive" in updateData);
+              if (!profileUnchanged) {
+                await setDoc(userPrefsRef, updateData, { merge: true });
+              }
             } else {
               updateData.academic_year = workspaceRef.current.academicYear;
               updateData.branch = workspaceRef.current.branch;

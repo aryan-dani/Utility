@@ -915,23 +915,9 @@ export default function PlannerClient() {
   const [prevPlanPeriod, setPrevPlanPeriod] = useState('');
   if (prevPlanPeriod !== planPeriodKey) {
     setPrevPlanPeriod(planPeriodKey);
-    // Reset during render; hydrate from localStorage only in the browser (SSR-safe).
-    let nextData: PlanData = {};
-    let nextMeta: PlanMeta = { title: 'Study Plan', month, year, is_public: false };
-    if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem(storageKey(month, year));
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          nextData = parsed.data || {};
-          nextMeta = parsed.meta || nextMeta;
-        } catch {
-          /* keep empty defaults */
-        }
-      }
-    }
-    setPlanData(nextData);
-    setPlanMeta(nextMeta);
+    // Reset during render with empty defaults; hydrate from localStorage after mount.
+    setPlanData({});
+    setPlanMeta({ title: 'Study Plan', month, year, is_public: false });
   }
 
   useLayoutEffect(() => {
@@ -939,6 +925,22 @@ export default function PlannerClient() {
     lastWrittenDataRef.current = '';
     skipLocalStampRef.current = true;
   }, [planPeriodKey, prevPlanPeriod]);
+
+  useEffect(() => {
+    if (!mounted) return;
+    queueMicrotask(() => {
+      const saved = localStorage.getItem(storageKey(month, year));
+      if (!saved) return;
+      try {
+        const parsed = JSON.parse(saved);
+        skipLocalStampRef.current = true;
+        setPlanData(parsed.data || {});
+        setPlanMeta(parsed.meta || { title: 'Study Plan', month, year, is_public: false });
+      } catch {
+        /* keep empty defaults */
+      }
+    });
+  }, [mounted, month, year]);
 
   // ── Auth ──
   useEffect(() => {
@@ -948,9 +950,10 @@ export default function PlannerClient() {
     return () => unsubscribe();
   }, []);
 
-  const pullFromCloud = useCallback(async () => {
+  const pullFromCloud = useCallback(async (signal?: { cancelled: boolean }) => {
     if (!user) return;
     await Promise.resolve();
+    if (signal?.cancelled) return;
     cloudHydratingRef.current = true;
     setSyncing(true);
     try {
@@ -958,8 +961,10 @@ export default function PlannerClient() {
 
       const res = await authFetch(`/api/planner?month=${month}&year=${year}`);
 
+      if (signal?.cancelled) return;
       if (!res.ok) throw new Error(await res.text());
       const resData = await res.json();
+      if (signal?.cancelled) return;
 
       if (resData.plan) {
         const p = resData.plan;
@@ -987,6 +992,8 @@ export default function PlannerClient() {
           if (cloudUpdatedMs) setLastSynced(new Date(cloudUpdatedMs));
           return;
         }
+
+        if (signal?.cancelled) return;
 
         const nextData = p.data || {};
         const nextMeta = {
@@ -1020,23 +1027,27 @@ export default function PlannerClient() {
         setCollaborators(resData.collaborators || []);
       }
     } catch (e) {
-      console.error(e);
-      notify.error('Could not load plan from cloud.');
+      if (!signal?.cancelled) {
+        console.error(e);
+        notify.error('Could not load plan from cloud.');
+      }
     } finally {
-      cloudHydratingRef.current = false;
-      setSyncing(false);
+      if (!signal?.cancelled) {
+        cloudHydratingRef.current = false;
+        setSyncing(false);
+      }
     }
   }, [user, month, year, setPlanData]);
 
   const cloudPullKey = user && mounted ? `${user.id}:${month}:${year}` : '';
   useEffect(() => {
     if (!cloudPullKey) return;
-    let cancelled = false;
+    const signal = { cancelled: false };
     queueMicrotask(() => {
-      if (!cancelled) void pullFromCloud();
+      if (!signal.cancelled) void pullFromCloud(signal);
     });
     return () => {
-      cancelled = true;
+      signal.cancelled = true;
     };
   }, [cloudPullKey, pullFromCloud]);
 

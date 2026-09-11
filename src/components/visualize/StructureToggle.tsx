@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import AppLink from "@/components/ui/AppLink";
 import { usePathname, useSearchParams } from "next/navigation";
 import {
   structureFromParam,
@@ -33,18 +33,18 @@ export function StructureToggle({ algorithmId }: { algorithmId: string }) {
       role="group"
       aria-label="Graph or tree view"
     >
-      <Link
+      <AppLink
         href={base}
         className={`${segmentClass(structure === "graph")} border-r border-border`}
       >
         Graph
-      </Link>
-      <Link
+      </AppLink>
+      <AppLink
         href={`${base}?structure=tree`}
         className={segmentClass(structure === "tree")}
       >
         Tree
-      </Link>
+      </AppLink>
     </div>
   );
 }

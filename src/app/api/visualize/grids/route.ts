@@ -7,6 +7,8 @@ import { enforceUserRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
 
+const PRIVATE_NO_STORE = { "Cache-Control": "private, no-store" };
+
 const MAX_ROWS = 40;
 const MAX_COLS = 40;
 const MAX_WALLS = 800;
@@ -67,14 +69,17 @@ export async function GET(request: Request) {
       if (data.owner_id !== auth.uid) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
-      return NextResponse.json({
-        grid: {
-          id: snap.id,
-          name: data.name,
-          gridData: data.gridData,
-          created_at: data.created_at?.toDate?.()?.toISOString?.() ?? null,
+      return NextResponse.json(
+        {
+          grid: {
+            id: snap.id,
+            name: data.name,
+            gridData: data.gridData,
+            created_at: data.created_at?.toDate?.()?.toISOString?.() ?? null,
+          },
         },
-      });
+        { headers: PRIVATE_NO_STORE },
+      );
     }
 
     const snapshot = await db
@@ -95,7 +100,7 @@ export async function GET(request: Request) {
       })
       .sort((a, b) => (b.created_at ?? "").localeCompare(a.created_at ?? ""));
 
-    return NextResponse.json({ grids });
+    return NextResponse.json({ grids }, { headers: PRIVATE_NO_STORE });
   } catch (error) {
     console.error("visualize grids GET", error);
     return NextResponse.json({ error: "Failed to load mazes" }, { status: 500 });
@@ -144,6 +149,14 @@ export async function DELETE(request: Request) {
   try {
     const auth = await requireUser(request);
     if (isAuthFailure(auth)) return auth;
+
+    const rate = await enforceUserRateLimit(auth.uid, "visualize-grids", 30, 60_000);
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+      );
+    }
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

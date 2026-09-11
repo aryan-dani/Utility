@@ -40,7 +40,7 @@ import { notify } from '@/lib/toast';
 import { useSRSStore } from '@/store/srsStore';
 import { useSearchParams, useRouter } from 'next/navigation';
 import AcademicBreadcrumb from '@/components/AcademicBreadcrumb';
-import Link from 'next/link';
+import AppLink from '@/components/ui/AppLink';
 import { buildResourcesHref, pageFromSectionLabel } from '@/lib/resourceUrl';
 import { Button, Select, PageHeader } from '@/components/ui';
 import { SourceCardList, renderWithCitations } from '@/components/ask/SourceCard';
@@ -363,10 +363,6 @@ function createInitialChatSession(): ChatSession {
 }
 
 function loadChatSessionsFromStorage(): { sessions: ChatSession[]; activeSessionId: string } {
-  if (typeof window === 'undefined') {
-    const session = createInitialChatSession();
-    return { sessions: [session], activeSessionId: session.id };
-  }
   const saved = localStorage.getItem('utility_chat_sessions');
   if (saved) {
     try {
@@ -404,15 +400,11 @@ export default function AskClient() {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  // Chat History / Sessions States
-  const initialChat = useMemo(() => loadChatSessionsFromStorage(), []);
-  const [sessions, setSessions] = useState<ChatSession[]>(initialChat.sessions);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(initialChat.activeSessionId);
-  const [sidebarOpen, setSidebarOpen] = useState(() =>
-    typeof window !== 'undefined'
-      ? window.matchMedia('(min-width: 1024px)').matches
-      : false,
-  );
+  // Chat History / Sessions — empty until after mount (avoids SSR generateId/localStorage mismatch)
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [sessionsReady, setSessionsReady] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   // Chat refs & state
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -432,8 +424,18 @@ export default function AskClient() {
   );
 
   useEffect(() => {
+    queueMicrotask(() => {
+      const loaded = loadChatSessionsFromStorage();
+      setSessions(loaded.sessions);
+      setActiveSessionId(loaded.activeSessionId);
+      setSessionsReady(true);
+    });
+  }, []);
+
+  useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');
     const apply = () => setSidebarOpen(mq.matches);
+    queueMicrotask(apply);
     mq.addEventListener('change', apply);
     return () => mq.removeEventListener('change', apply);
   }, []);
@@ -659,14 +661,14 @@ export default function AskClient() {
   }, [sessions, activeSessionId, messages, status]);
 
   useEffect(() => {
-    if (!activeSessionId) return;
+    if (!sessionsReady || !activeSessionId) return;
     if (status !== 'ready' && status !== 'error') return;
     const session = sessions.find((s) => s.id === activeSessionId);
     if (!session) return;
     const merged = displaySessions;
     if (JSON.stringify(session.messages) === JSON.stringify(messages)) return;
     localStorage.setItem('utility_chat_sessions', JSON.stringify(merged));
-  }, [activeSessionId, status, sessions, messages, displaySessions]);
+  }, [sessionsReady, activeSessionId, status, sessions, messages, displaySessions]);
 
   // Save sessions helper
   const saveSessions = (updated: ChatSession[]) => {
@@ -843,10 +845,15 @@ export default function AskClient() {
     t.style.height = Math.min(t.scrollHeight, 160) + 'px';
   };
 
-  const [randomPrompts] = useState(() => {
-    const shuffled = [...SUGGESTED_PROMPTS].sort(() => Math.random() - 0.5);
-    return shuffled.slice(0, 4);
-  });
+  const [randomPrompts, setRandomPrompts] = useState(() =>
+    SUGGESTED_PROMPTS.slice(0, 4),
+  );
+  useEffect(() => {
+    queueMicrotask(() => {
+      const shuffled = [...SUGGESTED_PROMPTS].sort(() => Math.random() - 0.5);
+      setRandomPrompts(shuffled.slice(0, 4));
+    });
+  }, []);
 
   // Keep the document from growing extra viewports while the transcript streams.
   useEffect(() => {
@@ -1088,12 +1095,12 @@ export default function AskClient() {
           </div>
         </div>
 
-        <Link
+        <AppLink
           href={`/syllabus?year=${encodeURIComponent(academicYear)}&branch=${branch}&semester=${semester}`}
           className="text-xs font-semibold text-muted hover:text-foreground active:bg-surface bg-surface px-2.5 py-2 min-h-11 rounded-md border border-border transition-colors self-start sm:self-auto inline-flex items-center"
         >
           Syllabus
-        </Link>
+        </AppLink>
       </div>
 
       {/* Tab 1: Chat Assistant */}

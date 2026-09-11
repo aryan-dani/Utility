@@ -3,8 +3,11 @@ import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { isAuthFailure, requireUser } from "@/lib/apiAuth";
 import { getAlgorithm } from "@/lib/visualize/catalog";
+import { enforceUserRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
+
+const PRIVATE_NO_STORE = { "Cache-Control": "private, no-store" };
 
 /** Normalize tree playback ids (e.g. `bfs-tree`) onto the base algorithm. */
 function normalizeAlgorithmId(raw: string): string {
@@ -32,7 +35,7 @@ export async function GET(request: Request) {
       };
     });
 
-    return NextResponse.json({ progress });
+    return NextResponse.json({ progress }, { headers: PRIVATE_NO_STORE });
   } catch (error) {
     console.error("visualize progress GET", error);
     return NextResponse.json(
@@ -46,6 +49,19 @@ export async function POST(request: Request) {
   try {
     const auth = await requireUser(request);
     if (isAuthFailure(auth)) return auth;
+
+    const rate = await enforceUserRateLimit(
+      auth.uid,
+      "visualize-progress",
+      60,
+      60_000,
+    );
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+      );
+    }
 
     const body = await request.json();
     const rawId =

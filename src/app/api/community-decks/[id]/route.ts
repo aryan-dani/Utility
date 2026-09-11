@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { isAuthFailure, requireUser } from "@/lib/apiAuth";
+import { enforceUserRateLimit } from "@/lib/rateLimit";
 
 export async function GET(
   _request: Request,
@@ -61,6 +62,19 @@ export async function POST(
 
     const auth = await requireUser(request);
     if (isAuthFailure(auth)) return auth;
+
+    const rate = await enforceUserRateLimit(
+      auth.uid,
+      "community-deck-upvote",
+      30,
+      60_000,
+    );
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+      );
+    }
 
     let body: { action?: string } = {};
     try {
@@ -124,6 +138,19 @@ export async function DELETE(
 
     const authResult = await requireUser(request);
     if (isAuthFailure(authResult)) return authResult;
+
+    const rate = await enforceUserRateLimit(
+      authResult.uid,
+      "community-deck-delete",
+      10,
+      60_000,
+    );
+    if (!rate.allowed) {
+      return NextResponse.json(
+        { error: "Rate limit exceeded" },
+        { status: 429, headers: { "Retry-After": String(rate.retryAfterSec) } },
+      );
+    }
 
     const db = adminDb();
 

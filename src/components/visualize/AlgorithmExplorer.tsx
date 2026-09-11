@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import AppLink from "@/components/ui/AppLink";
 import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import {
@@ -38,7 +38,7 @@ function FeaturedCard({
 }) {
   const Mark = START_MARKS[index] ?? RippleMark;
   return (
-    <Link
+    <AppLink
       href={`/visualize/${algo.id}`}
       className="group relative bg-card hover:bg-surface p-6 sm:p-7 flex flex-col min-h-[15.5rem] transition-colors duration-300"
     >
@@ -64,7 +64,7 @@ function FeaturedCard({
           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-300" />
         </span>
       </div>
-    </Link>
+    </AppLink>
   );
 }
 
@@ -83,7 +83,7 @@ function CatalogCard({
     structure === "tree" ? "Tree" : TYPE_LABEL[algo.visualizerType];
 
   return (
-    <Link
+    <AppLink
       href={href}
       className="group relative bg-card hover:bg-surface p-5 sm:p-6 flex flex-col min-h-[11.5rem] transition-colors duration-300"
     >
@@ -106,7 +106,7 @@ function CatalogCard({
           <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-1 transition-transform duration-300" />
         </span>
       </div>
-    </Link>
+    </AppLink>
   );
 }
 
@@ -133,18 +133,18 @@ export function AlgorithmExplorer() {
                 description="Pathfinding, game trees, and N-Queens, one step at a time. Press Watch it run. You do not need the theory first."
                 actions={
                   <>
-                    <Link
+                    <AppLink
                       href="/visualize/bfs"
                       className="inline-flex items-center justify-center min-h-11 px-5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
                     >
                       Start with BFS
-                    </Link>
-                    <Link
+                    </AppLink>
+                    <AppLink
                       href="/visualize/progress"
                       className="inline-flex items-center justify-center min-h-11 px-4 rounded-xl text-sm text-muted hover:text-foreground hover:bg-surface transition-colors"
                     >
                       Your runs
-                    </Link>
+                    </AppLink>
                   </>
                 }
               />

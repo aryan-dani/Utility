@@ -1,6 +1,6 @@
 import { matchesAcademicYear } from "@/lib/academic/scope";
 import type { AcademicYear } from "@/lib/academic/scope";
-import { LEGACY_ACADEMIC_YEAR } from "@/lib/academic/scope";
+import { DEFAULT_ACADEMIC_YEAR } from "@/lib/academic/scope";
 import { adminDb } from "@/lib/firebaseAdmin";
 import { FieldValue, type Query } from "firebase-admin/firestore";
 import {
@@ -290,7 +290,7 @@ function buildContext(
 export async function retrieve(params: RetrieveParams): Promise<RetrievalResult> {
   const {
     query,
-    academicYear = LEGACY_ACADEMIC_YEAR,
+    academicYear = DEFAULT_ACADEMIC_YEAR,
     branch,
     semester,
     resourceId,
