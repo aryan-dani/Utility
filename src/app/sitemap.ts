@@ -21,6 +21,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/community",
     "/install",
     "/support",
+    "/privacy",
+    "/account/delete",
   ];
 
   const now = new Date();

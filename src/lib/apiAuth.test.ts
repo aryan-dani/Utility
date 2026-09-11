@@ -14,6 +14,7 @@ import {
   isAuthFailure,
   requireUser,
   requireAdmin,
+  requireRecentUser,
 } from "@/lib/apiAuth";
 
 describe("getAdminEmails", () => {
@@ -41,7 +42,9 @@ describe("isAuthFailure", () => {
   });
 
   it("returns false for AuthedUser", () => {
-    expect(isAuthFailure({ uid: "u1", email: "a@b.com" })).toBe(false);
+    expect(isAuthFailure({ uid: "u1", email: "a@b.com", authTime: 1 })).toBe(
+      false,
+    );
   });
 });
 
@@ -78,7 +81,57 @@ describe("requireUser", () => {
       }),
     );
     expect(isAuthFailure(result)).toBe(false);
-    expect(result).toEqual({ uid: "u1", email: "user@example.com" });
+    expect(result).toEqual({
+      uid: "u1",
+      email: "user@example.com",
+      authTime: 0,
+    });
+  });
+});
+
+describe("requireRecentUser", () => {
+  beforeEach(() => {
+    verifyIdToken.mockReset();
+  });
+
+  it("returns 401 with requires-recent-login when auth_time is stale", async () => {
+    verifyIdToken.mockResolvedValueOnce({
+      uid: "u1",
+      email: "user@example.com",
+      auth_time: Math.floor(Date.now() / 1000) - 10 * 60,
+    });
+    const res = await requireRecentUser(
+      new Request("http://localhost/api", {
+        headers: { Authorization: "Bearer good" },
+      }),
+    );
+    expect(isAuthFailure(res)).toBe(true);
+    if (isAuthFailure(res)) {
+      expect(res.status).toBe(401);
+      await expect(res.json()).resolves.toMatchObject({
+        code: "requires-recent-login",
+      });
+    }
+  });
+
+  it("returns user when auth_time is recent", async () => {
+    const authTime = Math.floor(Date.now() / 1000) - 30;
+    verifyIdToken.mockResolvedValueOnce({
+      uid: "u1",
+      email: "user@example.com",
+      auth_time: authTime,
+    });
+    const result = await requireRecentUser(
+      new Request("http://localhost/api", {
+        headers: { Authorization: "Bearer good" },
+      }),
+    );
+    expect(isAuthFailure(result)).toBe(false);
+    expect(result).toEqual({
+      uid: "u1",
+      email: "user@example.com",
+      authTime,
+    });
   });
 });
 
@@ -119,6 +172,10 @@ describe("requireAdmin", () => {
       }),
     );
     expect(isAuthFailure(result)).toBe(false);
-    expect(result).toEqual({ uid: "a1", email: "Admin@Example.com" });
+    expect(result).toEqual({
+      uid: "a1",
+      email: "Admin@Example.com",
+      authTime: 0,
+    });
   });
 });

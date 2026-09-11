@@ -1,11 +1,13 @@
 import { FirebaseError } from "firebase/app";
 import {
+  EmailAuthProvider,
   GithubAuthProvider,
   GoogleAuthProvider,
   getRedirectResult,
   linkWithCredential,
   linkWithPopup,
   linkWithRedirect,
+  reauthenticateWithCredential,
   reauthenticateWithPopup,
   reauthenticateWithRedirect,
   signInWithCredential,
@@ -47,7 +49,21 @@ type AuthIntent =
   | "link-google"
   | "link-github"
   | "reauth-github"
-  | "reauth-google";
+  | "reauth-google"
+  | "reauth-session-google"
+  | "reauth-session-github";
+
+const PENDING_DELETE_KEY = "utility.auth.pendingDelete";
+
+export function markPendingAccountDelete() {
+  sessionStorage.setItem(PENDING_DELETE_KEY, "1");
+}
+
+export function takePendingAccountDelete(): boolean {
+  const value = sessionStorage.getItem(PENDING_DELETE_KEY);
+  sessionStorage.removeItem(PENDING_DELETE_KEY);
+  return value === "1";
+}
 
 type StoredMerge = {
   googleIdToken: string | null;
@@ -57,11 +73,60 @@ type StoredMerge = {
 
 export type LinkMergeResult =
   | { status: "linked"; user: User }
+  | { status: "reauthed"; user: User }
   | { status: "redirecting" }
   | { status: "needs-github-confirm" }
   | { status: "needs-google-confirm" }
   | { status: "none" }
   | { status: "error"; code: string | null };
+
+export type ReauthResult =
+  | { status: "ok" }
+  | { status: "redirecting" }
+  | { status: "password-required" };
+
+/** Fresh credential for sensitive actions (account deletion). */
+export async function reauthenticateCurrentUser(
+  auth: Auth,
+  password?: string,
+): Promise<ReauthResult> {
+  const user = auth.currentUser;
+  if (!user) throw new Error("Not signed in");
+  const ids = providerIds(user);
+
+  if (ids.includes("google.com")) {
+    try {
+      await reauthenticateWithPopup(user, googleAuthProvider());
+      return { status: "ok" };
+    } catch (err: unknown) {
+      if (!isPopupBlocked(firebaseErrorCode(err))) throw err;
+      setIntent("reauth-session-google");
+      await reauthenticateWithRedirect(user, googleAuthProvider());
+      return { status: "redirecting" };
+    }
+  }
+
+  if (ids.includes("github.com")) {
+    try {
+      await reauthenticateWithPopup(user, githubAuthProvider());
+      return { status: "ok" };
+    } catch (err: unknown) {
+      if (!isPopupBlocked(firebaseErrorCode(err))) throw err;
+      setIntent("reauth-session-github");
+      await reauthenticateWithRedirect(user, githubAuthProvider());
+      return { status: "redirecting" };
+    }
+  }
+
+  if (ids.includes("password")) {
+    if (!password || !user.email) return { status: "password-required" };
+    const cred = EmailAuthProvider.credential(user.email, password);
+    await reauthenticateWithCredential(user, cred);
+    return { status: "ok" };
+  }
+
+  throw new Error("No reauthentication provider available.");
+}
 
 function providerIds(user: User) {
   return user.providerData.map((p) => p.providerId);
@@ -295,6 +360,12 @@ async function consumeRedirectResultImpl(auth: Auth): Promise<LinkMergeResult> {
       saveMerge({ ...prev, googleIdToken: parts.idToken, googleAccessToken: parts.accessToken });
       const merged = await completeMerge(auth);
       return { status: "linked", user: merged };
+    }
+    if (
+      (intent === "reauth-session-google" || intent === "reauth-session-github") &&
+      result
+    ) {
+      return { status: "reauthed", user: result.user };
     }
 
     if (result && auth.currentUser) {

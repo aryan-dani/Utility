@@ -56,6 +56,8 @@ export default function Footer() {
               <h4 className="text-[10px] font-bold uppercase tracking-widest text-foreground/50">Company</h4>
               <nav className="flex flex-col gap-2.5">
                 <AppLink href={getLinkWithParams('/support')} className="text-sm text-muted hover:text-foreground transition-colors">Support</AppLink>
+                <AppLink href="/privacy" className="text-sm text-muted hover:text-foreground transition-colors">Privacy</AppLink>
+                <AppLink href="/account/delete" className="text-sm text-muted hover:text-foreground transition-colors">Delete account</AppLink>
                 <AppLink href={getLinkWithParams('/community')} className="text-sm text-muted hover:text-foreground transition-colors">Community</AppLink>
                 <a
                   href="https://chat.whatsapp.com/IptJTcvj4F848iY2riZ3YZ"

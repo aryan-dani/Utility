@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { auth, db } from "@/lib/firebase";
 import { updateProfile, type User as FirebaseUser, type UserInfo } from "firebase/auth";
@@ -12,12 +12,18 @@ import {
   confirmMergeWithGoogle,
   consumeRedirectResult,
   getPendingMergeStep,
+  reauthenticateCurrentUser,
+  markPendingAccountDelete,
+  takePendingAccountDelete,
 } from "@/lib/firebaseAuth";
 import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useAcademicStore, AcademicYear, Branch, Semester } from "@/store/academicStore";
 import { DEFAULT_ACADEMIC_YEAR, DEFAULT_SEMESTER, workspaceQuery } from "@/lib/workspace";
 import { BRANCH_OPTIONS_LONG, isAcademicYear } from "@/lib/academic/scope";
 import { notify } from "@/lib/toast";
+import { describeError } from "@/lib/errors";
+import { authFetch } from "@/lib/authFetch";
+import { clearLocalUserData } from "@/lib/localUserData";
 import AppLink from "@/components/ui/AppLink";
 import { useTheme } from "next-themes";
 import { useIsClient } from "@/lib/clientHooks";
@@ -40,10 +46,11 @@ import {
   ExternalLink,
   CheckCircle2,
   HardDrive,
+  Trash2,
 } from "lucide-react";
 import { clearDriveFileCache } from "@/lib/driveFileCache";
 import { ScopeSelector } from "@/components/academic/ScopeSelector";
-import { PageHeader } from "@/components/ui";
+import { Button, Input, Modal, PageHeader } from "@/components/ui";
 
 // Helper to generate self-contained SVG base64 Data URLs for monochrome avatars
 function generateAvatarDataUrl(emoji: string, gradientStart: string, gradientEnd: string): string {
@@ -149,19 +156,67 @@ export default function ProfileClientComponent() {
   const [selectedBranch, setSelectedBranch] = useState<Branch>("AIDS");
   const [selectedSemester, setSelectedSemester] = useState<Semester>(DEFAULT_SEMESTER);
   const [lastSavedAt, setLastSavedAt] = useState<string | null>(null);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState("");
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const mergingRef = useRef(false);
+  const deletingRef = useRef(false);
   const workspaceRef = useRef({ academicYear, branch, semester });
 
   useEffect(() => {
     workspaceRef.current = { academicYear, branch, semester };
   }, [academicYear, branch, semester]);
 
+  const submitAccountDeletion = useCallback(async () => {
+    setDeleting(true);
+    deletingRef.current = true;
+    try {
+      await auth.currentUser?.getIdToken(true);
+      const res = await authFetch("/api/account", { method: "DELETE" });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as {
+          error?: string;
+          code?: string;
+        };
+        if (body.code === "requires-recent-login") {
+          deletingRef.current = false;
+          notify.error("Please confirm your identity and try again.");
+          setDeleting(false);
+          return;
+        }
+        throw new Error(
+          typeof body.error === "string"
+            ? body.error
+            : "Could not delete the account.",
+        );
+      }
+      clearLocalUserData();
+      await auth.signOut();
+      notify.success("Your Utility account was deleted.");
+      router.push("/");
+    } catch (err) {
+      deletingRef.current = false;
+      notify.error(describeError(err));
+      setDeleting(false);
+    }
+  }, [router]);
+
+  const submitAccountDeletionRef = useRef(submitAccountDeletion);
+  useEffect(() => {
+    submitAccountDeletionRef.current = submitAccountDeletion;
+  }, [submitAccountDeletion]);
+
   // Authentication & Initial data loading
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged(async (user) => {
       if (!user) {
         if (mergingRef.current) return;
+        if (deletingRef.current) {
+          router.push("/");
+          return;
+        }
         notify.error("Please sign in to access your profile settings.");
         router.push("/login?redirectTo=/profile");
         return;
@@ -225,6 +280,11 @@ export default function ProfileClientComponent() {
           setTempPhotoUrl(outcome.user.photoURL || "");
           setMergeStep(null);
           notify.success("Google and GitHub are now one account.");
+        } else if (outcome.status === "reauthed") {
+          setCurrentUser(outcome.user);
+          if (takePendingAccountDelete()) {
+            void submitAccountDeletionRef.current();
+          }
         } else if (outcome.status === "needs-github-confirm") {
           setMergeStep("github");
         } else if (outcome.status === "needs-google-confirm") {
@@ -421,6 +481,30 @@ export default function ProfileClientComponent() {
     }
   };
 
+  const handleDeleteAccount = async () => {
+    if (deleteConfirm !== "DELETE") {
+      notify.error("Type DELETE to confirm.");
+      return;
+    }
+    setDeleting(true);
+    try {
+      const reauth = await reauthenticateCurrentUser(auth, deletePassword);
+      if (reauth.status === "password-required") {
+        notify.error("Enter your password to delete this account.");
+        setDeleting(false);
+        return;
+      }
+      if (reauth.status === "redirecting") {
+        markPendingAccountDelete();
+        return;
+      }
+      await submitAccountDeletion();
+    } catch (err) {
+      notify.error(describeError(err));
+      setDeleting(false);
+    }
+  };
+
   if (loading || redirectBusy) {
     return (
       <div
@@ -444,6 +528,9 @@ export default function ProfileClientComponent() {
   );
   const isGithub = currentUser?.providerData?.some(
     (p: UserInfo) => p.providerId === "github.com"
+  );
+  const isPassword = currentUser?.providerData?.some(
+    (p: UserInfo) => p.providerId === "password",
   );
   const providerLabel = isGoogle
     ? "Google Account"
@@ -883,7 +970,100 @@ export default function ProfileClientComponent() {
             </div>
           </div>
         </form>
+
+        <section className="mt-6 rounded-2xl border border-destructive/20 bg-card/80 p-4 sm:p-5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-muted mb-1">
+            Danger zone
+          </p>
+          <h2 className="text-sm font-semibold text-foreground">Delete account</h2>
+          <p className="text-xs text-muted mt-1.5 leading-relaxed max-w-xl">
+            Permanently remove your Utility login, planner plans you own, SRS
+            decks, visualize progress, and related cloud data. This cannot be
+            undone. Anyone can also follow the steps on{" "}
+            <AppLink href="/account/delete" className="underline underline-offset-4 text-foreground">
+              the deletion page
+            </AppLink>
+            .
+          </p>
+          <Button
+            type="button"
+            variant="destructive"
+            className="mt-4"
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="w-4 h-4" />
+            Delete account
+          </Button>
+        </section>
       </div>
+
+      <Modal
+        open={deleteOpen}
+        onClose={() => {
+          if (deleting) return;
+          setDeleteOpen(false);
+          setDeleteConfirm("");
+          setDeletePassword("");
+        }}
+        title="Delete your Utility account"
+        size="sm"
+      >
+        <p className="text-sm text-muted leading-relaxed">
+          Type DELETE to confirm. You will be asked to sign in again so this
+          cannot happen by accident.
+        </p>
+        {isPassword && !isGoogle && !isGithub ? (
+          <label className="block mt-4 text-xs font-semibold text-foreground">
+            Password
+            <Input
+              type="password"
+              autoComplete="current-password"
+              className="mt-1.5"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+            />
+          </label>
+        ) : null}
+        <label className="block mt-4 text-xs font-semibold text-foreground">
+          Confirmation
+          <Input
+            className="mt-1.5"
+            value={deleteConfirm}
+            onChange={(e) => setDeleteConfirm(e.target.value)}
+            placeholder="DELETE"
+            autoComplete="off"
+          />
+        </label>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={deleting}
+            onClick={() => {
+              setDeleteOpen(false);
+              setDeleteConfirm("");
+              setDeletePassword("");
+            }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            variant="destructive"
+            disabled={deleting || deleteConfirm !== "DELETE"}
+            onClick={() => void handleDeleteAccount()}
+          >
+            {deleting ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin" />
+                Deleting…
+              </>
+            ) : (
+              "Delete account"
+            )}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

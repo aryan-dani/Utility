@@ -329,6 +329,13 @@ function LoginContent() {
             Create an account
           </Link>
         </p>
+        <p className="text-center text-xs text-muted/80 mt-3 leading-relaxed">
+          By continuing you agree to Utility&apos;s{" "}
+          <Link href="/privacy" className="font-medium text-foreground hover:underline">
+            privacy policy
+          </Link>
+          .
+        </p>
       </div>
     </div>
   );
