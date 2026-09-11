@@ -7,7 +7,7 @@ Utility ships to Google Play as a Trusted Web Activity and to the Microsoft Stor
 - Play listing title (max 30): `Utility OS: Study Workspace`
 - Android package: `tech.utilityos.app`
 - Microsoft reservation: `Utility OS`
-- Contact in the privacy policy: `hello@utilityos.tech` (create this mailbox, or change `CONTACT_EMAIL` in `src/lib/legal.ts` before you submit)
+- Contact in the privacy policy: `daniaryan212@gmail.com` (from `CONTACT_EMAIL` in `src/lib/legal.ts`)
 
 ## Assets already in the repo
 
@@ -35,7 +35,7 @@ Do these in order. You cannot skip the closed-test wait on a new personal accoun
 
 ### 3. Mailbox
 
-Create `hello@utilityos.tech` (or update `src/lib/legal.ts` and redeploy) so Play Data safety / support email matches the privacy policy.
+Support / privacy contact is `daniaryan212@gmail.com` (`CONTACT_EMAIL` in `src/lib/legal.ts`). Redeploy after changing it so Play Data safety and the live privacy page match.
 
 ### 4. JDK + TWA package
 
