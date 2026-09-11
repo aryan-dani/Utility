@@ -33,6 +33,15 @@ import type { Branch, Semester } from "@/lib/academic/scope";
 import { BRANCH_OPTIONS, SEMESTER_OPTIONS } from "@/lib/academic/scope";
 import { Select } from "@/components/ui/Select";
 import { PageHeader, Card, Segmented, Button, Input } from "@/components/ui";
+import {
+  ActivityFunnel,
+  DonutChart,
+  formatCompact,
+  HighlightText,
+  KpiTile,
+  RankBars,
+  ShareBars,
+} from "@/components/admin/AdminCharts";
 import { fetchAdminStatus } from "@/lib/adminStatus";
 import { authFetch } from "@/lib/authFetch";
 
@@ -91,12 +100,21 @@ type ActiveUser = {
 type OverviewStats = {
   userCount: number;
   activeLast7d: number;
+  activeLast30d?: number;
+  dormant30d?: number;
+  neverOpened?: number;
   totalOpens: number;
   filesWithOpens: number;
   usersWithOpens?: number;
+  engagementRate?: number;
+  activeRate7d?: number;
+  avgOpensPerEngaged?: number;
+  totalUserOpens?: number;
 };
 
 type BranchCount = { branch: string; count: number };
+type SemesterCount = { semester: string; count: number };
+type ProviderCount = { provider: string; count: number };
 
 type UserActiveFilter = "all" | "7d" | "30d";
 
@@ -169,6 +187,8 @@ export default function AdminClient({
 
   const [overview, setOverview] = useState<OverviewStats | null>(null);
   const [byBranch, setByBranch] = useState<BranchCount[]>([]);
+  const [bySemester, setBySemester] = useState<SemesterCount[]>([]);
+  const [byProvider, setByProvider] = useState<ProviderCount[]>([]);
   const [topResources, setTopResources] = useState<TopResource[]>([]);
   const [mostActiveUsers, setMostActiveUsers] = useState<ActiveUser[]>([]);
   const [loadingStats, setLoadingStats] = useState(false);
@@ -218,6 +238,8 @@ export default function AdminClient({
       const data = await res.json();
       setOverview(data.overview || null);
       setByBranch(data.byBranch || []);
+      setBySemester(data.bySemester || []);
+      setByProvider(data.byProvider || []);
       setTopResources(data.topResources || []);
       setMostActiveUsers(data.mostActiveUsers || []);
     } catch (err) {
@@ -545,64 +567,78 @@ export default function AdminClient({
       )}
 
       {tab === "overview" && (
-        <div className="flex flex-col gap-6 animate-fade-in">
+        <div className="flex flex-col gap-5 sm:gap-6 animate-fade-in">
           {loadingStats && !overview ? (
             <div className="py-16 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-muted" />
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4">
-                {[
-                  {
-                    label: "Signed-in users",
-                    value: overview?.userCount ?? 0,
-                    Icon: Users,
-                  },
-                  {
-                    label: "Active (7 days)",
-                    value: overview?.activeLast7d ?? 0,
-                    Icon: Activity,
-                  },
-                  {
-                    label: "Resource opens",
-                    value: overview?.totalOpens ?? 0,
-                    Icon: Eye,
-                  },
-                  {
-                    label: "Files with opens",
-                    value: overview?.filesWithOpens ?? 0,
-                    Icon: Files,
-                  },
-                  {
-                    label: "Users with opens",
-                    value: overview?.usersWithOpens ?? 0,
-                    Icon: Flame,
-                  },
-                ].map(({ label, value, Icon }) => (
-                  <Card
-                    key={label}
-                    className="rounded-2xl !p-4 sm:!p-5"
-                    padding="none"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest text-muted">
-                          {label}
-                        </p>
-                        <p className="mt-2 text-2xl sm:text-3xl font-display tracking-tight text-foreground">
-                          {value.toLocaleString()}
-                        </p>
-                      </div>
-                      <div className="w-9 h-9 rounded-xl bg-surface border border-border flex items-center justify-center shrink-0">
-                        <Icon className="w-4 h-4 text-foreground" />
-                      </div>
-                    </div>
-                  </Card>
-                ))}
+              <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 sm:gap-4">
+                <KpiTile
+                  label="Signed-in users"
+                  value={formatCompact(overview?.userCount ?? 0)}
+                  hint={
+                    overview?.activeRate7d != null
+                      ? `${overview.activeRate7d}% active in last 7 days`
+                      : undefined
+                  }
+                  icon={<Users className="w-3.5 h-3.5 text-foreground" />}
+                />
+                <KpiTile
+                  label="Engagement"
+                  value={`${overview?.engagementRate ?? 0}%`}
+                  hint={`${formatCompact(overview?.usersWithOpens ?? 0)} users have opened at least one file`}
+                  icon={<Flame className="w-3.5 h-3.5 text-foreground" />}
+                />
+                <KpiTile
+                  label="Resource opens"
+                  value={formatCompact(overview?.totalOpens ?? 0)}
+                  hint={`Avg ${overview?.avgOpensPerEngaged ?? 0} opens per engaged user`}
+                  icon={<Eye className="w-3.5 h-3.5 text-foreground" />}
+                />
+                <KpiTile
+                  label="Catalog reach"
+                  value={formatCompact(overview?.filesWithOpens ?? 0)}
+                  hint="Files with at least one signed-in open"
+                  icon={<Files className="w-3.5 h-3.5 text-foreground" />}
+                />
               </div>
 
-              {byBranch.length > 0 && (
+              <Card className="rounded-2xl" padding="md">
+                <div className="flex items-center gap-2 mb-4">
+                  <Activity className="w-4 h-4 text-foreground" />
+                  <h3 className="text-sm font-bold text-foreground">
+                    Activity pulse
+                  </h3>
+                </div>
+                <ActivityFunnel
+                  segments={[
+                    {
+                      label: "Active 7d",
+                      value: overview?.activeLast7d ?? 0,
+                      hint: "Signed in or opened a file",
+                    },
+                    {
+                      label: "Active 30d",
+                      value: overview?.activeLast30d ?? 0,
+                      hint: "Still in the product monthly",
+                    },
+                    {
+                      label: "Engaged",
+                      value: overview?.usersWithOpens ?? 0,
+                      hint: "Ever opened a vault file",
+                    },
+                    {
+                      label: "Never opened",
+                      value: overview?.neverOpened ?? 0,
+                      hint: "Accounts with zero opens",
+                    },
+                  ]}
+                />
+              </Card>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
                 <Card className="rounded-2xl overflow-hidden" padding="none">
                   <div className="px-5 py-4 border-b border-border bg-surface/40 flex items-center gap-2">
                     <PieChart className="w-4 h-4 text-foreground" />
@@ -610,123 +646,146 @@ export default function AdminClient({
                       Users by branch
                     </h3>
                   </div>
-                  <ul className="divide-y divide-border sm:grid sm:grid-cols-2 sm:divide-y-0">
-                    {byBranch.map((row) => (
-                      <li
-                        key={row.branch}
-                        className="px-5 py-3 flex items-center justify-between gap-3 sm:border-b sm:border-border"
-                      >
-                        <span className="text-sm font-semibold text-foreground">
-                          {row.branch}
-                        </span>
-                        <span className="text-sm font-bold tabular-nums text-foreground">
-                          {row.count}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="p-5">
+                    {byBranch.length === 0 ? (
+                      <p className="text-sm text-muted text-center py-8">
+                        No branch data yet.
+                      </p>
+                    ) : (
+                      <DonutChart
+                        items={byBranch.map((r) => ({
+                          key: r.branch,
+                          label: r.branch,
+                          value: r.count,
+                        }))}
+                        centerLabel="Users"
+                        centerValue={formatCompact(overview?.userCount ?? 0)}
+                      />
+                    )}
+                  </div>
                 </Card>
-              )}
 
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <Card className="rounded-2xl overflow-hidden" padding="none">
                   <div className="px-5 py-4 border-b border-border bg-surface/40 flex items-center gap-2">
                     <BarChart3 className="w-4 h-4 text-foreground" />
                     <h3 className="text-sm font-bold text-foreground">
-                      Top resources
+                      Users by semester
                     </h3>
                   </div>
-                  {topResources.length === 0 ? (
-                    <div className="p-10 text-center text-sm text-muted">
-                      No signed-in viewer opens yet. Opens are counted when a
-                      signed-in user opens a file in the vault.
+                  <div className="p-5">
+                    {bySemester.length === 0 ? (
+                      <p className="text-sm text-muted text-center py-8">
+                        No semester data yet.
+                      </p>
+                    ) : (
+                      <ShareBars
+                        items={bySemester.map((r) => ({
+                          key: r.semester,
+                          label: r.semester,
+                          value: r.count,
+                        }))}
+                      />
+                    )}
+                  </div>
+                </Card>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-5">
+                <Card className="rounded-2xl overflow-hidden" padding="none">
+                  <div className="px-5 py-4 border-b border-border bg-surface/40 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <BarChart3 className="w-4 h-4 text-foreground shrink-0" />
+                      <h3 className="text-sm font-bold text-foreground truncate">
+                        Top resources
+                      </h3>
                     </div>
-                  ) : (
-                    <ul className="divide-y divide-border">
-                      {topResources.map((r, index) => (
-                        <li
-                          key={r.id}
-                          className="px-5 py-3.5 flex items-center gap-3 hover:bg-surface/30 transition-colors"
-                        >
-                          <span className="text-[10px] font-mono text-muted w-5 shrink-0">
-                            {String(index + 1).padStart(2, "0")}
-                          </span>
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-semibold text-foreground truncate">
-                              {r.title}
-                            </p>
-                            <p className="text-2xs text-muted truncate">
-                              {r.subject || "Uncategorized"}
-                              {r.uniqueOpeners > 0
-                                ? ` · ${r.uniqueOpeners} openers`
-                                : ""}
-                            </p>
-                          </div>
-                          <span className="text-sm font-bold text-foreground tabular-nums shrink-0">
-                            {r.opens}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
+                    <span className="text-2xs text-muted shrink-0">
+                      by signed-in opens
+                    </span>
+                  </div>
+                  <RankBars
+                    empty="No signed-in viewer opens yet. Opens are counted when a signed-in user opens a file in the vault."
+                    items={topResources.map((r) => ({
+                      key: r.id,
+                      label: r.title,
+                      meta: [
+                        r.subject || "Uncategorized",
+                        r.uniqueOpeners > 0
+                          ? `${r.uniqueOpeners} openers`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(" · "),
+                      value: r.opens,
+                    }))}
+                  />
                 </Card>
 
                 <Card className="rounded-2xl overflow-hidden" padding="none">
-                  <div className="px-5 py-4 border-b border-border bg-surface/40 flex items-center gap-2">
-                    <Flame className="w-4 h-4 text-foreground" />
-                    <h3 className="text-sm font-bold text-foreground">
-                      Most active users
-                    </h3>
-                  </div>
-                  {mostActiveUsers.filter((u) => u.resourceOpenCount > 0)
-                    .length === 0 ? (
-                    <div className="p-10 text-center text-sm text-muted">
-                      Usage will appear here after signed-in students open
-                      resources in the app.
+                  <div className="px-5 py-4 border-b border-border bg-surface/40 flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <Flame className="w-4 h-4 text-foreground shrink-0" />
+                      <h3 className="text-sm font-bold text-foreground truncate">
+                        Most active users
+                      </h3>
                     </div>
-                  ) : (
-                    <ul className="divide-y divide-border">
-                      {mostActiveUsers
-                        .filter((u) => u.resourceOpenCount > 0)
-                        .map((u) => (
-                          <li
-                            key={u.uid}
-                            className="px-5 py-3.5 flex items-center gap-3 hover:bg-surface/30 transition-colors"
-                          >
-                            <div className="w-8 h-8 rounded-lg bg-foreground text-background flex items-center justify-center text-xs font-black overflow-hidden border border-border/60 shrink-0">
-                              {u.photoURL ? (
-                                <Image
-                                  src={u.photoURL}
-                                  alt=""
-                                  width={32}
-                                  height={32}
-                                  className="w-full h-full object-cover"
-                                  referrerPolicy="no-referrer"
-                                  unoptimized
-                                />
-                              ) : (
-                                u.displayName?.[0] ?? u.email?.[0] ?? "?"
-                              )}
-                            </div>
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-semibold text-foreground truncate">
-                                {u.displayName ||
-                                  u.email?.split("@")[0] ||
-                                  "Student"}
-                              </p>
-                              <p className="text-2xs text-muted truncate">
-                                {u.lastOpenedTitle || u.email || "No file yet"}
-                              </p>
-                            </div>
-                            <span className="text-sm font-bold text-foreground tabular-nums shrink-0">
-                              {u.resourceOpenCount}
-                            </span>
-                          </li>
-                        ))}
-                    </ul>
-                  )}
+                    <span className="text-2xs text-muted shrink-0">
+                      lifetime opens
+                    </span>
+                  </div>
+                  <RankBars
+                    empty="Usage will appear here after signed-in students open resources in the app."
+                    items={mostActiveUsers
+                      .filter((u) => u.resourceOpenCount > 0)
+                      .map((u) => ({
+                        key: u.uid,
+                        label:
+                          u.displayName ||
+                          u.email?.split("@")[0] ||
+                          "Student",
+                        meta: u.lastOpenedTitle || u.email || "No file yet",
+                        value: u.resourceOpenCount,
+                        leading: (
+                          <div className="w-8 h-8 rounded-lg bg-foreground text-background flex items-center justify-center text-xs font-black overflow-hidden border border-border/60 shrink-0">
+                            {u.photoURL ? (
+                              <Image
+                                src={u.photoURL}
+                                alt=""
+                                width={32}
+                                height={32}
+                                className="w-full h-full object-cover"
+                                referrerPolicy="no-referrer"
+                                unoptimized
+                              />
+                            ) : (
+                              u.displayName?.[0] ?? u.email?.[0] ?? "?"
+                            )}
+                          </div>
+                        ),
+                      }))}
+                  />
                 </Card>
               </div>
+
+              {byProvider.length > 1 && (
+                <Card className="rounded-2xl overflow-hidden" padding="none">
+                  <div className="px-5 py-4 border-b border-border bg-surface/40 flex items-center gap-2">
+                    <ShieldCheck className="w-4 h-4 text-foreground" />
+                    <h3 className="text-sm font-bold text-foreground">
+                      Sign-in providers
+                    </h3>
+                  </div>
+                  <div className="p-5">
+                    <ShareBars
+                      items={byProvider.map((r) => ({
+                        key: r.provider,
+                        label: r.provider,
+                        value: r.count,
+                      }))}
+                    />
+                  </div>
+                </Card>
+              )}
             </>
           )}
         </div>
@@ -966,11 +1025,14 @@ export default function AdminClient({
               <div className="relative flex-1 min-w-0">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
                 <Input
+                  type="text"
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
                   placeholder="Search name or email…"
                   className="pl-9"
                   aria-label="Search users"
+                  autoComplete="off"
+                  spellCheck={false}
                 />
               </div>
               <Segmented
@@ -1032,6 +1094,7 @@ export default function AdminClient({
                           key={usr.id}
                           usr={usr}
                           uid={uid}
+                          searchQuery={userSearch}
                           expanded={expanded}
                           usageRows={usageRows}
                           loadingUsage={loadingUsageUid === uid}
@@ -1063,6 +1126,7 @@ export default function AdminClient({
 function UserRows({
   usr,
   uid,
+  searchQuery,
   expanded,
   usageRows,
   loadingUsage,
@@ -1073,6 +1137,7 @@ function UserRows({
 }: {
   usr: AdminUser;
   uid: string;
+  searchQuery: string;
   expanded: boolean;
   usageRows: UserUsageRow[] | undefined;
   loadingUsage: boolean;
@@ -1081,6 +1146,8 @@ function UserRows({
   onToggle: () => void;
   onRemove: () => void;
 }) {
+  const display =
+    usr.displayName || usr.email?.split("@")[0] || "Student";
   return (
     <>
       <tr
@@ -1108,21 +1175,25 @@ function UserRows({
                   unoptimized
                 />
               ) : (
-                usr.displayName?.[0] ?? usr.email?.[0] ?? "?"
+                display[0] ?? "?"
               )}
             </div>
             <div className="min-w-0">
-              <span className="font-bold text-foreground block truncate">
-                {usr.displayName || usr.email?.split("@")[0] || "Student"}
-              </span>
-              <span className="text-[9px] font-extrabold uppercase tracking-wide text-muted">
+              <HighlightText
+                text={display}
+                query={searchQuery}
+                className="font-semibold text-foreground block truncate"
+              />
+              <span className="text-[9px] font-extrabold uppercase tracking-wide text-muted block mt-0.5">
                 {usr.provider || "Unknown"} · {usr.branch || "AIDS"} Sem{" "}
                 {usr.semester || "—"}
               </span>
             </div>
           </div>
         </td>
-        <td className="p-4 text-muted font-mono">{usr.email || "No email"}</td>
+        <td className="p-4 text-muted font-mono">
+          <HighlightText text={usr.email || "No email"} query={searchQuery} />
+        </td>
         <td className="p-4 font-bold text-foreground tabular-nums">
           {usr.resourceOpenCount || 0}
         </td>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import AppLink from "@/components/ui/AppLink";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase";
@@ -13,15 +13,42 @@ import {
 } from "@/lib/visualize/client";
 import { ALGORITHMS } from "@/lib/visualize/catalog";
 import { GhostAction } from "@/components/visualize/LessonChrome";
-import { fadeUp, stagger } from "@/components/visualize/motion";
+import { useVizMotion } from "@/components/visualize/motion";
 import { motion } from "framer-motion";
+import {
+  ButtonLink,
+  EmptyState,
+  ErrorState,
+  PageHeader,
+  SectionHeader,
+  Skeleton,
+} from "@/components/ui";
+import { Map } from "lucide-react";
 
 export function ProgressClient() {
+  const { fadeUp, stagger } = useVizMotion();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [grids, setGrids] = useState<SavedGrid[]>([]);
   const [progress, setProgress] = useState<AlgorithmProgress[]>([]);
   const [error, setError] = useState<string | null>(null);
+
+  const loadForUser = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const [saved, done] = await Promise.all([
+        fetchSavedGrids(),
+        fetchProgress(),
+      ]);
+      setGrids(saved);
+      setProgress(done);
+    } catch {
+      setError("Could not load progress.");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
     return onAuthStateChanged(auth, async (user) => {
@@ -33,22 +60,9 @@ export function ProgressClient() {
         setLoading(false);
         return;
       }
-      setLoading(true);
-      setError(null);
-      try {
-        const [saved, done] = await Promise.all([
-          fetchSavedGrids(),
-          fetchProgress(),
-        ]);
-        setGrids(saved);
-        setProgress(done);
-      } catch {
-        setError("Could not load progress.");
-      } finally {
-        setLoading(false);
-      }
+      await loadForUser();
     });
-  }, []);
+  }, [loadForUser]);
 
   const completedIds = new Set(
     progress.filter((p) => p.completed).map((p) => p.algorithmId),
@@ -64,11 +78,11 @@ export function ProgressClient() {
 
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 sm:py-12 min-h-[80vh]">
-      <motion.header
+      <motion.div
         variants={stagger}
         initial="hidden"
         animate="show"
-        className="max-w-2xl mb-10"
+        className="max-w-2xl mb-10 space-y-4"
       >
         <motion.div variants={fadeUp}>
           <AppLink
@@ -78,54 +92,53 @@ export function ProgressClient() {
             ← Visualize
           </AppLink>
         </motion.div>
-        <motion.h1
-          variants={fadeUp}
-          className="font-display text-3xl sm:text-5xl text-foreground tracking-tight mt-4"
-        >
-          Your runs
-        </motion.h1>
-        <motion.p
-          variants={fadeUp}
-          className="text-base text-foreground-subtle mt-3 leading-relaxed"
-        >
-          Finish a visualizer to the last step and it shows up here. Mazes you
-          save from a grid search live below.
-        </motion.p>
-      </motion.header>
+        <motion.div variants={fadeUp}>
+          <PageHeader
+            size="hero"
+            title="Your runs"
+            description="Finish a visualizer to the last step and it shows up here. Mazes you save from a grid search live below."
+          />
+        </motion.div>
+      </motion.div>
 
       {showLoading && (
-        <div className="rounded-xl border border-border bg-card p-5 max-w-xl">
-          <p className="text-sm text-muted">Loading your progress…</p>
+        <div className="max-w-xl space-y-3" aria-busy="true">
+          <Skeleton className="h-4 w-40" />
+          <Skeleton className="h-24 w-full" />
+          <Skeleton className="h-11 w-full" />
         </div>
       )}
 
       {!showLoading && signedIn === false && (
-        <div className="rounded-xl border border-border bg-card p-5 max-w-xl">
-          <p className="text-sm font-semibold text-foreground">
-            Sign in to keep your runs
-          </p>
-          <p className="text-sm text-muted mt-1 leading-relaxed">
-            Completions and saved mazes stay on your account across devices.
-          </p>
-          <AppLink
-            href="/login"
-            className="inline-flex items-center justify-center min-h-11 px-5 mt-4 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
-          >
-            Sign in
-          </AppLink>
-        </div>
+        <EmptyState
+          className="max-w-xl"
+          title="Sign in to keep your runs"
+          description="Completions and saved mazes stay on your account across devices."
+          action={
+            <ButtonLink href="/login">Sign in</ButtonLink>
+          }
+        />
       )}
 
-      {error && !showLoading && <p className="text-sm text-muted mb-4">{error}</p>}
+      {error && !showLoading && (
+        <ErrorState
+          className="mb-4 max-w-xl"
+          title="Could not load progress"
+          description={error}
+          onRetry={() => {
+            void loadForUser();
+          }}
+        />
+      )}
 
       {!showLoading && signedIn && (
         <div className="space-y-12">
           <section>
-            <div className="flex items-end justify-between gap-3 mb-3">
-              <p className="text-xs text-muted">
-                {doneCount} of {ALGORITHMS.length} finished
-              </p>
-            </div>
+            <SectionHeader
+              className="mb-3"
+              title="Algorithms"
+              description={`${doneCount} of ${ALGORITHMS.length} finished`}
+            />
             <div className="h-1 bg-border rounded-full overflow-hidden mb-4">
               <div
                 className="h-full bg-foreground transition-[width] duration-500"
@@ -142,7 +155,7 @@ export function ProgressClient() {
                   <li key={algo.id}>
                     <AppLink
                       href={`/visualize/${algo.id}`}
-                      className="flex items-baseline justify-between gap-4 py-3.5 px-4 hover:bg-surface/60"
+                      className="flex items-baseline justify-between gap-4 py-3.5 px-4 hover:bg-surface/60 min-h-11"
                     >
                       <span>
                         <span className="text-sm font-medium text-foreground">
@@ -165,14 +178,18 @@ export function ProgressClient() {
           </section>
 
           <section>
-            <h2 className="text-sm font-semibold text-foreground mb-3">
-              Saved mazes
-            </h2>
+            <SectionHeader className="mb-3" title="Saved mazes" />
             {grids.length === 0 ? (
-              <p className="text-sm text-muted">
-                None yet. On any pathfinding page, press Save maze after you
-                like the walls.
-              </p>
+              <EmptyState
+                icon={<Map className="w-6 h-6" />}
+                title="No mazes yet"
+                description="On any pathfinding page, press Save maze after you like the walls."
+                action={
+                  <ButtonLink href="/visualize/a-star" variant="secondary">
+                    Open A*
+                  </ButtonLink>
+                }
+              />
             ) : (
               <ul className="divide-y divide-border border border-border rounded-xl overflow-hidden bg-card">
                 {grids.map((grid) => (
@@ -189,12 +206,13 @@ export function ProgressClient() {
                       </p>
                     </div>
                     <div className="flex items-center gap-1">
-                      <AppLink
+                      <ButtonLink
                         href={`/visualize/a-star?grid=${grid.id}`}
-                        className="min-h-11 px-3 text-sm text-foreground underline underline-offset-4"
+                        variant="ghost"
+                        size="sm"
                       >
                         Open in A*
-                      </AppLink>
+                      </ButtonLink>
                       <GhostAction onClick={() => handleDelete(grid.id)}>
                         Delete
                       </GhostAction>

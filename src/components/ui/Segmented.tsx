@@ -19,8 +19,8 @@ export interface SegmentedProps<T extends string | number> {
 }
 
 const sizeClasses = {
-  sm: "min-h-8 px-2.5 text-2xs",
-  md: "min-h-9 px-3 text-xs",
+  sm: "h-8 px-2.5 text-2xs whitespace-nowrap",
+  md: "h-9 px-3 text-xs whitespace-nowrap",
 };
 
 export function Segmented<T extends string | number>({
@@ -81,7 +81,7 @@ export function Segmented<T extends string | number>({
             disabled={disabled}
             onClick={() => onChange(opt.value)}
             className={cn(
-              "inline-flex items-center justify-center font-mono uppercase tracking-wide transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
+              "inline-flex flex-1 items-center justify-center font-mono uppercase tracking-wide transition-colors disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset",
               sizeClasses[size],
               active
                 ? "bg-foreground text-background"

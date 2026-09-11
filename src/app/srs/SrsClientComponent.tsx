@@ -412,7 +412,7 @@ export default function SrsClient() {
                               deleteDeck(deck.id);
                             }
                           }}
-                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 min-h-11 min-w-11 md:p-1.5 md:min-h-0 md:min-w-0 text-muted hover:text-red-500 rounded-lg transition-all inline-flex items-center justify-center"
+                          className="opacity-100 md:opacity-0 md:group-hover:opacity-100 p-2 min-h-11 min-w-11 md:p-1.5 md:min-h-0 md:min-w-0 text-muted hover:text-destructive rounded-lg transition-all inline-flex items-center justify-center"
                           title="Delete Deck"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -773,7 +773,7 @@ export default function SrsClient() {
                           </button>
                           <button
                             onClick={() => deleteCard(card.id)}
-                            className="p-2 text-muted hover:text-red-500 rounded-lg hover:bg-destructive/10 transition-all"
+                            className="p-2 text-muted hover:text-destructive rounded-lg hover:bg-destructive/10 transition-all"
                             title="Delete Card"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -889,7 +889,7 @@ export default function SrsClient() {
               </div>
               <div className="w-px bg-border h-4 self-center" />
               <div className="flex-1 text-center">
-                <span className="text-red-500 font-bold">{reviewSummary.forgot}</span> Forgot
+                <span className="text-destructive font-bold">{reviewSummary.forgot}</span> Forgot
               </div>
             </div>
 

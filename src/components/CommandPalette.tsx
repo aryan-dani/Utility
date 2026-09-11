@@ -63,7 +63,7 @@ function highlightMatch(text: string, query: string) {
     <span>
       {parts.map((part, i) =>
         part.toLowerCase() === qLower ? (
-          <mark key={i} className="bg-primary/20 text-primary font-bold rounded-sm px-0.5">
+          <mark key={i} className="search-hit font-bold">
             {part}
           </mark>
         ) : (

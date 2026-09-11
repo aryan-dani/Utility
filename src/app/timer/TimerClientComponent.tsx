@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   RotateCcw, 
   Coffee, 
@@ -10,16 +10,24 @@ import {
   Settings2, 
   Volume2, 
   VolumeX,
-  CheckCircle2,
-  X,
   Flame,
-  BarChart3,
   ShieldCheck,
   Music,
   CloudRain
 } from 'lucide-react';
 import { FadeIn } from '@/components/Animations';
-import { PageHeader } from '@/components/ui';
+import {
+  Button,
+  Card,
+  Field,
+  IconButton,
+  Input,
+  Modal,
+  PageHeader,
+  SectionHeader,
+  Segmented,
+} from '@/components/ui';
+import { useMotionSafe } from '@/lib/motion';
 import { logActivity, localDateKey } from '@/lib/activity';
 import { incrementTaskFocus } from '@/lib/plannerStorage';
 
@@ -98,6 +106,7 @@ export default function TimerClient() {
   const [soundVolume, setSoundVolume] = useState(0.5);
   const [soundPlaying, setSoundPlaying] = useState(false);
   const soundAudioRef = useRef<HTMLAudioElement | null>(null);
+  const motionSafe = useMotionSafe();
 
   const soundUrls = useMemo(() => ({
     lofi: 'https://raw.githubusercontent.com/Saumya-patel-31/Moodmap/main/public/audio/lofi.mp3',
@@ -431,44 +440,30 @@ export default function TimerClient() {
   }, [weeklyChartData]);
 
   return (
-    <div className="flex-1 w-full page-gutter py-10 flex flex-col md:flex-row items-center justify-center gap-12 min-h-screen">
-      
-      {/* Left panel: Pomodoro timer */}
+    <div className="flex-1 w-full page-gutter py-5 sm:py-10 flex flex-col md:flex-row items-center justify-center gap-12 min-h-screen">
       <div className="flex-1 flex flex-col items-center max-w-md w-full">
         <FadeIn className="w-full mb-6 flex flex-col items-center">
-          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-[10px] font-semibold uppercase tracking-wider mb-4 border border-border transition-all duration-300 ${themeColorClass}`}>
+          <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-2xs font-semibold uppercase tracking-wider mb-4 border border-border ${themeColorClass}`}>
             {mode === 'work' ? <Brain className="w-3 h-3" /> : <Coffee className="w-3 h-3" />}
             {mode === 'work' ? 'Deep Work Session' : mode === 'break' ? 'Short Break' : 'Long Break'}
           </div>
           <PageHeader
             className="text-center sm:flex-col sm:items-center [&_h1]:mx-auto [&_p]:mx-auto"
-            title="Stay Focused"
+            title="Stay focused"
             description="Pomodoro tracker optimized for your weekly targets."
           />
-
-          {/* Mode Selector Tabs */}
-          <div className="flex bg-surface/50 border border-border/80 rounded-xl p-1 w-full max-w-[280px] shadow-xs mt-5">
-            {(['work', 'break', 'longBreak'] as const).map((m) => {
-              const labelMap = {
-                work: 'Focus',
-                break: 'Break',
-                longBreak: 'Long Break',
-              };
-              return (
-                <button
-                  key={m}
-                  onClick={() => switchMode(m)}
-                  className={`flex-1 py-1.5 rounded-lg text-[11px] font-semibold transition-all ${
-                    mode === m
-                      ? 'bg-background border border-border/80 text-foreground shadow-sm font-bold'
-                      : 'text-muted hover:text-foreground'
-                  }`}
-                >
-                  {labelMap[m]}
-                </button>
-              );
-            })}
-          </div>
+          <Segmented
+            className="mt-5 w-[min(100%,16.5rem)]"
+            size="sm"
+            aria-label="Timer mode"
+            value={mode}
+            onChange={switchMode}
+            options={[
+              { value: 'work', label: 'Focus' },
+              { value: 'break', label: 'Break' },
+              { value: 'longBreak', label: 'Long' },
+            ]}
+          />
         </FadeIn>
 
         {/* Active Task Callout */}
@@ -485,10 +480,9 @@ export default function TimerClient() {
         )}
 
         <FadeIn delay={0.1} className="relative mb-8 flex items-center justify-center">
-          {/* Active timer breathing ambient glow */}
-          {isActive && (
-            <motion.div 
-              animate={{ 
+          {isActive && !motionSafe.reduce && (
+            <motion.div
+              animate={{
                 scale: [1, 1.12, 1],
                 opacity: [0.12, 0.22, 0.12]
               }}
@@ -497,9 +491,8 @@ export default function TimerClient() {
             />
           )}
 
-          {/* Progress Circle */}
           <div className="relative w-64 h-64 sm:w-72 sm:h-72 flex items-center justify-center">
-            {isActive && (
+            {isActive && !motionSafe.reduce && (
               <motion.div
                 initial={{ scale: 0.96, opacity: 0.1 }}
                 animate={{ scale: 1.04, opacity: [0.1, 0.18, 0.1] }}
@@ -551,91 +544,72 @@ export default function TimerClient() {
           </div>
         </FadeIn>
 
-        {/* Controls */}
         <FadeIn delay={0.2} className="w-full space-y-6 flex flex-col items-center">
-          <div className="flex items-center justify-center gap-5">
-            <button
+          <div className="flex items-center justify-center gap-3">
+            <IconButton
+              variant="secondary"
+              size="lg"
+              label="Reset timer"
               onClick={resetTimer}
-              className="w-12 h-12 rounded-xl border border-border bg-card flex items-center justify-center text-foreground hover:border-foreground/35 hover:scale-110 active:scale-90 shadow-xs transition-all duration-200"
-              title="Reset"
-              aria-label="Reset timer"
             >
               <RotateCcw className="w-5 h-5" />
-            </button>
-            
-            <button
+            </IconButton>
+            <Button
+              size="lg"
+              variant={isActive ? 'secondary' : 'primary'}
               onClick={toggleTimer}
-              className={`w-32 h-12 rounded-xl border flex items-center justify-center hover:scale-105 active:scale-95 transition-all duration-200 font-extrabold text-xs uppercase tracking-widest shadow-sm ${
-                isActive 
-                  ? 'bg-card border-foreground/30 text-foreground hover:bg-surface' 
-                  : 'bg-foreground border-foreground text-background hover:opacity-95'
-              }`}
-              aria-label={isActive ? "Pause timer" : "Start timer"}
+              className="min-w-[8.5rem]"
+              aria-label={isActive ? 'Pause timer' : 'Start timer'}
             >
               {isActive ? 'Pause' : 'Start'}
-            </button>
-
-            <button
+            </Button>
+            <IconButton
+              variant="secondary"
+              size="lg"
+              label={muted ? 'Unmute completion sound' : 'Mute completion sound'}
               onClick={() => setMuted((m) => !m)}
-              className="w-12 h-12 rounded-xl border border-border bg-card flex items-center justify-center text-foreground hover:border-foreground/35 hover:scale-110 active:scale-90 shadow-xs transition-all duration-200"
-              title={muted ? 'Unmute' : 'Mute'}
-              aria-label={muted ? 'Unmute completion sound' : 'Mute completion sound'}
             >
               {muted ? <VolumeX className="w-5 h-5" /> : <Volume2 className="w-5 h-5" />}
-            </button>
-
-            <button
+            </IconButton>
+            <IconButton
+              variant="secondary"
+              size="lg"
+              label="Timer settings"
               onClick={() => setShowSettings(true)}
-              className="w-12 h-12 rounded-xl border border-border bg-card flex items-center justify-center text-foreground hover:border-foreground/35 hover:scale-110 active:scale-90 shadow-xs transition-all duration-200"
-              title="Settings"
-              aria-label="Timer settings"
             >
               <Settings2 className="w-5 h-5" />
-            </button>
+            </IconButton>
           </div>
-
-          <button
+          <Button
+            variant={isFocusMode ? 'primary' : 'secondary'}
             onClick={isFocusMode ? exitFocusMode : enterFocusMode}
-            className={`px-5 py-2.5 rounded-xl text-[10px] font-extrabold uppercase tracking-widest transition-all duration-300 border flex items-center gap-2 shadow-3xs hover:scale-[1.02] active:scale-[0.98] ${
-              isFocusMode
-                ? 'bg-foreground/[0.04] border-foreground/35 text-foreground hover:bg-foreground/[0.08]'
-                : 'bg-surface/50 border-border text-foreground hover:bg-surface-hover hover:border-foreground/30'
-            }`}
           >
             <ShieldCheck className="w-4 h-4" />
-            {isFocusMode ? 'Exit Focus Mode' : 'Enter Focus Mode'}
-          </button>
+            {isFocusMode ? 'Exit focus mode' : 'Enter focus mode'}
+          </Button>
         </FadeIn>
       </div>
 
-      {/* Right panel: Focus analytics */}
       <FadeIn delay={0.3} className="flex-1 w-full max-w-sm space-y-6">
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-muted mb-4 flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            Session Statistics
-          </h3>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-surface/50 border border-border rounded-xl p-3 text-center">
-              <span className="text-xs font-bold text-muted uppercase tracking-widest">Completed</span>
-              <p className="text-2xl font-black text-foreground mt-1">{sessions}</p>
+        <Card>
+          <SectionHeader title="Session statistics" />
+          <div className="grid grid-cols-2 gap-3 mt-4">
+            <div className="bg-surface/50 border border-border rounded-lg p-3 text-center">
+              <span className="text-2xs font-semibold uppercase tracking-widest text-muted">Completed</span>
+              <p className="text-2xl font-semibold text-foreground mt-1 tabular-nums">{sessions}</p>
             </div>
-            <div className="bg-surface/50 border border-border rounded-xl p-3 text-center">
-              <span className="text-xs font-bold text-muted uppercase tracking-widest">Today&apos;s Focus</span>
-              <p className="text-2xl font-black text-foreground mt-1">
+            <div className="bg-surface/50 border border-border rounded-lg p-3 text-center">
+              <span className="text-2xs font-semibold uppercase tracking-widest text-muted">Today&apos;s focus</span>
+              <p className="text-2xl font-semibold text-foreground mt-1 tabular-nums">
                 {focusLogs.find(l => l.date === localDateKey())?.minutes || 0}m
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Weekly Chart */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center gap-2 mb-4">
-            <BarChart3 className="w-4 h-4 text-muted" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Weekly Study Time</h3>
-          </div>
-          <div className="flex justify-between items-end h-28 pt-2 px-2">
+        <Card>
+          <SectionHeader title="Weekly study time" />
+          <div className="flex justify-between items-end h-28 pt-4 px-1">
             {weeklyChartData.map((d, index) => {
               const pct = (d.minutes / maxMinutes) * 100;
               return (
@@ -643,9 +617,9 @@ export default function TimerClient() {
                   <div className="absolute -top-8 bg-foreground text-background text-xs font-bold rounded px-1.5 py-0.5 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-150 pointer-events-none whitespace-nowrap shadow-md z-10">
                     {d.minutes}m
                   </div>
-                  <div className="w-6 md:w-5 bg-surface border border-border rounded-full overflow-hidden flex items-end h-20 transition-all group-hover:border-foreground/30 group-active:border-foreground/30">
-                    <div 
-                      className="w-full bg-foreground transition-all duration-500 ease-out rounded-full" 
+                  <div className="w-6 md:w-5 bg-surface border border-border rounded-full overflow-hidden flex items-end h-20">
+                    <div
+                      className="w-full bg-foreground transition-all duration-500 ease-out rounded-full"
                       style={{ height: `${pct}%` }}
                     />
                   </div>
@@ -654,26 +628,23 @@ export default function TimerClient() {
               );
             })}
           </div>
-        </div>
+        </Card>
 
-        {/* Ambient Soundscapes Card */}
-        <div className="bg-card border border-border rounded-2xl p-5 shadow-xs">
-          <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center gap-2">
-              <Volume2 className="w-4 h-4 text-muted" />
-              <h3 className="text-xs font-bold uppercase tracking-wider text-foreground">Ambient Soundscapes</h3>
-            </div>
+        <Card>
+          <div className="flex items-center justify-between gap-3 mb-4">
+            <SectionHeader title="Ambient soundscapes" />
             {soundscape !== 'none' && (
-              <button 
+              <Button
+                size="sm"
+                variant="secondary"
                 onClick={toggleSoundscapePlay}
-                className="text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 bg-surface border border-border rounded-lg text-foreground hover:bg-surface-hover hover:border-foreground/35 transition-all shadow-3xs"
                 aria-label={soundPlaying ? 'Pause soundscape' : 'Play soundscape'}
               >
                 {soundPlaying ? 'Pause' : 'Play'}
-              </button>
+              </Button>
             )}
           </div>
-          
+
           <div className="grid grid-cols-3 gap-2 mb-4">
             {(['lofi', 'rain', 'cafe'] as const).map((s) => {
               const soundMap = {
@@ -682,39 +653,36 @@ export default function TimerClient() {
                 cafe: { label: 'Café', icon: Coffee },
               };
               const { label, icon: Icon } = soundMap[s];
+              const active = soundscape === s;
               return (
-                <button
+                <Button
                   key={s}
+                  size="sm"
+                  variant={active ? 'primary' : 'secondary'}
                   onClick={() => setSoundscape(soundscape === s ? 'none' : s)}
-                  className={`flex items-center justify-center gap-2 px-2 py-2.5 rounded-xl text-xs font-semibold transition-all border ${
-                    soundscape === s
-                      ? 'bg-foreground border-foreground text-background shadow-xs hover:opacity-90 font-bold'
-                      : 'bg-surface/40 border-border text-muted hover:border-border-strong hover:text-foreground'
-                  }`}
-                  aria-label={`Select ${s} soundscape`}
+                  aria-pressed={active}
+                  aria-label={`Select ${label} soundscape`}
+                  className="px-2"
                 >
-                  {soundscape === s && soundPlaying ? (
-                    <div className="flex items-end gap-0.5 h-3.5 w-3.5 shrink-0 mb-0.5">
-                      <span className="w-0.5 bg-background animate-pulse h-2 block" style={{ animationDelay: '0.1s', animationDuration: '0.6s' }} />
-                      <span className="w-0.5 bg-background animate-pulse h-3 block" style={{ animationDelay: '0.3s', animationDuration: '0.8s' }} />
-                      <span className="w-0.5 bg-background animate-pulse h-1.5 block" style={{ animationDelay: '0.2s', animationDuration: '0.5s' }} />
-                    </div>
+                  {active && soundPlaying ? (
+                    <span className="flex items-end gap-0.5 h-3.5 w-3.5 shrink-0" aria-hidden>
+                      <span className="w-0.5 bg-current animate-pulse h-2 block" style={{ animationDelay: '0.1s', animationDuration: '0.6s' }} />
+                      <span className="w-0.5 bg-current animate-pulse h-3 block" style={{ animationDelay: '0.3s', animationDuration: '0.8s' }} />
+                      <span className="w-0.5 bg-current animate-pulse h-1.5 block" style={{ animationDelay: '0.2s', animationDuration: '0.5s' }} />
+                    </span>
                   ) : (
                     <Icon className="w-3.5 h-3.5 shrink-0" />
                   )}
-                  <span>{label}</span>
-                </button>
+                  {label}
+                </Button>
               );
             })}
           </div>
 
           {soundscape !== 'none' && (
-            <div className="space-y-2 animate-fade-in">
-              <div className="flex justify-between text-[10px] font-bold uppercase tracking-widest text-muted">
-                <span>Volume</span>
-                <span>{Math.round(soundVolume * 100)}%</span>
-              </div>
+            <Field label="Volume" htmlFor="soundscape-volume">
               <input
+                id="soundscape-volume"
                 type="range"
                 min="0"
                 max="1"
@@ -722,131 +690,93 @@ export default function TimerClient() {
                 value={soundVolume}
                 onChange={(e) => setSoundVolume(parseFloat(e.target.value))}
                 className="w-full accent-slider cursor-pointer"
-                aria-label="Soundscape volume slider"
+                aria-valuetext={`${Math.round(soundVolume * 100)} percent`}
               />
-            </div>
+            </Field>
           )}
-        </div>
+        </Card>
       </FadeIn>
 
-      {/* Settings Modal */}
-      {showSettings && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95">
-          <FadeIn className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-            <div className="px-6 py-4 border-b border-border flex justify-between items-center">
-              <h2 className="font-bold text-foreground">Timer Settings</h2>
-              <button onClick={() => setShowSettings(false)} className="text-muted hover:text-foreground">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-widest text-muted">Work Duration (mins)</label>
-                <input 
-                  type="number" 
-                  min={MIN_DURATION_MINUTES}
-                  max={MAX_DURATION_MINUTES}
-                  step={1}
-                  value={workTime} 
-                  onChange={(e) => setWorkTime(e.target.value === '' ? '' : sanitizeDuration(e.target.value))}
-                  className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-widest text-muted">Short Break (mins)</label>
-                <input 
-                  type="number" 
-                  min={MIN_DURATION_MINUTES}
-                  max={MAX_DURATION_MINUTES}
-                  step={1}
-                  value={breakTime} 
-                  onChange={(e) => setBreakTime(e.target.value === '' ? '' : sanitizeDuration(e.target.value))}
-                  className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
-                />
-              </div>
-              <div className="space-y-3">
-                <label className="text-xs font-bold uppercase tracking-widest text-muted">Long Break (mins)</label>
-                <input 
-                  type="number" 
-                  min={MIN_DURATION_MINUTES}
-                  max={MAX_DURATION_MINUTES}
-                  step={1}
-                  value={longBreakTime} 
-                  onChange={(e) => setLongBreakTime(e.target.value === '' ? '' : sanitizeDuration(e.target.value))}
-                  className="w-full bg-surface border border-border rounded-lg px-4 py-2 text-foreground font-mono outline-none focus:ring-1 focus:ring-foreground"
-                />
-              </div>
-            </div>
-            <div className="p-4 bg-surface border-t border-border">
-              <button 
-                onClick={() => {
-                  setShowSettings(false);
-                  resetTimer();
-                }}
-                className="w-full py-3 bg-foreground text-background rounded-xl text-sm font-bold shadow-lg"
-              >
-                Apply Changes
-              </button>
-            </div>
-          </FadeIn>
-        </div>
-      )}
-
-      {/* Focus Mode Interrupted Modal */}
-      <AnimatePresence>
-        {showFocusWarning && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[150] flex flex-col items-center justify-center p-4 bg-background/95"
+      <Modal
+        open={showSettings}
+        onClose={() => setShowSettings(false)}
+        title="Timer settings"
+        size="sm"
+      >
+        <div className="space-y-5">
+          <Field label="Work duration (minutes)" htmlFor="timer-work">
+            <Input
+              id="timer-work"
+              type="number"
+              min={MIN_DURATION_MINUTES}
+              max={MAX_DURATION_MINUTES}
+              step={1}
+              value={workTime}
+              onChange={(e) => setWorkTime(e.target.value === '' ? '' : sanitizeDuration(e.target.value))}
+            />
+          </Field>
+          <Field label="Short break (minutes)" htmlFor="timer-break">
+            <Input
+              id="timer-break"
+              type="number"
+              min={MIN_DURATION_MINUTES}
+              max={MAX_DURATION_MINUTES}
+              step={1}
+              value={breakTime}
+              onChange={(e) => setBreakTime(e.target.value === '' ? '' : sanitizeDuration(e.target.value))}
+            />
+          </Field>
+          <Field label="Long break (minutes)" htmlFor="timer-long-break">
+            <Input
+              id="timer-long-break"
+              type="number"
+              min={MIN_DURATION_MINUTES}
+              max={MAX_DURATION_MINUTES}
+              step={1}
+              value={longBreakTime}
+              onChange={(e) => setLongBreakTime(e.target.value === '' ? '' : sanitizeDuration(e.target.value))}
+            />
+          </Field>
+          <Button
+            className="w-full"
+            onClick={() => {
+              setShowSettings(false);
+              resetTimer();
+            }}
           >
-            <motion.div
-              initial={{ scale: 0.95, y: 10 }}
-              animate={{ scale: 1, y: 0 }}
-              exit={{ scale: 0.95, y: 10 }}
-              className="max-w-md w-full text-center space-y-6 p-8 border border-destructive/20 bg-card rounded-2xl shadow-2xl"
-            >
-              <div className="w-16 h-16 rounded-full bg-destructive/10 border border-destructive/20 flex items-center justify-center mx-auto text-destructive animate-bounce">
-                <X className="w-8 h-8" />
-              </div>
-              
-              <div className="space-y-2">
-                <h2 className="text-2xl font-black text-destructive tracking-tight uppercase">
-                  Focus Interrupted!
-                </h2>
-                <p className="text-sm text-foreground-subtle">
-                  You navigated away or exited fullscreen mode. Stay focused on your targets to finish the session!
-                </p>
-              </div>
+            Apply changes
+          </Button>
+        </div>
+      </Modal>
 
-              <div className="py-3 px-4 bg-surface/50 border border-border rounded-xl inline-block">
-                <p className="text-xs font-bold uppercase tracking-wider text-muted">
-                  Distractions Count
-                </p>
-                <p className="text-3xl font-black text-foreground mt-1 animate-warning-pulse">
-                  {distractions}
-                </p>
-              </div>
-
-              <div className="pt-2 flex flex-col gap-2.5">
-                <button
-                  onClick={resumeFocus}
-                  className="w-full py-3 bg-foreground text-background font-bold rounded-xl text-sm hover:scale-[1.02] active:scale-[0.98] transition-all shadow-md"
-                >
-                  Resume Focus Mode
-                </button>
-                <button
-                  onClick={exitFocusMode}
-                  className="w-full py-2.5 bg-surface border border-border text-foreground font-semibold rounded-xl text-xs hover:bg-surface-hover transition-all"
-                >
-                  Exit Focus Mode
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <Modal
+        open={showFocusWarning}
+        onClose={exitFocusMode}
+        title="Focus interrupted"
+        size="sm"
+      >
+        <div className="space-y-5">
+          <p className="text-sm text-muted leading-relaxed">
+            You navigated away or exited fullscreen. Stay on this session to finish the block.
+          </p>
+          <div className="rounded-lg border border-border bg-surface/50 px-4 py-3 text-center">
+            <p className="text-2xs font-semibold uppercase tracking-widest text-muted">
+              Distractions
+            </p>
+            <p className="text-3xl font-semibold text-foreground mt-1 tabular-nums">
+              {distractions}
+            </p>
+          </div>
+          <div className="flex flex-col gap-2">
+            <Button onClick={resumeFocus} className="w-full">
+              Resume focus mode
+            </Button>
+            <Button variant="secondary" onClick={exitFocusMode} className="w-full">
+              Exit focus mode
+            </Button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

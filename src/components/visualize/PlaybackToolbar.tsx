@@ -1,7 +1,11 @@
 "use client";
 
-import type { ReactNode } from "react";
 import { Pause, Play, RotateCcw, StepBack, StepForward } from "lucide-react";
+import {
+  Button,
+  Card,
+  IconButton,
+} from "@/components/ui";
 import { PlaybackControls } from "@/lib/visualize/useVisualizerPlayback";
 import {
   formatPlaybackSpeed,
@@ -13,6 +17,7 @@ import {
   speedFillPercent,
   speedMsToSliderValue,
 } from "@/lib/visualize/playbackSpeed";
+import type { ReactNode } from "react";
 
 export interface PlaybackToolbarProps<TState> {
   playback: PlaybackControls<TState>;
@@ -62,61 +67,54 @@ export function PlaybackToolbar<TState>({
     totalSteps <= 1 ? 0 : (currentStepIndex / (totalSteps - 1)) * 100;
   const speedSliderValue = speedMsToSliderValue(speedMs);
 
-  const btnBase =
-    "inline-flex items-center justify-center gap-1.5 min-h-11 px-3 rounded-md text-sm transition-colors disabled:opacity-40 disabled:cursor-not-allowed";
-  const btnPrimary = `${btnBase} bg-foreground text-background font-medium`;
-  const btnGhost = `${btnBase} text-muted hover:text-foreground hover:bg-surface/80`;
-
   return (
-    <div className="w-full max-w-xl mx-auto select-none rounded-lg border border-border bg-card p-4 space-y-4">
+    <Card className="w-full max-w-xl mx-auto select-none space-y-4">
       <div className="flex flex-wrap items-center justify-center gap-1.5">
-        <button
-          type="button"
-          onClick={togglePlay}
-          disabled={locked}
-          className={btnPrimary}
-        >
+        <Button type="button" onClick={togglePlay} disabled={locked} size="md">
           {isPlaying ? (
             <Pause className="w-3.5 h-3.5" />
           ) : (
             <Play className="w-3.5 h-3.5" />
           )}
           {isPlaying ? "Pause" : isAtEnd && totalSteps > 0 ? "Replay" : "Play"}
-        </button>
-        <button
+        </Button>
+        <IconButton
           type="button"
+          variant="ghost"
+          size="md"
           onClick={stepBackward}
           disabled={locked || isAtStart}
-          className={btnGhost}
+          label="Previous step"
         >
-          <StepBack className="w-3.5 h-3.5" />
-          Back
-        </button>
-        <button
+          <StepBack className="w-4 h-4" />
+        </IconButton>
+        <IconButton
           type="button"
+          variant="ghost"
+          size="md"
           onClick={stepForward}
           disabled={locked || isAtEnd}
-          className={btnGhost}
+          label="Next step"
         >
-          Next
-          <StepForward className="w-3.5 h-3.5" />
-        </button>
-        <button
+          <StepForward className="w-4 h-4" />
+        </IconButton>
+        <IconButton
           type="button"
+          variant="ghost"
+          size="md"
           onClick={reset}
           disabled={locked || isAtStart}
-          className={btnGhost}
+          label="Restart from the first step"
         >
-          <RotateCcw className="w-3.5 h-3.5" />
-          Start
-        </button>
+          <RotateCcw className="w-4 h-4" />
+        </IconButton>
         <span className="font-mono text-xs text-muted tabular-nums min-w-[4.75rem] text-center">
           {totalSteps > 0 ? currentStepIndex + 1 : 0} / {totalSteps}
         </span>
       </div>
 
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted">
+        <div className="flex items-center justify-between text-2xs font-mono uppercase tracking-wider text-muted">
           <span>Step</span>
           <span>
             {totalSteps > 0 ? currentStepIndex + 1 : 0} of {totalSteps}
@@ -138,34 +136,31 @@ export function PlaybackToolbar<TState>({
 
       <div className="space-y-2 border-t border-border pt-3">
         <div className="flex items-center justify-between gap-2">
-          <span className="text-[10px] font-mono uppercase tracking-wider text-muted">
+          <span className="text-2xs font-mono uppercase tracking-wider text-muted">
             Speed
           </span>
-          <span className="font-mono text-[10px] text-muted tabular-nums">
+          <span className="font-mono text-2xs text-muted tabular-nums">
             {formatPlaybackSpeed(speedMs)} per step
           </span>
         </div>
 
         <div className="flex flex-wrap gap-1">
           {PLAYBACK_SPEED_PRESETS.map((preset) => (
-            <button
+            <Button
               type="button"
               key={preset.label}
+              size="sm"
+              variant={speedMs === preset.ms ? "primary" : "secondary"}
               onClick={() => setSpeedMs(preset.ms)}
               disabled={disabled}
-              className={`min-h-8 rounded-md px-2.5 text-[10px] font-mono uppercase tracking-wide transition-colors disabled:opacity-40 ${
-                speedMs === preset.ms
-                  ? "bg-foreground text-background"
-                  : "border border-border text-muted hover:text-foreground"
-              }`}
             >
               {preset.label}
-            </button>
+            </Button>
           ))}
         </div>
 
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[10px] font-mono uppercase tracking-wider text-muted">
+          <div className="flex items-center justify-between text-2xs font-mono uppercase tracking-wider text-muted">
             <span>Super slow</span>
             <span>Fast</span>
           </div>
@@ -187,6 +182,6 @@ export function PlaybackToolbar<TState>({
           </RangeTrack>
         </div>
       </div>
-    </div>
+    </Card>
   );
 }

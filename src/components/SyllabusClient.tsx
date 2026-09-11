@@ -39,7 +39,7 @@ import { parseUnitKey, unitFolderId } from '@/lib/resourceGroups';
 import { buildResourcesHref } from '@/lib/resourceUrl';
 import AcademicBreadcrumb from '@/components/AcademicBreadcrumb';
 import AppLink from '@/components/ui/AppLink';
-import { Button, Card, Badge, Input, Select, Segmented, Modal, PageHeader } from '@/components/ui';
+import { Button, Card, Badge, Input, Select, Segmented, Modal, PageHeader, ErrorState } from '@/components/ui';
 import { useWorkspaceResources } from '@/lib/useWorkspaceResources';
 import { generateId } from '@/lib/id';
 import PageSkeleton from '@/components/PageSkeleton';
@@ -523,26 +523,12 @@ export default function SyllabusClient() {
       </div>
 
       {catalogError && (
-        <Card
-          padding="md"
-          className="mb-8 relative z-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-dashed border-red-500/30"
-        >
-          <div>
-            <p className="text-sm font-semibold text-foreground">
-              Couldn’t load course materials
-            </p>
-            <p className="text-xs text-muted mt-0.5">
-              {catalogError}. Vault links may be missing until this succeeds.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={retryCatalog}
-            className="shrink-0 px-3 py-1.5 rounded-lg bg-foreground text-background text-xs font-semibold hover:opacity-90"
-          >
-            Retry
-          </button>
-        </Card>
+        <ErrorState
+          className="mb-8"
+          title="Couldn’t load course materials"
+          description={`${catalogError}. Vault links may be missing until this succeeds.`}
+          onRetry={retryCatalog}
+        />
       )}
 
       {/* Progress */}

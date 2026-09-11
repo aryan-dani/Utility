@@ -49,6 +49,12 @@ drive-rename-report.json
 drive-needs-review.md
 drive-site-audit.json
 
+# Android TWA packaging (Bubblewrap)
+/store/android/app/build/
+/store/android/*.keystore
+/store/android/*.jks
+/store/android/android.keystore
+
 # local sync/index logs
 *-log.txt
 index-content-log.txt

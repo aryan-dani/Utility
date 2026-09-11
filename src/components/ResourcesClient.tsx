@@ -69,7 +69,7 @@ import { getReadingProgress } from "@/lib/readingProgress";
 import { logResourceOpen } from "@/lib/activity";
 import { authFetch } from "@/lib/authFetch";
 import { useWorkspaceResources } from "@/lib/useWorkspaceResources";
-import { Button, Card, Badge, PageHeader, Input, IconButton } from "@/components/ui";
+import { Button, Card, Badge, PageHeader, Input, IconButton, EmptyState, ErrorState } from "@/components/ui";
 import PageSkeleton from "@/components/PageSkeleton";
 import type { RAGSearchResult } from "@/lib/ragSearch";
 
@@ -883,37 +883,18 @@ export default function ResourcesClient() {
       <div className="border-b border-border mb-8" />
 
       {catalogError ? (
-        <Card
-          padding="lg"
-          className="flex flex-col items-center justify-center p-10 text-center border-dashed border-red-500/30 bg-surface"
-        >
-          <p className="text-base font-semibold text-foreground mb-1">
-            Couldn’t load the vault catalog
-          </p>
-          <p className="text-sm text-muted mb-4 max-w-md">
-            {catalogError}. This isn’t an empty semester — try again.
-          </p>
-          <button
-            type="button"
-            onClick={retryCatalog}
-            className="px-4 py-2 rounded-lg bg-foreground text-background text-sm font-semibold hover:opacity-90"
-          >
-            Retry
-          </button>
-        </Card>
+        <ErrorState
+          className="mb-8"
+          title="Couldn’t load the vault catalog"
+          description={`${catalogError}. This isn’t an empty semester — try again.`}
+          onRetry={retryCatalog}
+        />
       ) : resources.length === 0 ? (
-        <Card
-          padding="lg"
-          className="flex flex-col items-center justify-center p-16 text-center border-dashed bg-surface"
-        >
-          <Folder className="w-10 h-10 text-muted/40 mb-3" />
-          <p className="text-base font-semibold text-foreground mb-1">
-            No Files Found
-          </p>
-          <p className="text-sm text-muted">
-            No resources uploaded for {branch} Semester {semester} yet.
-          </p>
-        </Card>
+        <EmptyState
+          icon={<Folder className="w-10 h-10 text-muted/40" />}
+          title="No files found"
+          description={`No resources uploaded for ${branch} Semester ${semester} yet.`}
+        />
       ) : (
         <div className="flex flex-col lg:flex-row gap-8 items-start">
           <Card

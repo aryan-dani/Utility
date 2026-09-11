@@ -14,7 +14,7 @@ import { logActivity } from '@/lib/activity';
 import { parsePrompt, mergeEntries } from '@/lib/promptParser';
 import { plannerStorageKey } from '@/lib/plannerStorage';
 import { notify } from '@/lib/toast';
-import { Button, Modal, PageHeader, Card, Segmented } from '@/components/ui';
+import { Button, Modal, PageHeader, Card, Segmented, Switch } from '@/components/ui';
 import AppLink from '@/components/ui/AppLink';
 import { authFetch } from '@/lib/authFetch';
 import { getSoonestUpcomingExam } from '@/lib/examCountdown';
@@ -646,12 +646,11 @@ function ShareModal({
                     </p>
                   </div>
                 </div>
-                <button
-                  onClick={onTogglePublic}
-                  className={`relative w-11 h-6 rounded-full border border-border transition-colors ${isPublic ? 'bg-foreground' : 'bg-surface-hover'}`}
-                >
-                  <div className={`absolute top-0.5 w-4.5 h-4.5 rounded-full border border-border bg-white transition-transform ${isPublic ? 'left-[22px]' : 'left-0.5'}`} />
-                </button>
+                <Switch
+                  checked={isPublic}
+                  onCheckedChange={() => onTogglePublic()}
+                  label={isPublic ? "Public link enabled" : "Private plan"}
+                />
               </div>
 
               {/* Copy link */}
@@ -1450,9 +1449,9 @@ export default function PlannerClient() {
   if (!mounted) return null;
 
   return (
-    <div className="flex-1 w-full min-w-0 page-gutter py-6 sm:py-8 max-w-5xl mx-auto flex flex-col gap-5 sm:gap-6 pb-12">
+    <div className="flex-1 w-full min-w-0 page-gutter py-5 sm:py-6 max-w-5xl mx-auto flex flex-col gap-3 sm:gap-4 pb-12">
       {/* ── Header toolkit ── */}
-      <Card className="rounded-2xl" padding="lg">
+      <Card className="rounded-2xl" padding="md">
         <PageHeader
           className="min-w-0"
           eyebrow="Productivity"
@@ -1609,12 +1608,14 @@ export default function PlannerClient() {
       </Card>
 
       {/* ── Controls toolkit ── */}
-      <Card className="rounded-2xl" padding="md">
-        <div className="flex flex-col gap-3 sm:gap-4 min-w-0">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 min-w-0">
+      <Card className="rounded-2xl" padding="sm">
+        <div className="flex flex-col gap-2 sm:gap-3 min-w-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 min-w-0">
             <Segmented
               value={plannerView}
               onChange={setPlannerView}
+              size="sm"
+              className="w-full sm:w-auto"
               aria-label="Planner view"
               options={[
                 { value: 'calendar', label: (<span className="inline-flex items-center gap-1.5"><Calendar className="w-3.5 h-3.5" /><span className="hidden sm:inline">Calendar</span></span>) },
@@ -1672,12 +1673,12 @@ export default function PlannerClient() {
         <div className="grid grid-cols-7 gap-px bg-border/80">
           {/* Day headers */}
           {DAY_LABELS.map((d) => (
-            <div key={d} className="bg-surface/80 py-3 text-center">
+            <div key={d} className="bg-surface/80 py-2 text-center">
               <span className="text-[11px] font-bold text-muted uppercase tracking-wider">{d}</span>
             </div>
           ))}
 
-          {/* Day cells */}
+          {/* Day cells — fixed equal height so empty/full days match */}
           {calendarDays.map(({ date, dayNum, isCurrentMonth }) => {
             const tasks = planData[date] || [];
             const isToday = date === today;
@@ -1688,7 +1689,7 @@ export default function PlannerClient() {
               <div
                 key={date}
                 onClick={() => setSelectedDate(date)}
-                className={`min-h-[108px] sm:min-h-[124px] p-2 sm:p-2.5 flex flex-col cursor-pointer transition-all hover:bg-surface/60 group/cell relative ${
+                className={`h-[4.75rem] sm:h-[5.5rem] p-1.5 sm:p-2 flex flex-col overflow-hidden cursor-pointer transition-colors hover:bg-surface/60 group/cell relative ${
                   isCurrentMonth ? 'bg-card' : 'bg-surface/40 opacity-55'
                 } ${isToday ? 'ring-1 ring-inset ring-foreground/25' : ''}`}
               >

@@ -13,7 +13,6 @@ import {
   Loader2, 
   Copy, 
   Check, 
-  MessageSquare, 
   Layers, 
   HelpCircle, 
   RotateCw, 
@@ -29,6 +28,7 @@ import {
   FileText,
   X,
   Square,
+  Flag,
 } from 'lucide-react';
 import { useAcademicStore } from '@/store/academicStore';
 import { auth } from '@/lib/firebase';
@@ -42,13 +42,25 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import AcademicBreadcrumb from '@/components/AcademicBreadcrumb';
 import AppLink from '@/components/ui/AppLink';
 import { buildResourcesHref, pageFromSectionLabel } from '@/lib/resourceUrl';
-import { Button, Select, PageHeader } from '@/components/ui';
+import { Button, ButtonLink, Modal, Select, PageHeader, Segmented, IconButton } from '@/components/ui';
 import { SourceCardList, renderWithCitations } from '@/components/ask/SourceCard';
 import type { RetrievalSource } from '@/lib/rag/types';
 import { stripInvalidCitations, validMarkerSet } from '@/lib/agent/router';
 import { authFetch, getAuthHeaders } from '@/lib/authFetch';
 import { useWorkspaceResources } from '@/lib/useWorkspaceResources';
 import { generateId } from '@/lib/id';
+
+type AskTab = 'chat' | 'flashcards' | 'quiz';
+
+const ASK_TAB_OPTIONS: { value: AskTab; label: string }[] = [
+  { value: 'chat', label: 'Chat' },
+  { value: 'flashcards', label: 'Flashcards' },
+  { value: 'quiz', label: 'Quiz' },
+];
+
+/** Shared height so sidebar + chat toolbars share one baseline. */
+const ASK_CHROME_ROW =
+  'h-11 shrink-0 border-b border-border flex items-center px-3 gap-2';
 
 /** Legacy persisted messages may include a plain `content` field. */
 type ChatMessage = UIMessage & { content?: string };
@@ -99,6 +111,28 @@ const SUGGESTED_PROMPTS = [
   'Create 10 flashcards on OS deadlock prevention and Banker’s algorithm',
   'Outline UI/UX heuristic evaluation steps for a Sem 5 mini-project',
 ];
+
+function ReportButton({
+  onClick,
+  disabled,
+}: {
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Button
+      variant="ghost"
+      size="sm"
+      onClick={onClick}
+      disabled={disabled}
+      className="opacity-100 md:opacity-0 md:group-hover:opacity-100 min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1"
+      title="Report this response"
+      aria-label="Report this response"
+    >
+      <Flag className="w-3 h-3" />
+    </Button>
+  );
+}
 
 function CopyButton({ text }: { text: string }) {
   const [copied, setCopied] = useState(false);
@@ -387,7 +421,7 @@ export default function AskClient() {
     subjects,
     loading: catalogLoading,
   } = useWorkspaceResources();
-  const [activeTab, setActiveTab] = useState<'chat' | 'flashcards' | 'quiz'>('chat');
+  const [activeTab, setActiveTab] = useState<AskTab>('chat');
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -405,6 +439,10 @@ export default function AskClient() {
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sessionsReady, setSessionsReady] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportText, setReportText] = useState('');
+  const [reportReason, setReportReason] = useState('inaccurate');
+  const [reportSending, setReportSending] = useState(false);
 
   // Chat refs & state
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -1033,11 +1071,41 @@ export default function AskClient() {
     return correct;
   };
 
+  const submitAiReport = async () => {
+    if (!auth.currentUser) {
+      notify.error('Sign in to report a response.');
+      return;
+    }
+    if (!reportText.trim()) return;
+    setReportSending(true);
+    try {
+      const res = await authFetch('/api/support', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          kind: 'ai-report',
+          reason: reportReason,
+          message: reportText.slice(0, 2000),
+        }),
+      });
+      if (!res.ok) {
+        throw new Error('Could not send the report.');
+      }
+      notify.success('Thanks — we received your report.');
+      setReportOpen(false);
+      setReportText('');
+    } catch (err) {
+      notify.error(err, 'Could not send the report.');
+    } finally {
+      setReportSending(false);
+    }
+  };
+
   return (
-    <div className="flex-1 min-h-0 w-full mx-auto grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden overscroll-none h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] max-h-[calc(100dvh-3.5rem-env(safe-area-inset-top))] md:h-dvh md:max-h-dvh page-gutter">
+    <div className="flex-1 min-h-0 w-full mx-auto grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden overscroll-none h-full max-h-full page-gutter">
       {/* Top Navigation Tabs */}
-      <div className="border-b border-border px-4 sm:px-6 py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
-        <div className="flex flex-col gap-2 min-w-0">
+      <div className="border-b border-border px-4 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+        <div className="flex flex-col gap-1.5 min-w-0">
           <AcademicBreadcrumb
             branch={branch}
             semester={semester}
@@ -1049,58 +1117,24 @@ export default function AskClient() {
               },
             ]}
           />
-          <div className="flex items-center gap-1.5 p-1 bg-surface border border-border rounded-xl shadow-xs w-fit max-w-full overflow-x-auto" role="tablist" aria-label="Ask modes">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'chat'}
-            onClick={() => setActiveTab('chat')}
-            className={`flex items-center gap-2 px-3.5 min-h-11 rounded-lg text-xs font-semibold transition-colors focus-visible:outline-offset-1 shrink-0 ${
-              activeTab === 'chat'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted hover:text-foreground'
-            }`}
-          >
-            <MessageSquare className="w-3.5 h-3.5" />
-            Chat Assistant
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'flashcards'}
-            onClick={() => setActiveTab('flashcards')}
-            className={`flex items-center gap-2 px-3.5 min-h-11 rounded-lg text-xs font-semibold transition-colors focus-visible:outline-offset-1 shrink-0 ${
-              activeTab === 'flashcards'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted hover:text-foreground'
-            }`}
-          >
-            <Layers className="w-3.5 h-3.5" />
-            Flashcards
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={activeTab === 'quiz'}
-            onClick={() => setActiveTab('quiz')}
-            className={`flex items-center gap-2 px-3.5 min-h-11 rounded-lg text-xs font-semibold transition-colors focus-visible:outline-offset-1 shrink-0 ${
-              activeTab === 'quiz'
-                ? 'bg-primary text-primary-foreground shadow-xs'
-                : 'text-muted hover:text-foreground'
-            }`}
-          >
-            <HelpCircle className="w-3.5 h-3.5" />
-            Practice Quiz
-          </button>
-          </div>
+          <Segmented
+            value={activeTab}
+            options={ASK_TAB_OPTIONS}
+            onChange={setActiveTab}
+            size="sm"
+            aria-label="Ask modes"
+            className="w-fit max-w-full"
+          />
         </div>
 
-        <AppLink
+        <ButtonLink
           href={`/syllabus?year=${encodeURIComponent(academicYear)}&branch=${branch}&semester=${semester}`}
-          className="text-xs font-semibold text-muted hover:text-foreground active:bg-surface bg-surface px-2.5 py-2 min-h-11 rounded-md border border-border transition-colors self-start sm:self-auto inline-flex items-center"
+          variant="secondary"
+          size="sm"
+          className="self-start sm:self-auto"
         >
           Syllabus
-        </AppLink>
+        </ButtonLink>
       </div>
 
       {/* Tab 1: Chat Assistant */}
@@ -1117,64 +1151,63 @@ export default function AskClient() {
                 className="absolute inset-0 bg-black/50 z-30 lg:hidden"
               />
               <div className="absolute lg:relative inset-y-0 left-0 z-40 lg:z-auto w-[min(16rem,85vw)] lg:w-64 min-h-0 border-r border-border bg-background-subtle flex flex-col shrink-0 shadow-popover lg:shadow-none">
-              <div className="p-3.5 border-b border-border flex items-center justify-between gap-2">
-                <span className="text-xs uppercase font-bold text-muted tracking-wider">Chat History</span>
+              <div className={`${ASK_CHROME_ROW} justify-between bg-surface/30`}>
+                <span className="text-[10px] uppercase font-bold text-muted tracking-wider">
+                  Chat History
+                </span>
                 <div className="flex items-center gap-1">
-                <Button
+                <IconButton
                   variant="secondary"
                   size="sm"
+                  label="New chat"
                   onClick={handleNewChat}
-                  className="tap-target shrink-0"
-                  title="New Chat"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                </Button>
-                <Button
+                </IconButton>
+                <IconButton
                   variant="secondary"
                   size="sm"
+                  label="Close chat history"
                   onClick={() => setSidebarOpen(false)}
-                  className="tap-target lg:hidden shrink-0"
-                  title="Close history"
-                  aria-label="Close chat history"
+                  className="lg:hidden"
                 >
                   <X className="w-3.5 h-3.5" />
-                </Button>
+                </IconButton>
                 </div>
               </div>
-              <div className="flex-1 overflow-y-auto p-2 space-y-1 custom-scrollbar">
+              <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
                 {displaySessions.map(s => {
                   const isActive = s.id === activeSessionId;
                   return (
                     <div
                       key={s.id}
                       onClick={() => handleSwitchSession(s.id)}
-                      className={`group/session w-full flex items-center justify-between px-3 py-2.5 min-h-11 rounded-xl text-xs font-bold cursor-pointer transition-all duration-250 border ${
+                      className={`group/session w-full flex items-center justify-between px-2.5 h-9 rounded-lg text-xs font-semibold cursor-pointer transition-colors border ${
                         isActive 
-                          ? 'bg-card border-border-strong text-foreground shadow-sm translate-x-0.5' 
-                          : 'border-transparent text-muted hover:text-foreground hover:bg-card hover:border-border hover:shadow-xs active:bg-card'
+                          ? 'bg-card border-border-strong text-foreground shadow-xs' 
+                          : 'border-transparent text-muted hover:text-foreground hover:bg-card/80 hover:border-border'
                       }`}
                     >
-                      <span className="truncate min-w-0 flex-1 mr-2">{s.title}</span>
-                      <div className="flex items-center gap-1 opacity-100 md:opacity-0 md:group-hover/session:opacity-100 transition-opacity shrink-0">
-                        <Button
+                      <span className="truncate min-w-0 flex-1 mr-1.5">{s.title}</span>
+                      <div className="flex items-center gap-0.5 opacity-100 md:opacity-0 md:group-hover/session:opacity-100 transition-opacity shrink-0">
+                        <IconButton
                           variant="ghost"
                           size="sm"
+                          label="Rename chat"
                           onClick={(e) => handleRenameSession(s.id, s.title, e)}
-                          className={`min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1 ${isActive ? 'text-foreground/75' : ''}`}
-                          title="Rename Chat"
-                          aria-label="Rename chat"
+                          className={isActive ? 'text-foreground/75' : undefined}
                         >
-                          <Pencil className="w-3.5 h-3.5" />
-                        </Button>
-                        <Button
+                          <Pencil className="w-3 h-3" />
+                        </IconButton>
+                        <IconButton
                           variant="ghost"
                           size="sm"
+                          label="Delete chat"
                           onClick={(e) => handleDeleteSession(s.id, e)}
-                          className={`min-h-11 min-w-11 md:min-h-0 md:min-w-0 md:p-1 hover:text-destructive ${isActive ? 'text-foreground/75' : ''}`}
-                          title="Delete Chat"
+                          className={`hover:text-destructive ${isActive ? 'text-foreground/75' : ''}`}
                         >
                           <Trash2 className="w-3 h-3" />
-                        </Button>
+                        </IconButton>
                       </div>
                     </div>
                   );
@@ -1188,29 +1221,30 @@ export default function AskClient() {
           <div className="flex-1 min-h-0 min-w-0 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
             
             {/* Top Toolbar: Sidebar toggle & grounded document selector */}
-            <div className="flex items-center justify-between gap-2 flex-wrap border-b border-border px-3 sm:px-4 py-2.5 bg-surface/30 shrink-0">
+            <div className={`${ASK_CHROME_ROW} justify-between flex-nowrap bg-surface/30 sm:px-4`}>
               <div className="flex items-center gap-2 min-w-0 flex-1">
-                <Button
+                <IconButton
                   variant="secondary"
                   size="sm"
+                  label={sidebarOpen ? "Hide chat history" : "Show chat history"}
                   onClick={() => setSidebarOpen(!sidebarOpen)}
-                  className="tap-target shrink-0"
-                  title={sidebarOpen ? "Hide chat history" : "Show chat history"}
                 >
                   <ChevronLeft className={`w-3.5 h-3.5 transition-transform ${sidebarOpen ? '' : 'rotate-180'}`} />
-                </Button>
+                </IconButton>
                 
-                <div className="h-4 w-px bg-border mx-1 hidden sm:block shrink-0" />
+                <div className="h-4 w-px bg-border hidden sm:block shrink-0" />
 
                 {/* Grounded Document Selector */}
                 <div className="flex items-center gap-2 min-w-0 flex-1">
-                  <span className="text-xs uppercase font-bold text-muted select-none hidden sm:inline shrink-0">AI Focus:</span>
+                  <span className="text-[10px] uppercase font-bold text-muted select-none hidden sm:inline shrink-0 tracking-wider">
+                    AI Focus
+                  </span>
                   <Select
                     value={selectedResourceId}
                     options={focusOptions}
                     onChange={setSelectedResourceId}
                     icon={selectedResourceId === 'all' ? Globe : FileText}
-                    size="md"
+                    size="sm"
                     searchable
                     searchPlaceholder="Search documents…"
                     className="w-full max-w-full sm:max-w-xs"
@@ -1219,8 +1253,8 @@ export default function AskClient() {
               </div>
 
               {selectedResourceId !== 'all' && (
-                <span className="text-xs font-bold uppercase tracking-wider text-foreground bg-foreground/5 px-2 py-0.5 rounded border border-foreground/15">
-                  Grounded Chat Mode
+                <span className="text-[10px] font-bold uppercase tracking-wider text-foreground bg-foreground/5 px-1.5 py-0.5 rounded border border-foreground/15 shrink-0 hidden sm:inline">
+                  Grounded
                 </span>
               )}
             </div>
@@ -1244,7 +1278,13 @@ export default function AskClient() {
                     className="mb-4 sm:flex-col sm:items-center [&_p]:hidden"
                     title="Academic AI Assistant"
                   />
-                  <NotesDisclaimer compact className="mb-8 max-w-md mx-auto" />
+                  <NotesDisclaimer compact className="mb-3 max-w-md mx-auto" />
+                  <p className="text-xs text-muted mb-8 max-w-md mx-auto leading-relaxed">
+                    Ask AI can be wrong. Report a response from any answer.{' '}
+                    <AppLink href="/privacy" className="text-foreground underline underline-offset-4">
+                      Privacy
+                    </AppLink>
+                  </p>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm w-full max-w-lg">
                     {randomPrompts.map((prompt) => (
@@ -1272,10 +1312,10 @@ export default function AskClient() {
                       )}
 
                       <div
-                        className={`max-w-[85%] ${
+                        className={`${
                           m.role === 'user'
-                            ? 'bg-foreground text-background rounded-2xl rounded-br-md px-4 py-2.5 shadow-sm'
-                            : 'bg-card border border-border/80 rounded-2xl px-5 py-4 shadow-xs relative group/bubble'
+                            ? 'w-fit max-w-[min(85%,28rem)] bg-foreground text-background rounded-2xl rounded-br-md px-3.5 py-2 shadow-sm'
+                            : 'max-w-[85%] bg-card border border-border/80 rounded-2xl px-4 py-3 shadow-xs relative group/bubble'
                         }`}
                       >
                         {m.role === 'user' ? (
@@ -1300,7 +1340,15 @@ export default function AskClient() {
                                 onCitationClick={openCitation}
                               />
                             )}
-                            <div className="absolute top-0 right-0 opacity-100 md:opacity-0 md:group-hover/bubble:opacity-100 transition-opacity">
+                            <div className="absolute top-0 right-0 flex items-center opacity-100 md:opacity-0 md:group-hover/bubble:opacity-100 transition-opacity">
+                              <ReportButton
+                                disabled={isLoading && m.id === messages[messages.length - 1]?.id}
+                                onClick={() => {
+                                  setReportText(getMessageContent(m).slice(0, 2000));
+                                  setReportReason('inaccurate');
+                                  setReportOpen(true);
+                                }}
+                              />
                               <CopyButton text={getMessageContent(m)} />
                             </div>
                           </div>
@@ -1341,7 +1389,7 @@ export default function AskClient() {
               )}
             </div>
 
-            <div className="border-t border-border px-4 sm:px-6 py-4 shrink-0 safe-bottom">
+            <div className="border-t border-border px-4 sm:px-6 py-4 shrink-0 md:safe-bottom">
               {messages.length > 0 && (
                 <div className="flex items-center gap-4 mb-2">
                   <Button
@@ -1436,25 +1484,26 @@ export default function AskClient() {
                 value={flashcardTopic}
                 onChange={(e) => setFlashcardTopic(e.target.value)}
                 disabled={isGeneratingFlashcards}
-                className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-sm outline-none text-foreground placeholder:text-muted focus:ring-0 focus-visible:ring-0 transition-[border-color,box-shadow] duration-150 shadow-sm input-premium-focus"
+                className="flex-1 bg-surface border border-border rounded-lg px-3 min-h-9 text-sm outline-none text-foreground placeholder:text-muted focus:ring-0 focus-visible:ring-0 transition-[border-color,box-shadow] duration-150 shadow-xs input-premium-focus"
               />
-              <button
+              <Button
                 type="submit"
                 disabled={isGeneratingFlashcards || !flashcardTopic.trim()}
-                className="px-6 py-3 bg-foreground text-background rounded-xl text-sm font-semibold disabled:opacity-30 hover:opacity-90 transition-all shadow-sm flex items-center gap-2 shrink-0"
+                size="sm"
+                className="shrink-0"
               >
                 {isGeneratingFlashcards ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Generating…
                   </>
                 ) : (
                   <>
-                    <Layers className="w-4 h-4" />
+                    <Layers className="w-3.5 h-3.5" />
                     Generate
                   </>
                 )}
-              </button>
+              </Button>
             </form>
 
             {/* Quick subject prompt pills */}
@@ -1557,9 +1606,9 @@ export default function AskClient() {
                     setIsFlipped(false);
                     setCurrentCardIndex((prev) => (prev - 1 + flashcards.length) % flashcards.length);
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-surface border border-border rounded-xl text-xs font-semibold text-foreground hover:bg-surface-hover transition-colors shadow-xs"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 bg-surface border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-surface-hover transition-colors shadow-xs"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <ChevronLeft className="w-3.5 h-3.5" />
                   Prev
                 </button>
 
@@ -1570,13 +1619,13 @@ export default function AskClient() {
                       setIsFlipped(false);
                       setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
                     }}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all shadow-xs ${
+                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border transition-colors shadow-xs ${
                       knownCards[currentCardIndex] === false
                         ? 'bg-destructive text-destructive-foreground border-destructive'
                         : 'bg-surface border-border text-muted hover:text-foreground'
                     }`}
                   >
-                    <XCircle className="w-4 h-4" />
+                    <XCircle className="w-3.5 h-3.5" />
                     Review
                   </button>
 
@@ -1586,13 +1635,13 @@ export default function AskClient() {
                       setIsFlipped(false);
                       setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
                     }}
-                    className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-semibold border transition-all shadow-xs ${
+                    className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border transition-colors shadow-xs ${
                       knownCards[currentCardIndex] === true
                         ? 'bg-foreground text-background border-foreground font-semibold'
                         : 'bg-surface border-border text-muted hover:text-foreground'
                     }`}
                   >
-                    <CheckCircle2 className="w-4 h-4" />
+                    <CheckCircle2 className="w-3.5 h-3.5" />
                     Got it
                   </button>
                 </div>
@@ -1602,7 +1651,7 @@ export default function AskClient() {
                     setIsFlipped(false);
                     setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
                   }}
-                  className="flex items-center gap-1.5 px-4 py-2.5 bg-surface border border-border rounded-xl text-xs font-semibold text-foreground hover:bg-surface-hover transition-colors shadow-xs"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 bg-surface border border-border rounded-lg text-xs font-semibold text-foreground hover:bg-surface-hover transition-colors shadow-xs"
                 >
                   Next
                   <ChevronRight className="w-4 h-4" />
@@ -1669,25 +1718,26 @@ export default function AskClient() {
                 value={quizTopic}
                 onChange={(e) => setQuizTopic(e.target.value)}
                 disabled={isGeneratingQuiz}
-                className="flex-1 bg-surface border border-border rounded-xl px-4 py-3 text-sm outline-none text-foreground placeholder:text-muted focus:ring-0 focus-visible:ring-0 transition-[border-color,box-shadow] duration-150 shadow-sm input-premium-focus"
+                className="flex-1 bg-surface border border-border rounded-lg px-3 min-h-9 text-sm outline-none text-foreground placeholder:text-muted focus:ring-0 focus-visible:ring-0 transition-[border-color,box-shadow] duration-150 shadow-xs input-premium-focus"
               />
-              <button
+              <Button
                 type="submit"
                 disabled={isGeneratingQuiz || !quizTopic.trim()}
-                className="px-6 py-3 bg-foreground text-background rounded-xl text-sm font-semibold disabled:opacity-30 hover:opacity-90 transition-all shadow-sm flex items-center gap-2 shrink-0"
+                size="sm"
+                className="shrink-0"
               >
                 {isGeneratingQuiz ? (
                   <>
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    Generating...
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Generating…
                   </>
                 ) : (
                   <>
-                    <HelpCircle className="w-4 h-4" />
+                    <HelpCircle className="w-3.5 h-3.5" />
                     Generate
                   </>
                 )}
-              </button>
+              </Button>
             </form>
 
             <div className="flex flex-wrap gap-2 mt-3">
@@ -1849,6 +1899,55 @@ export default function AskClient() {
           )}
         </div>
       )}
+      <Modal
+        open={reportOpen}
+        onClose={() => {
+          if (reportSending) return;
+          setReportOpen(false);
+        }}
+        title="Report this response"
+        size="sm"
+      >
+        <p className="text-sm text-muted leading-relaxed">
+          Tell us what is wrong. We store a truncated copy of the answer with
+          your report. See the{' '}
+          <AppLink href="/privacy" className="text-foreground underline underline-offset-4">
+            privacy policy
+          </AppLink>
+          .
+        </p>
+        <label className="block mt-4 text-xs font-semibold text-foreground">
+          Reason
+          <Select
+            className="mt-1.5"
+            value={reportReason}
+            onChange={setReportReason}
+            options={[
+              { value: 'inaccurate', label: 'Inaccurate or misleading' },
+              { value: 'harmful', label: 'Harmful or inappropriate' },
+              { value: 'off-topic', label: 'Off-topic' },
+              { value: 'other', label: 'Other' },
+            ]}
+          />
+        </label>
+        <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-2 mt-5">
+          <Button
+            type="button"
+            variant="secondary"
+            disabled={reportSending}
+            onClick={() => setReportOpen(false)}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={reportSending}
+            onClick={() => void submitAiReport()}
+          >
+            {reportSending ? 'Sending…' : 'Submit report'}
+          </Button>
+        </div>
+      </Modal>
     </div>
   );
 }

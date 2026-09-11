@@ -1,0 +1,31 @@
+{
+  "packageId": "tech.utilityos.app",
+  "host": "utilityos.tech",
+  "name": "Utility OS",
+  "launcherName": "Utility",
+  "display": "standalone",
+  "themeColor": "#09090b",
+  "navigationColor": "#09090b",
+  "backgroundColor": "#09090b",
+  "enableNotifications": false,
+  "startUrl": "/",
+  "iconUrl": "https://utilityos.tech/icon-512x512.png",
+  "maskableIconUrl": "https://utilityos.tech/icon-512x512.png",
+  "appVersionName": "1",
+  "appVersionCode": 1,
+  "shortcuts": [],
+  "generatorApp": "bubblewrap-cli",
+  "webManifestUrl": "https://utilityos.tech/manifest.webmanifest",
+  "fallbackType": "customtabs",
+  "features": {},
+  "alphaDependencies": {
+    "enabled": false
+  },
+  "enableSiteSettingsShortcut": false,
+  "isChromeOSOnly": false,
+  "isMetaQuest": false,
+  "fullScopeUsed": true,
+  "minSdkVersion": 21,
+  "orientation": "default",
+  "fingerprints": []
+}

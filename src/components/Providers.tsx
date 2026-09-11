@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 import { PWAProvider } from '@/contexts/PWAContext';
 import { Toaster } from 'sonner';
 import NavigationProgress from './NavigationProgress';
+import { ThemeColorSync } from '@/components/shell/ThemeColorSync';
 
 const CommandPalette = dynamic(() => import('./CommandPalette'), { ssr: false });
 const PwaUpdater = dynamic(() => import('./pwa/PwaUpdater'), { ssr: false });
@@ -42,6 +43,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
       storageKey="utility-theme"
     >
       <PWAProvider>
+        <ThemeColorSync />
         <NavigationProgress />
         {children}
         <CommandPalette />

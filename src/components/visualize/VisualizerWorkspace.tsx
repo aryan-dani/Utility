@@ -7,7 +7,7 @@ import { useSearchParams } from "next/navigation";
 import { StructureToggle } from "@/components/visualize/StructureToggle";
 import { structureFromParam } from "@/lib/visualize/structure";
 import { HowToUse } from "@/components/visualize/LessonChrome";
-import { fadeUp, stagger } from "@/components/visualize/motion";
+import { useVizMotion } from "@/components/visualize/motion";
 import { motion } from "framer-motion";
 import { AlgorithmMeta } from "@/lib/visualize/types";
 import { SearchTreeAlgorithmId } from "@/lib/visualize/engines/searchTree";
@@ -15,6 +15,7 @@ import { fetchSavedGrid } from "@/lib/visualize/client";
 import { SavedGridData } from "@/lib/visualize/grid";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
+import { ErrorState, PageHeader } from "@/components/ui";
 
 const GridWorkspace = dynamic(
   () =>
@@ -69,6 +70,7 @@ const PATH_ALGORITHM_IDS = new Set([
 ]);
 
 function VisualizerWorkspaceInner({ algorithm }: VisualizerWorkspaceProps) {
+  const { fadeUp, stagger } = useVizMotion();
   const searchParams = useSearchParams();
   const gridId = searchParams.get("grid") ?? undefined;
   const structure = structureFromParam(
@@ -123,11 +125,11 @@ function VisualizerWorkspaceInner({ algorithm }: VisualizerWorkspaceProps) {
 
   return (
     <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
-      <motion.header
+      <motion.div
         variants={stagger}
         initial="hidden"
         animate="show"
-        className="max-w-2xl mb-8"
+        className="max-w-2xl mb-8 space-y-4"
       >
         <motion.div variants={fadeUp}>
           <AppLink
@@ -137,38 +139,37 @@ function VisualizerWorkspaceInner({ algorithm }: VisualizerWorkspaceProps) {
             ← Visualize
           </AppLink>
         </motion.div>
-        <motion.h1
-          variants={fadeUp}
-          className="font-display text-3xl sm:text-5xl text-foreground tracking-tight mt-4"
-        >
-          {algorithm.name}
-        </motion.h1>
-        <motion.p
-          variants={fadeUp}
-          className="text-base sm:text-lg text-foreground-subtle mt-3 leading-relaxed"
-        >
-          {algorithm.inOneSentence}
-        </motion.p>
+        <motion.div variants={fadeUp}>
+          <PageHeader
+            size="hero"
+            title={algorithm.name}
+            description={algorithm.inOneSentence}
+            actions={
+              isPathAlgorithm ? (
+                <StructureToggle algorithmId={algorithm.id} />
+              ) : undefined
+            }
+          />
+        </motion.div>
         <motion.div
           variants={fadeUp}
-          className="flex flex-wrap items-center gap-2 mt-4"
+          className="flex flex-wrap items-center gap-2"
         >
-          <span className="inline-flex h-6 items-center text-[10px] font-mono uppercase tracking-widest text-muted px-2 border border-border rounded-md">
+          <span className="inline-flex h-6 items-center text-2xs font-mono uppercase tracking-widest text-muted px-2 border border-border rounded-md">
             {algorithm.category}
           </span>
-          <span className="inline-flex h-6 items-center text-[10px] font-mono uppercase tracking-widest text-muted px-2 border border-border rounded-md">
+          <span className="inline-flex h-6 items-center text-2xs font-mono uppercase tracking-widest text-muted px-2 border border-border rounded-md">
             {algorithm.difficulty}
           </span>
-          {isPathAlgorithm && <StructureToggle algorithmId={algorithm.id} />}
         </motion.div>
-      </motion.header>
+      </motion.div>
 
       <div className="mb-8">
         <HowToUse steps={algorithm.howTo} />
       </div>
 
       {loadError && structure === "graph" && (
-        <p className="text-sm text-muted mb-4">{loadError}</p>
+        <ErrorState className="mb-4" title="Could not load maze" description={loadError} />
       )}
 
       {useTree && (

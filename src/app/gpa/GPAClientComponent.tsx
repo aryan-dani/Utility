@@ -20,7 +20,17 @@ import { FadeIn, ScaleButton } from '@/components/Animations';
 import AppLink from '@/components/ui/AppLink';
 import { useAcademicStore } from '@/store/academicStore';
 import { getAidsGpaData } from '@/lib/syllabusData';
-import { Segmented, Select, PageHeader } from '@/components/ui';
+import {
+  Button,
+  ButtonLink,
+  Card,
+  Field,
+  Input,
+  PageHeader,
+  SectionHeader,
+  Segmented,
+  Select,
+} from '@/components/ui';
 
 interface Subject {
   id: string;
@@ -560,7 +570,7 @@ export default function GPAClient() {
   }
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-5 sm:py-8 min-h-[80vh]">
       {/* CSS Injection for beautiful printing */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
@@ -579,7 +589,7 @@ export default function GPAClient() {
         {storageCorrupt && (
           <div
             role="alert"
-            className="mb-6 rounded-xl border border-border bg-surface p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+            className="mb-5 rounded-xl border border-border bg-surface p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
           >
             <div className="flex items-start gap-3">
               <AlertTriangle className="w-4 h-4 text-muted shrink-0 mt-0.5" />
@@ -592,71 +602,75 @@ export default function GPAClient() {
                 </p>
               </div>
             </div>
-            <button
+            <Button
               type="button"
+              size="sm"
               onClick={resetCorruptStorage}
-              className="shrink-0 min-h-11 px-4 rounded-xl bg-foreground text-background text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"
+              className="shrink-0"
             >
               Reset saved data
-            </button>
+            </Button>
           </div>
         )}
         <FadeIn>
-          <div className="mb-8 space-y-4">
+          <div className="mb-6 space-y-3">
             <button 
               onClick={() => {
                 setShowCoursePicker(true);
                 setIsCalculated(false);
               }}
-              className="group flex items-center gap-2 text-muted hover:text-foreground text-sm font-semibold uppercase tracking-wider transition-colors"
+              className="group inline-flex items-center gap-1.5 text-xs text-muted hover:text-foreground transition-colors"
             >
-              <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+              <ChevronLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
               Change course table
             </button>
             <PageHeader
               title={currentBranch?.name}
               description={
-                <span className="flex items-center gap-2">
-                  <Info className="w-4 h-4 shrink-0" />
-                  Sem {calcSemester} from workspace ({workspaceBranch}). Credits follow the official syllabus where available.
+                <span className="inline-flex items-start gap-2">
+                  <Info className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                  <span>
+                    Sem {calcSemester} from workspace ({workspaceBranch}). Credits follow the official syllabus where available.
+                  </span>
                 </span>
               }
               actions={
-                <div className="flex gap-3">
-                  <ScaleButton
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
                     onClick={() => {
                       setMarks({});
                       setIsCalculated(false);
                     }}
-                    className="bg-surface border border-border text-muted hover:text-foreground px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all"
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    Reset Marks
-                  </ScaleButton>
-
-                  <ScaleButton
+                    Reset marks
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
                     onClick={() => window.print()}
-                    className="bg-surface border border-border text-muted hover:text-foreground px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest flex items-center gap-2 transition-all"
                   >
                     <Printer className="w-3.5 h-3.5" />
-                    Print Report
-                  </ScaleButton>
+                    Print report
+                  </Button>
                 </div>
               }
             />
           </div>
 
-          {/* Premium Tab Bar */}
-          <div className="mb-8">
+          <div className="mb-6">
             <Segmented
               value={activeTab}
               onChange={setActiveTab}
-              size="md"
+              size="sm"
               aria-label="GPA calculator mode"
-              className="w-fit"
               options={[
-                { value: 'semester', label: 'Semester Strategy' },
-                { value: 'roadmap', label: 'Cumulative CGPA Roadmap' },
+                { value: 'semester', label: 'Semester strategy' },
+                { value: 'roadmap', label: 'CGPA roadmap' },
               ]}
             />
           </div>
@@ -664,69 +678,80 @@ export default function GPAClient() {
           {/* TAB 1: Semester Strategy */}
           {activeTab === 'semester' && (
             <div>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                {/* Completed Subjects */}
-                <div className="bg-card border border-border rounded-2xl shadow-card overflow-hidden">
-                  <div className="px-6 py-4 border-b border-border bg-surface/30 flex items-center gap-3">
-                    <History className="w-5 h-5 text-muted" />
-                    <h2 className="text-sm font-black uppercase tracking-widest text-foreground">
-                      Completed Subjects
-                    </h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 mb-8 items-start">
+                <Card padding="none" className="overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border bg-surface/40 flex items-center gap-2">
+                    <History className="w-4 h-4 text-muted" />
+                    <SectionHeader title="Completed subjects" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border/60">
                     {currentBranch?.completed.map(sub => (
-                      <div key={sub.id} className="bg-card p-6 space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted block pl-1">
-                          {sub.name} <span className="opacity-50">({sub.credits} Cr)</span>
-                        </label>
-                        <input
-                          type="number"
-                          max="100"
-                          placeholder="Marks / 100"
-                          value={marks[sub.id] || ''}
-                          onChange={(e) => handleMarkChange(sub.id, e.target.value)}
-                          className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm font-bold text-foreground outline-none focus:border-foreground/50 transition-all placeholder:text-muted/30"
-                        />
+                      <div key={sub.id} className="bg-card p-3 sm:p-3.5">
+                        <Field
+                          label={
+                            <>
+                              {sub.name}{' '}
+                              <span className="text-muted font-normal">({sub.credits} cr)</span>
+                            </>
+                          }
+                          htmlFor={sub.id}
+                        >
+                          <Input
+                            id={sub.id}
+                            type="number"
+                            max={100}
+                            inputSize="sm"
+                            placeholder="Marks / 100"
+                            value={marks[sub.id] || ''}
+                            onChange={(e) => handleMarkChange(sub.id, e.target.value)}
+                          />
+                        </Field>
                       </div>
                     ))}
                   </div>
-                </div>
+                </Card>
 
-                {/* Pending Finals */}
-                <div className="bg-card border border-border rounded-2xl shadow-card overflow-hidden">
-                  <div className="px-6 py-4 border-b border-border bg-surface/30 flex items-center gap-3">
-                    <Target className="w-5 h-5 text-muted" />
-                    <h2 className="text-sm font-black uppercase tracking-widest text-foreground">
-                      Finals Preparation
-                    </h2>
+                <Card padding="none" className="overflow-hidden">
+                  <div className="px-4 py-3 border-b border-border bg-surface/40 flex items-center gap-2">
+                    <Target className="w-4 h-4 text-muted" />
+                    <SectionHeader title="Finals preparation" />
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-px bg-border/60">
                     {currentBranch?.finals.map(sub => (
-                      <div key={sub.id} className="bg-card p-6 space-y-2">
-                        <label className="text-[10px] font-black uppercase tracking-widest text-muted block pl-1">
-                          {sub.name} <span className="opacity-50">({sub.credits} Cr)</span>
-                        </label>
-                        <input
-                          type="number"
-                          max="60"
-                          placeholder="Internals / 60"
-                          value={marks[sub.id] || ''}
-                          onChange={(e) => handleMarkChange(sub.id, e.target.value)}
-                          className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-sm font-bold text-foreground outline-none focus:border-foreground/50 transition-all placeholder:text-muted/30"
-                        />
+                      <div key={sub.id} className="bg-card p-3 sm:p-3.5">
+                        <Field
+                          label={
+                            <>
+                              {sub.name}{' '}
+                              <span className="text-muted font-normal">({sub.credits} cr)</span>
+                            </>
+                          }
+                          htmlFor={sub.id}
+                        >
+                          <Input
+                            id={sub.id}
+                            type="number"
+                            max={60}
+                            inputSize="sm"
+                            placeholder="Internals / 60"
+                            value={marks[sub.id] || ''}
+                            onChange={(e) => handleMarkChange(sub.id, e.target.value)}
+                          />
+                        </Field>
                       </div>
                     ))}
                   </div>
-                  <div className="p-4 bg-surface/20 border-t border-border">
-                    <button
+                  <div className="p-3 border-t border-border bg-surface/30">
+                    <Button
+                      type="button"
+                      className="w-full"
                       onClick={calculateStrategy}
-                      className="w-full bg-foreground text-background py-4 rounded-xl font-black text-sm uppercase tracking-widest hover:opacity-90 active:scale-[0.99] transition-all flex items-center justify-center gap-3 shadow-md"
                     >
-                      <TrendingUp className="w-5 h-5" />
-                      Calculate Strategy
-                    </button>
+                      <TrendingUp className="w-4 h-4" />
+                      Calculate strategy
+                    </Button>
                   </div>
-                </div>
+                </Card>
               </div>
 
               {isCalculated && (
@@ -772,7 +797,7 @@ export default function GPAClient() {
                     <div className="flex flex-col md:flex-row items-center justify-between mb-10 gap-6">
                       <div>
                         <h2 className="text-2xl font-black text-foreground flex items-center gap-3">
-                          <Zap className="w-6 h-6 text-yellow-500 fill-yellow-500" />
+                          <Zap className="w-6 h-6 text-foreground" />
                           Projected Simulator
                         </h2>
                         <p className="text-muted text-sm mt-1 uppercase tracking-widest font-bold">Select realistic targets to see your projected GPA</p>
@@ -1153,7 +1178,7 @@ export default function GPAClient() {
       </div>
 
       {/* Printable Report Layout - HELD hidden in standard view but visible during window.print() */}
-      <div className="hidden print:block p-8 bg-white text-black min-h-screen">
+      <div className="hidden print:block gpa-print-island p-8 min-h-screen">
         <div className="text-center border-b-2 border-black pb-4 mb-6">
           <h1 className="text-3xl font-extrabold tracking-tight">Academic Performance & Strategy Report</h1>
           <p className="text-sm text-gray-600 mt-1" suppressHydrationWarning>

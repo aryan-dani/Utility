@@ -2,10 +2,11 @@
 
 import type { ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { easeOut, fadeUp, stagger } from "@/components/visualize/motion";
+import { useVizMotion } from "@/components/visualize/motion";
 import { Button } from "@/components/ui/Button";
 
 export function HowToUse({ steps }: { steps: readonly [string, string, string] }) {
+  const { fadeUp, stagger } = useVizMotion();
   return (
     <motion.ol
       variants={stagger}
@@ -36,16 +37,17 @@ export function HappeningNow({
   text: string | null;
   idle: string;
 }) {
+  const { duration, ease } = useVizMotion();
   const shown = text ?? idle;
   return (
     <div className="relative mx-auto w-full max-w-xl h-12 rounded-lg border border-border bg-card px-4">
       <AnimatePresence mode="wait">
         <motion.p
           key={shown}
-          initial={{ opacity: 0 }}
+          initial={{ opacity: duration === 0 ? 1 : 0 }}
           animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2, ease: easeOut }}
+          exit={{ opacity: duration === 0 ? 1 : 0 }}
+          transition={{ duration: duration === 0 ? 0 : 0.2, ease }}
           className="absolute inset-0 flex items-center justify-center px-1"
         >
           <span
@@ -141,11 +143,12 @@ export function Stage({
   children: ReactNode;
   dock?: ReactNode;
 }) {
+  const { reduce, ease, duration } = useVizMotion();
   return (
     <motion.section
-      initial={{ opacity: 0, y: 16 }}
+      initial={reduce ? false : { opacity: 0, y: 16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.55, ease: easeOut }}
+      transition={{ duration, ease }}
       className="border border-border bg-card/60 rounded-xl overflow-hidden"
     >
       <div className="flex items-center justify-between gap-3 px-4 sm:px-5 h-11 border-b border-border bg-surface/40">

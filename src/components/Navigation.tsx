@@ -5,11 +5,6 @@ import AppLink from "@/components/ui/AppLink";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
 import {
-  BookOpen,
-  FileText,
-  CalendarCheck,
-  Menu,
-  X,
   Search,
   Sun,
   Moon,
@@ -17,18 +12,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ShieldCheck,
-  Brain,
-  Users,
   Layers,
-  Download,
-  Timer,
-  GraduationCap,
-  Heart,
-  Building2,
-  Waypoints,
-  type LucideIcon,
+  MoreHorizontal,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useAcademicStore, AcademicYear, Branch, Semester } from "../store/academicStore";
 import { startNavigationProgress } from "./NavigationProgress";
@@ -39,7 +26,23 @@ import {
 } from "@/lib/workspace";
 import { ScopeSelector } from "@/components/academic/ScopeSelector";
 import { fetchAdminStatus } from "@/lib/adminStatus";
-import { useIsClient, useIsMac, useLocalStorageBoolean, writeLocalStorageBoolean } from "@/lib/clientHooks";
+import { useIsClient, useIsMac, useLocalStorageBoolean, useMediaQuery, writeLocalStorageBoolean } from "@/lib/clientHooks";
+import { useIsStandalone } from "@/lib/pwa/displayMode";
+import { Sheet, TabBar } from "@/components/ui";
+import { SegmentedThemeToggle } from "@/components/shell/ThemeToggle";
+import {
+  ACADEMIC_LINKS,
+  CAMPUS_LINKS,
+  MORE_LINKS,
+  PHONE_TABS,
+  PRODUCTIVITY_LINKS,
+  SOCIAL_LINKS,
+  SYSTEM_LINKS,
+  type NavLinkItem,
+} from "@/components/shell/navConfig";
+import { useMotionSafe } from "@/lib/motion";
+
+export type { NavLinkItem };
 
 const NavUserMenu = dynamic(() => import("./NavUserMenu"), {
   ssr: false,
@@ -48,43 +51,9 @@ const NavUserMenu = dynamic(() => import("./NavUserMenu"), {
   ),
 });
 
-export interface NavLinkItem {
-  href: string;
-  label: string;
-  Icon: LucideIcon;
-  featured?: boolean;
-  desc: string;
-}
-
-const ACADEMIC_LINKS: NavLinkItem[] = [
-  { href: "/resources", label: "Resources", Icon: FileText, featured: true, desc: "Subject files. Notes are reference-only" },
-  { href: "/ask", label: "Ask AI", Icon: Brain, desc: "RAG-powered academic assistant" },
-  { href: "/syllabus", label: "Syllabus", Icon: BookOpen, desc: "Course syllabus tracker" },
-  { href: "/visualize", label: "Visualize", Icon: Waypoints, desc: "AI algorithm visualizers" },
-];
-
-const CAMPUS_LINKS: NavLinkItem[] = [
-  { href: "/campus", label: "Campus", Icon: Building2, desc: "Seating, directory, and labs" },
-];
-
-const PRODUCTIVITY_LINKS: NavLinkItem[] = [
-  { href: "/planner", label: "Study Planner", Icon: CalendarCheck, desc: "Collaborative schedule & logs" },
-  { href: "/timer", label: "Focus Timer", Icon: Timer, desc: "Pomodoro study sessions" },
-  { href: "/gpa", label: "GPA Calculator", Icon: GraduationCap, desc: "Track and project your grades" },
-  { href: "/srs", label: "SRS Flashcards", Icon: Layers, desc: "Spaced repetition reviewer" },
-];
-
-const SOCIAL_LINKS: NavLinkItem[] = [
-  { href: "/community", label: "Community", Icon: Users, desc: "Decks & WhatsApp" },
-];
-
-const SYSTEM_LINKS: NavLinkItem[] = [
-  { href: "/install", label: "Install App", Icon: Download, desc: "PWA desktop application" },
-  { href: "/support", label: "Support", Icon: Heart, desc: "Optional contribution" },
-];
-
 const SIDEBAR_EXPANDED = "lg:w-72";
 const SIDEBAR_COLLAPSED = "lg:w-[4.25rem]";
+const TABLET_RAIL = "w-[4.25rem]";
 
 function NavSection({
   title,
@@ -109,44 +78,6 @@ function NavSection({
   );
 }
 
-function SegmentedThemeToggle({ theme, setTheme }: { theme: string | undefined; setTheme: (theme: string) => void }) {
-  const mounted = useIsClient();
-
-  if (!mounted) {
-    return <div className="skeleton h-8 rounded-xl border border-border/80 w-full" aria-hidden />;
-  }
-
-  const options = [
-    { value: "light", icon: Sun, label: "Light" },
-    { value: "dark", icon: Moon, label: "Dark" },
-    { value: "system", icon: Monitor, label: "System" },
-  ] as const;
-
-  return (
-    <div className="flex bg-background/70 border border-border/80 p-0.5 rounded-xl w-full">
-      {options.map((opt) => {
-        const Icon = opt.icon;
-        const active = theme === opt.value;
-        return (
-          <button
-            key={opt.value}
-            onClick={() => setTheme(opt.value)}
-            className={`flex-1 flex items-center justify-center py-1.5 px-2 rounded-lg text-xs font-medium transition-all relative ${
-              active
-                ? "bg-background border border-border/80 text-foreground shadow-xs font-semibold"
-                : "text-muted hover:text-foreground hover:bg-surface/30"
-            }`}
-            title={opt.label}
-            aria-label={`Switch to ${opt.label} theme`}
-          >
-            <Icon className="w-3.5 h-3.5" />
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 /** Syncs URL workspace params into the store. Isolated so Navigation chrome never suspends. */
 function NavigationUrlSync() {
   const searchParams = useSearchParams();
@@ -158,7 +89,6 @@ function NavigationUrlSync() {
   const urlSemester = searchParams.get("semester");
 
   useEffect(() => {
-    // Static pages often leave useSearchParams empty; always prefer the live URL.
     const live = new URLSearchParams(window.location.search);
     const year = live.get("year") ?? urlYear;
     const branch = live.get("branch") ?? urlBranch;
@@ -193,11 +123,11 @@ function currentSearchParams(): URLSearchParams {
 function NavigationInner() {
   const pathname = usePathname();
   const router = useRouter();
-  // Display store values only — never searchParams during render. Static SSR has no
-  // query string, so reading URL here caused React #418 (Current/2026–2027 vs Archive/2025–2026).
   const academicYear = useAcademicStore((s) => s.academicYear);
   const branch = useAcademicStore((s) => s.branch);
   const semester = useAcademicStore((s) => s.semester);
+  const standalone = useIsStandalone();
+  const motionSafe = useMotionSafe();
 
   const {
     setAcademicYear,
@@ -208,18 +138,22 @@ function NavigationInner() {
     setCommandPaletteOpen,
   } = useAcademicStore();
 
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
   const collapsed = useLocalStorageBoolean("sidebar-collapsed", false);
   const [userEmail, setUserEmail] = useState<string | undefined>();
   const [isAdmin, setIsAdmin] = useState(false);
   const isMac = useIsMac();
+  const isClient = useIsClient();
+  const isMd = useMediaQuery("(min-width: 768px)");
+  const isLg = useMediaQuery("(min-width: 1024px)");
+  const showTabletRail = isClient && isMd && !isLg;
   const { theme, setTheme } = useTheme();
   const prefsAppliedRef = useRef(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
 
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
-    if (mobileOpen) setMobileOpen(false);
+    if (moreOpen) setMoreOpen(false);
   }
 
   const handleCollapseToggle = () => {
@@ -232,13 +166,10 @@ function NavigationInner() {
       params.set("year", newYear);
       params.set("branch", newBranch);
       params.set("semester", newSem.toString());
-      // Drop deep-link params that belong to the previous scope
       params.delete("subject");
       params.delete("filter");
       params.delete("view");
       params.delete("folder");
-      // Update the store immediately so Syllabus/Resources react without waiting
-      // for useSearchParams soft-navigation (which can lag on static pages).
       setWorkspace(newYear, newBranch as Branch, newSem as Semester);
       writeStoredWorkspace(
         newYear,
@@ -253,7 +184,6 @@ function NavigationInner() {
     [pathname, router, setWorkspace],
   );
 
-  /** Apply Firestore/local prefs into store + URL when URL lacks workspace params. */
   const applyPrefsToUrl = useCallback(
     (prefYear: AcademicYear, prefBranch: Branch, prefSemester: Semester) => {
       if (prefsAppliedRef.current) return;
@@ -331,10 +261,21 @@ function NavigationInner() {
     pathname === "/planner" ||
     pathname.startsWith("/planner");
 
+  const scopedHref = useCallback(
+    (href: string) =>
+      `${href}?year=${encodeURIComponent(academicYear)}&branch=${branch}&semester=${semester}`,
+    [academicYear, branch, semester],
+  );
+
+  const systemLinks = SYSTEM_LINKS.filter(
+    (link) => !(standalone && link.href === "/install"),
+  );
+  const moreLinks = MORE_LINKS.filter(
+    (link) => !(standalone && link.href === "/install"),
+  );
+
   const renderNavLink = useCallback((link: NavLinkItem, isCollapsed: boolean) => {
-    // Prefer store scope for hrefs so static SSR matches the first client paint.
-    // URL deep-links sync into the store after mount via the effect above.
-    const finalHref = `${link.href}?year=${encodeURIComponent(academicYear)}&branch=${branch}&semester=${semester}`;
+    const finalHref = scopedHref(link.href);
     const active = isActive(link.href);
     return (
       <AppLink
@@ -353,7 +294,7 @@ function NavigationInner() {
           <motion.div
             layoutId="activeIndicator"
             className="absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-full bg-background/80"
-            transition={{ type: "spring", stiffness: 380, damping: 30 }}
+            transition={motionSafe.reduce ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 30 }}
           />
         )}
 
@@ -370,14 +311,13 @@ function NavigationInner() {
         )}
       </AppLink>
     );
-  }, [isActive, setSearchQuery, academicYear, branch, semester]);
+  }, [isActive, setSearchQuery, scopedHref, motionSafe.reduce]);
 
-  const renderSidebarContent = (isMobile: boolean = false) => {
-    const isCollapsed = collapsed && !isMobile;
+  const renderSidebarContent = (opts: { collapsed: boolean }) => {
+    const isCollapsed = opts.collapsed;
     const link = (item: NavLinkItem) => renderNavLink(item, isCollapsed);
     return (
       <div className="flex flex-col h-full select-none">
-        {/* Brand / Logo */}
         <div className={`px-3 py-3.5 flex ${isCollapsed ? "flex-col items-center justify-center gap-3" : "items-center justify-between gap-2"} border-b border-border/50 min-h-[3.75rem]`}>
           <AppLink
             href="/"
@@ -396,24 +336,14 @@ function NavigationInner() {
             )}
           </AppLink>
 
-          {isMobile ? (
-            <button
-              onClick={() => setMobileOpen(false)}
-              className="tap-target rounded-lg text-muted hover:text-foreground hover:bg-surface/50 active:bg-surface border border-transparent transition-colors lg:hidden"
-              aria-label="Close navigation menu"
-            >
-              <X className="w-5 h-5" />
-            </button>
-          ) : (
-            <button
-              onClick={handleCollapseToggle}
-              className="tap-target w-8 h-8 rounded-lg hover:bg-surface active:bg-surface-hover border border-transparent text-muted hover:text-foreground hover:border-border/70 transition-all shrink-0 inline-flex items-center justify-center"
-              title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-              aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-            >
-              {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-            </button>
-          )}
+          <button
+            onClick={handleCollapseToggle}
+            className="tap-target w-8 h-8 rounded-lg hover:bg-surface active:bg-surface-hover border border-transparent text-muted hover:text-foreground hover:border-border/70 transition-all shrink-0 hidden lg:inline-flex items-center justify-center"
+            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+            aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+          >
+            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
+          </button>
         </div>
 
         {showSelectors && !isCollapsed && (
@@ -446,7 +376,6 @@ function NavigationInner() {
           </div>
         )}
 
-        {/* Global Search Button */}
         <div className="px-3 pt-3">
           {isCollapsed ? (
             <button
@@ -477,7 +406,6 @@ function NavigationInner() {
           )}
         </div>
 
-        {/* Navigation Sections */}
         <div className="flex-1 overflow-y-auto px-2 py-4 space-y-5 custom-scrollbar">
           <NavSection title="Academic" collapsed={isCollapsed}>
             {ACADEMIC_LINKS.map(link)}
@@ -496,7 +424,7 @@ function NavigationInner() {
           </NavSection>
 
           <NavSection title="System" collapsed={isCollapsed}>
-            {SYSTEM_LINKS.map(link)}
+            {systemLinks.map(link)}
             {isAdmin && (
               <AppLink
                 href="/admin"
@@ -516,9 +444,7 @@ function NavigationInner() {
           </NavSection>
         </div>
 
-        {/* Footer Controls */}
         <div className="p-3 border-t border-border/50 space-y-2.5 bg-card/40">
-          {/* Theme segment toggle or single cycle button */}
           {isCollapsed ? (
             <button
               onClick={cycleTheme}
@@ -580,25 +506,37 @@ function NavigationInner() {
     );
   };
 
+  const tabActive = (href: string) =>
+    href === "/" ? pathname === "/" : pathname.startsWith(href);
+
   return (
     <>
       <Suspense fallback={null}>
         <NavigationUrlSync />
       </Suspense>
 
-      {/* 1. Desktop Sticky Sidebar with collapse transition */}
       <aside
         aria-label="Primary"
+        data-app-chrome=""
         className={`h-screen sticky top-0 left-0 border-r border-border/80 bg-background-subtle z-40 hidden lg:flex flex-col shrink-0 transition-all duration-400 ease-[cubic-bezier(0.2,0.8,0.2,1)] w-0 overflow-hidden lg:overflow-visible ${
           collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
         }`}
         style={{ willChange: "width" }}
       >
-        {renderSidebarContent(false)}
+        {renderSidebarContent({ collapsed })}
       </aside>
 
-      {/* 2. Mobile Top Header */}
-      <header className="fixed top-0 inset-x-0 w-full max-w-[100vw] h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-border/80 bg-background/80 backdrop-blur-md z-sticky flex items-center justify-between gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] lg:hidden transition-colors">
+      {showTabletRail && (
+        <aside
+          aria-label="Primary"
+          data-app-chrome=""
+          className={`h-screen sticky top-0 left-0 border-r border-border/80 bg-background-subtle z-40 flex flex-col shrink-0 ${TABLET_RAIL}`}
+        >
+          {renderSidebarContent({ collapsed: true })}
+        </aside>
+      )}
+
+      <header data-app-chrome="" className="fixed top-0 inset-x-0 w-full max-w-[100vw] h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-border/80 bg-background/80 backdrop-blur-md z-sticky flex items-center justify-between gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] md:hidden transition-colors">
         <AppLink
           href="/"
           onClick={() => setSearchQuery("")}
@@ -613,6 +551,14 @@ function NavigationInner() {
         <div className="flex items-center gap-1 shrink-0">
           <button
             type="button"
+            className="hidden xs:inline-flex items-center max-w-[7.5rem] min-h-11 px-2 rounded-lg text-2xs font-semibold text-muted truncate"
+            onClick={() => setMoreOpen(true)}
+            aria-label="Workspace"
+          >
+            {branch} · {semester}
+          </button>
+          <button
+            type="button"
             className="tap-target shrink-0 rounded-lg text-muted hover:text-foreground hover:bg-surface/50 active:bg-surface border border-transparent transition-colors"
             onClick={() => setCommandPaletteOpen(true)}
             aria-label="Search resources"
@@ -620,43 +566,90 @@ function NavigationInner() {
           >
             <Search className="w-5 h-5" />
           </button>
-          <button
-            type="button"
-            className="tap-target shrink-0 rounded-lg text-muted hover:text-foreground hover:bg-surface/50 active:bg-surface border border-transparent transition-colors"
-            onClick={() => setMobileOpen(true)}
-            aria-label="Open navigation menu"
-          >
-            <Menu className="w-5 h-5" />
-          </button>
+          <div className="max-w-[2.75rem]">
+            <NavUserMenu
+              collapsed
+              academicYear={academicYear}
+              branch={branch}
+              semester={semester}
+              setAcademicYear={setAcademicYear}
+              setBranch={setBranch}
+              setSemester={setSemester}
+              onWorkspaceFromPrefs={applyPrefsToUrl}
+              onUserChange={(u) => setUserEmail(u?.email)}
+            />
+          </div>
         </div>
       </header>
 
-      {/* 3. Mobile Navigation Drawer Overlay */}
-      <AnimatePresence>
-        {mobileOpen && (
-          <>
-            {/* Backdrop Overlay */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setMobileOpen(false)}
-              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-modal lg:hidden"
-            />
+      <TabBar
+        items={[
+          ...PHONE_TABS.map((tab) => ({
+            href: scopedHref(tab.href),
+            label: tab.label,
+            icon: <tab.Icon className="w-5 h-5" />,
+            active: tabActive(tab.href),
+          })),
+          {
+            label: "More",
+            icon: <MoreHorizontal className="w-5 h-5" />,
+            active: moreOpen,
+            onClick: () => setMoreOpen(true),
+          },
+        ]}
+      />
 
-            {/* Sidebar drawer content */}
-            <motion.aside
-              initial={{ x: "-100%" }}
-              animate={{ x: 0 }}
-              exit={{ x: "-100%" }}
-              transition={{ type: "spring", damping: 25, stiffness: 300, mass: 0.8 }}
-              className="fixed top-0 bottom-0 left-0 w-80 max-w-[88vw] bg-background-subtle border-r border-border/80 shadow-window z-dropdown lg:hidden flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
-            >
-              {renderSidebarContent(true)}
-            </motion.aside>
-          </>
-        )}
-      </AnimatePresence>
+      <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="More">
+        <div className="px-1 pb-2">
+          <div className="bg-card border border-border/80 p-3 rounded-2xl mb-3">
+            <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-muted/70 mb-2">
+              Workspace
+            </p>
+            <ScopeSelector
+              academicYear={academicYear}
+              branch={branch}
+              semester={semester}
+              variant="sidebar"
+              onAcademicYearChange={(val) => updateUrl(val, branch, semester)}
+              onBranchChange={(val) => updateUrl(academicYear, val, semester)}
+              onSemesterChange={(val) => updateUrl(academicYear, branch, val)}
+            />
+          </div>
+          <nav className="flex flex-col gap-0.5">
+            {moreLinks.map((item) => (
+              <AppLink
+                key={item.href}
+                href={scopedHref(item.href)}
+                onClick={() => {
+                  setSearchQuery("");
+                  setMoreOpen(false);
+                }}
+                className={`flex items-center gap-3 min-h-11 px-3 rounded-lg text-sm ${
+                  isActive(item.href)
+                    ? "bg-foreground text-background"
+                    : "text-foreground hover:bg-surface"
+                }`}
+              >
+                <item.Icon className="w-4 h-4 shrink-0" />
+                <span className="truncate">{item.label}</span>
+              </AppLink>
+            ))}
+            {isAdmin && (
+              <AppLink
+                href="/admin"
+                onClick={() => setMoreOpen(false)}
+                className="flex items-center gap-3 min-h-11 px-3 rounded-lg text-sm text-foreground hover:bg-surface"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                Admin
+              </AppLink>
+            )}
+          </nav>
+          <div className="mt-4">
+            <SegmentedThemeToggle theme={theme} setTheme={setTheme} />
+          </div>
+        </div>
+      </Sheet>
     </>
   );
 }

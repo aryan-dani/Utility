@@ -104,7 +104,7 @@ export function Modal({
             exit={{ opacity: 0, scale: 0.96, y: 12 }}
             transition={{ duration: 0.18, ease: "easeOut" }}
             className={cn(
-              "relative z-modal w-full rounded-xl border border-border bg-card shadow-lg",
+              "relative z-modal w-full rounded-2xl border border-border bg-card shadow-lg",
               "max-h-[min(85vh,720px)] flex flex-col overflow-hidden",
               sizeClasses[size],
               className,

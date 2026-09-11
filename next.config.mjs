@@ -49,6 +49,16 @@ const nextConfig = {
 
     return [
       {
+        source: "/.well-known/assetlinks.json",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=300, s-maxage=300",
+          },
+          { key: "Content-Type", value: "application/json" },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },
@@ -56,7 +66,7 @@ const nextConfig = {
           { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=()",
+            value: "camera=(), microphone=(self), geolocation=()",
           },
           {
             key: "Strict-Transport-Security",
@@ -95,6 +105,8 @@ const config = isDev
         "!pdf.worker.min.mjs",
         "!utility-logo.png",
         "!utility-logo-og.png",
+        "!screenshots/**",
+        "!.well-known/**",
       ],
       // Offline document only via NetworkFirst handlerDidError — never App Shell navigateFallback
       // (that serves /~offline for every navigation and causes React hydration #418).

@@ -5,7 +5,7 @@ export default function PageSkeleton({
 }) {
   return (
     <div
-      className="flex-1 w-full max-w-7xl mx-auto px-6 py-8 min-h-[60vh]"
+      className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[60vh]"
       role="status"
       aria-live="polite"
       aria-busy="true"

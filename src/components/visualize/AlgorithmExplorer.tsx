@@ -14,9 +14,9 @@ import {
   RippleMark,
   StarMark,
 } from "@/components/visualize/TopicMarks";
-import { fadeUp, stagger } from "@/components/visualize/motion";
+import { useVizMotion } from "@/components/visualize/motion";
 import type { AlgorithmMeta, VisualizerType } from "@/lib/visualize/types";
-import { PageHeader } from "@/components/ui";
+import { ButtonLink, PageHeader, SectionHeader } from "@/components/ui";
 
 const START_MARKS = [RippleMark, StarMark, QueenMark];
 
@@ -111,6 +111,7 @@ function CatalogCard({
 }
 
 export function AlgorithmExplorer() {
+  const { fadeUp, stagger } = useVizMotion();
   const startHere = START_HERE_IDS.map((id) => BY_ID.get(id)).filter(
     (algo): algo is AlgorithmMeta => Boolean(algo),
   );
@@ -133,18 +134,10 @@ export function AlgorithmExplorer() {
                 description="Pathfinding, game trees, and N-Queens, one step at a time. Press Watch it run. You do not need the theory first."
                 actions={
                   <>
-                    <AppLink
-                      href="/visualize/bfs"
-                      className="inline-flex items-center justify-center min-h-11 px-5 rounded-xl bg-foreground text-background text-sm font-medium hover:opacity-90 transition-opacity"
-                    >
-                      Start with BFS
-                    </AppLink>
-                    <AppLink
-                      href="/visualize/progress"
-                      className="inline-flex items-center justify-center min-h-11 px-4 rounded-xl text-sm text-muted hover:text-foreground hover:bg-surface transition-colors"
-                    >
+                    <ButtonLink href="/visualize/bfs">Start with BFS</ButtonLink>
+                    <ButtonLink href="/visualize/progress" variant="ghost">
                       Your runs
-                    </AppLink>
+                    </ButtonLink>
                   </>
                 }
               />
@@ -171,12 +164,11 @@ export function AlgorithmExplorer() {
 
       <section className="mb-14 sm:mb-16">
         <div className="flex items-end justify-between gap-3 mb-4">
-          <p className="text-xs font-medium tracking-wide uppercase text-muted">
-            Start here
-          </p>
-          <p className="text-[10px] font-mono text-muted">
-            {ALGORITHMS.length} algorithms
-          </p>
+          <SectionHeader
+            eyebrow="Start here"
+            title="Three ways in"
+            description={`${ALGORITHMS.length} algorithms in the catalog.`}
+          />
         </div>
         <motion.div
           variants={stagger}
@@ -206,13 +198,8 @@ export function AlgorithmExplorer() {
           return (
             <motion.div key={group.id} variants={fadeUp}>
               <div className="flex items-end justify-between gap-3 mb-3">
-                <div>
-                  <h2 className="text-sm font-semibold text-foreground">
-                    {group.title}
-                  </h2>
-                  <p className="text-sm text-muted mt-0.5">{group.blurb}</p>
-                </div>
-                <span className="text-[10px] font-mono text-muted shrink-0">
+                <SectionHeader title={group.title} description={group.blurb} />
+                <span className="text-2xs font-mono text-muted shrink-0">
                   {items.length}
                 </span>
               </div>

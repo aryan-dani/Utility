@@ -21,7 +21,7 @@ export function StructureToggle({ algorithmId }: { algorithmId: string }) {
   const base = pathname;
 
   const segmentClass = (active: boolean) =>
-    `inline-flex h-6 items-center justify-center px-2.5 text-[10px] font-mono uppercase tracking-widest transition-colors ${
+    `inline-flex h-6 items-center justify-center px-2.5 text-2xs font-mono uppercase tracking-widest transition-colors ${
       active
         ? "bg-foreground text-background"
         : "text-muted hover:text-foreground"
@@ -29,7 +29,7 @@ export function StructureToggle({ algorithmId }: { algorithmId: string }) {
 
   return (
     <div
-      className="inline-flex overflow-hidden rounded-md border border-border bg-surface/40"
+      className="inline-flex overflow-hidden rounded-lg border border-border bg-surface/40"
       role="group"
       aria-label="Graph or tree view"
     >

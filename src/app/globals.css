@@ -231,11 +231,34 @@ summary:focus-visible {
 }
 
 
-/* ── Selection ────────────────────────────────────────────────────────────── */
+/* ── Selection & find highlights ──────────────────────────────────────────── */
 
 ::selection {
   background: rgb(var(--foreground));
   color: rgb(var(--background));
+}
+
+/* Kill browser-default yellow/green find + <mark> chrome; use product tone */
+mark,
+.search-hit {
+  background: rgb(var(--foreground) / 0.14);
+  color: inherit;
+  border-radius: 0.2em;
+  padding: 0 0.12em;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* Chromium find-in-page / scroll-to-text (when CSS Highlight API applies) */
+::highlight(find),
+::highlight(search-text) {
+  background-color: rgb(var(--foreground) / 0.2);
+  color: inherit;
+}
+
+::target-text {
+  background-color: rgb(var(--foreground) / 0.2);
+  color: inherit;
 }
 
 /* ── Transitions ──────────────────────────────────────────────────────────── */
@@ -285,6 +308,29 @@ h1, h2, h3, h4, h5, h6 {
 
 .safe-bottom {
   padding-bottom: env(safe-area-inset-bottom);
+}
+
+@media print {
+  .gpa-print-island {
+    color: #09090b;
+    background: #fff;
+  }
+  .gpa-print-island .text-muted,
+  .gpa-print-island [class*="text-gray"] {
+    color: #52525b !important;
+  }
+}
+
+@media (display-mode: standalone) {
+  html,
+  body {
+    overscroll-behavior: none;
+  }
+}
+
+body.focus-mode-active [data-app-chrome],
+body.focus-mode-active [data-app-tabbar] {
+  display: none !important;
 }
 
 /* iOS Safari zooms focused inputs under 16px — keep text-sm on sm+ via utilities */
@@ -526,10 +572,18 @@ h1, h2, h3, h4, h5, h6 {
 .pdf-text-layer ::selection {
   background: rgb(var(--foreground) / 0.22);
 }
+.pdf-text-layer ::highlight(find),
+.pdf-text-layer ::highlight(search-text),
+.pdf-text-layer ::target-text {
+  background-color: rgb(var(--foreground) / 0.22);
+  color: transparent;
+}
 .pdf-text-layer .pdf-find-hit {
   background: rgb(var(--foreground) / 0.18);
   color: transparent;
   border-radius: 2px;
+  /* Override any UA find paint sitting under our custom hits */
+  box-shadow: inset 0 0 0 9999px rgb(var(--foreground) / 0.12);
 }
 .pdf-text-layer .pdf-find-hit-active {
   background: rgb(var(--foreground) / 0.32);

@@ -6,6 +6,7 @@ import { MetricsPanel } from "@/components/visualize/MetricsPanel";
 import { StepExplanation } from "@/components/visualize/StepExplanation";
 import { GhostAction, PrimaryAction } from "@/components/visualize/LessonChrome";
 import { WorkspaceShell } from "@/components/visualize/WorkspaceShell";
+import { Field } from "@/components/ui";
 import { useVisualizerPlayback } from "@/lib/visualize/useVisualizerPlayback";
 import { usePendingPlay } from "@/lib/visualize/usePendingPlay";
 import {
@@ -132,19 +133,24 @@ export function OptimizationWorkspace({
   return (
     <div className="space-y-8">
       {!hasGenerated && !isGenetic && (
-        <label className="flex flex-wrap items-center gap-3 text-sm text-muted">
-          Starting place
-          <input
-            type="range"
-            min={OPTIMIZATION_DOMAIN.minX}
-            max={OPTIMIZATION_DOMAIN.maxX}
-            step="0.5"
-            value={initialX}
-            onChange={(e) => setInitialX(parseFloat(e.target.value))}
-            className="w-48 cursor-pointer accent-foreground"
-          />
-          <span className="font-mono text-foreground">{initialX.toFixed(1)}</span>
-        </label>
+        <Field label="Starting place" htmlFor="hill-start-x" className="max-w-md">
+          <div className="flex items-center gap-3">
+            <input
+              id="hill-start-x"
+              type="range"
+              min={OPTIMIZATION_DOMAIN.minX}
+              max={OPTIMIZATION_DOMAIN.maxX}
+              step="0.5"
+              value={initialX}
+              onChange={(e) => setInitialX(parseFloat(e.target.value))}
+              className="w-48 cursor-pointer accent-foreground"
+              aria-valuetext={initialX.toFixed(1)}
+            />
+            <span className="font-mono text-sm text-foreground tabular-nums">
+              {initialX.toFixed(1)}
+            </span>
+          </div>
+        </Field>
       )}
 
       <WorkspaceShell
