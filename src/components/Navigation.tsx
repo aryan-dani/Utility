@@ -9,13 +9,14 @@ import {
   Sun,
   Moon,
   Monitor,
-  ChevronLeft,
   ChevronRight,
+  ChevronLeft,
+  ChevronDown,
   ShieldCheck,
   Layers,
   MoreHorizontal,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useAcademicStore, AcademicYear, Branch, Semester } from "../store/academicStore";
 import { startNavigationProgress } from "./NavigationProgress";
@@ -30,6 +31,7 @@ import { useIsClient, useIsMac, useLocalStorageBoolean, useMediaQuery, writeLoca
 import { useIsStandalone } from "@/lib/pwa/displayMode";
 import { Sheet, TabBar } from "@/components/ui";
 import { SegmentedThemeToggle } from "@/components/shell/ThemeToggle";
+import { DockTooltip } from "@/components/shell/DockTooltip";
 import {
   ACADEMIC_LINKS,
   CAMPUS_LINKS,
@@ -51,10 +53,6 @@ const NavUserMenu = dynamic(() => import("./NavUserMenu"), {
   ),
 });
 
-const SIDEBAR_EXPANDED = "lg:w-72";
-const SIDEBAR_COLLAPSED = "lg:w-[4.25rem]";
-const TABLET_RAIL = "w-[4.25rem]";
-
 function NavSection({
   title,
   collapsed,
@@ -66,13 +64,30 @@ function NavSection({
 }) {
   return (
     <div className="space-y-0.5">
-      {collapsed ? (
-        <div className="mx-2.5 my-2 border-t border-border/50" />
-      ) : (
-        <p className="px-2.5 mb-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted/55">
-          {title}
-        </p>
-      )}
+      <div className="h-6 flex items-center px-2.5 relative overflow-hidden">
+        {/* Expanded label */}
+        <div
+          className="flex items-center gap-2 w-full transition-[opacity,transform] duration-200"
+          style={{
+            opacity: collapsed ? 0 : 1,
+            transform: collapsed ? "translateX(-6px)" : "translateX(0)",
+            pointerEvents: collapsed ? "none" : "auto",
+          }}
+        >
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted/50 truncate">
+            {title}
+          </span>
+          <div className="h-px flex-1 bg-border/30" />
+        </div>
+
+        {/* Collapsed divider */}
+        <div
+          className="absolute inset-0 flex items-center justify-center transition-opacity duration-200 pointer-events-none"
+          style={{ opacity: collapsed ? 1 : 0 }}
+        >
+          <div className="w-5 h-px bg-border/60" />
+        </div>
+      </div>
       {children}
     </div>
   );
@@ -148,12 +163,28 @@ function NavigationInner() {
   const isLg = useMediaQuery("(min-width: 1024px)");
   const showTabletRail = isClient && isMd && !isLg;
   const { theme, setTheme } = useTheme();
+
   const prefsAppliedRef = useRef(false);
   const [prevPathname, setPrevPathname] = useState(pathname);
+  const [scopeOpen, setScopeOpen] = useState(false);
+  const scopeRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function handler(e: MouseEvent) {
+      if (scopeRef.current && !scopeRef.current.contains(e.target as Node)) {
+        setScopeOpen(false);
+      }
+    }
+    if (scopeOpen) {
+      document.addEventListener("mousedown", handler);
+      return () => document.removeEventListener("mousedown", handler);
+    }
+  }, [scopeOpen]);
 
   if (prevPathname !== pathname) {
     setPrevPathname(pathname);
     if (moreOpen) setMoreOpen(false);
+    if (scopeOpen) setScopeOpen(false);
   }
 
   const handleCollapseToggle = () => {
@@ -259,7 +290,9 @@ function NavigationInner() {
     pathname === "/ask" ||
     pathname.startsWith("/ask") ||
     pathname === "/planner" ||
-    pathname.startsWith("/planner");
+    pathname.startsWith("/planner") ||
+    pathname === "/qa" ||
+    pathname.startsWith("/qa");
 
   const scopedHref = useCallback(
     (href: string) =>
@@ -274,139 +307,328 @@ function NavigationInner() {
     (link) => !(standalone && link.href === "/install"),
   );
 
-  const renderNavLink = useCallback((link: NavLinkItem, isCollapsed: boolean) => {
-    const finalHref = scopedHref(link.href);
-    const active = isActive(link.href);
-    return (
-      <AppLink
-        key={link.href}
-        href={finalHref}
-        onClick={() => setSearchQuery("")}
-        aria-label={link.label}
-        title={isCollapsed ? link.label : undefined}
-        className={`flex items-center min-h-10 mx-1 ${isCollapsed ? "justify-center px-0" : "justify-between px-2.5"} py-2 rounded-lg text-sm font-medium tracking-tight transition-colors border group relative overflow-visible ${
-          active
-            ? "bg-foreground text-background border-transparent shadow-card"
-            : "text-muted hover:text-foreground hover:bg-surface/60 active:bg-surface border-transparent"
-        }`}
-      >
-        {active && (
-          <motion.div
-            layoutId="activeIndicator"
-            className="absolute left-0 top-1.5 bottom-1.5 w-[2.5px] rounded-full bg-background/80"
-            transition={motionSafe.reduce ? { duration: 0 } : { type: "spring", stiffness: 380, damping: 30 }}
-          />
-        )}
+  const renderNavLink = useCallback(
+    (link: NavLinkItem, isCollapsed: boolean) => {
+      const finalHref = scopedHref(link.href);
+      const active = isActive(link.href);
 
-        <span className="flex items-center gap-2.5 min-w-0">
-          <link.Icon className={`w-[17px] h-[17px] shrink-0 ${active ? "text-background" : "text-muted group-hover:text-foreground"}`} />
-          {!isCollapsed && <span className="truncate">{link.label}</span>}
-        </span>
-        {!isCollapsed && link.featured && (
-          <span className={`flex items-center px-1.5 py-px rounded-md text-3xs font-bold uppercase tracking-[0.12em] shrink-0 ${
-            active ? "bg-background/20 text-background" : "bg-foreground text-background"
-          }`}>
-            Core
-          </span>
-        )}
-      </AppLink>
-    );
-  }, [isActive, setSearchQuery, scopedHref, motionSafe.reduce]);
+      return (
+        <DockTooltip
+          key={link.href}
+          label={link.label}
+          badge={link.featured ? "Core" : undefined}
+          disabled={!isCollapsed}
+        >
+          {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+            <AppLink
+              ref={ref as React.RefObject<HTMLAnchorElement>}
+              href={finalHref}
+              onClick={() => setSearchQuery("")}
+              onMouseEnter={onMouseEnter}
+              onMouseLeave={onMouseLeave}
+              onFocus={onFocus}
+              onBlur={onBlur}
+              aria-label={link.label}
+              className={`relative flex items-center my-0.5 rounded-xl group transition-all active:scale-[0.98] ${
+                isCollapsed
+                  ? "w-10 h-10 mx-auto justify-center px-0"
+                  : "w-full h-10 px-2.5 justify-start"
+              }`}
+            >
+              {active && (
+                <motion.div
+                  layoutId="dockActivePill"
+                  className="absolute inset-0 rounded-xl bg-foreground shadow-md"
+                  transition={
+                    motionSafe.reduce
+                      ? { duration: 0 }
+                      : { type: "spring", stiffness: 450, damping: 35 }
+                  }
+                />
+              )}
+              {!active && (
+                <div className="absolute inset-0 rounded-xl bg-foreground/[0.04] dark:bg-white/[0.06] opacity-0 group-hover:opacity-100 transition-opacity" />
+              )}
+
+              {/* Fixed icon container: 40x40 when collapsed, 24x24 when expanded */}
+              <div
+                className={`flex items-center justify-center shrink-0 relative z-10 ${
+                  isCollapsed ? "w-10 h-10" : "w-6 h-6"
+                }`}
+              >
+                <link.Icon
+                  className={`w-[18px] h-[18px] transition-all ${
+                    active
+                      ? "text-background"
+                      : "text-muted group-hover:text-foreground group-hover:scale-105"
+                  }`}
+                />
+              </div>
+
+              {/* Label & Core badge */}
+              {!isCollapsed && (
+                <div className="flex items-center justify-between flex-1 min-w-0 ml-2.5 relative z-10 overflow-hidden">
+                  <span
+                    className={`truncate text-sm font-medium tracking-tight ${
+                      active
+                        ? "text-background font-semibold"
+                        : "text-muted group-hover:text-foreground"
+                    }`}
+                  >
+                    {link.label}
+                  </span>
+                  {link.featured && (
+                    <span
+                      className={`px-1.5 py-0.5 rounded-md text-3xs font-bold uppercase tracking-[0.12em] shrink-0 ml-2 transition-colors ${
+                        active
+                          ? "bg-background/20 text-background"
+                          : "bg-foreground/10 text-foreground dark:bg-white/10 dark:text-foreground"
+                      }`}
+                    >
+                      Core
+                    </span>
+                  )}
+                </div>
+              )}
+            </AppLink>
+          )}
+        </DockTooltip>
+      );
+    },
+    [isActive, setSearchQuery, scopedHref, motionSafe.reduce],
+  );
 
   const renderSidebarContent = (opts: { collapsed: boolean }) => {
     const isCollapsed = opts.collapsed;
     const link = (item: NavLinkItem) => renderNavLink(item, isCollapsed);
+
     return (
-      <div className="flex flex-col h-full select-none">
-        <div className={`px-3 py-3.5 flex ${isCollapsed ? "flex-col items-center justify-center gap-3" : "items-center justify-between gap-2"} border-b border-border/50 min-h-[3.75rem]`}>
-          <AppLink
-            href="/"
-            onClick={() => setSearchQuery("")}
-            aria-label="Utility OS Home"
-            className="text-base font-bold tracking-tight text-foreground flex items-center gap-2.5 group min-w-0"
-          >
-            <div className="flex items-center justify-center w-8 h-8 bg-foreground text-background rounded-lg transition-transform group-hover:scale-[1.03] shrink-0">
-              <Layers className="w-4 h-4" />
-            </div>
-            {!isCollapsed && (
-              <span className="font-display text-[1.15rem] leading-none tracking-tight text-foreground truncate">
-                Utility
-                <span className="ml-1 text-[0.7em] font-sans font-semibold text-muted tracking-wide">OS</span>
-              </span>
-            )}
-          </AppLink>
-
-          <button
-            onClick={handleCollapseToggle}
-            className="tap-target w-8 h-8 rounded-lg hover:bg-surface active:bg-surface-hover border border-transparent text-muted hover:text-foreground hover:border-border/70 transition-all shrink-0 hidden lg:inline-flex items-center justify-center"
-            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-            aria-label={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          >
-            {isCollapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
-          </button>
-        </div>
-
-        {showSelectors && !isCollapsed && (
-          <div className="px-3 pt-3 overflow-visible relative z-50">
-            <div className="bg-card border border-border/80 p-3 rounded-2xl flex flex-col gap-2.5 shadow-xs">
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-[10px] font-semibold tracking-[0.16em] uppercase text-muted/70">
-                  Workspace
-                </p>
-                <span className="text-2xs font-semibold text-muted tabular-nums truncate">
-                  {branch} · Sem {semester}
-                </span>
-              </div>
-              <ScopeSelector
-                academicYear={academicYear}
-                branch={branch}
-                semester={semester}
-                variant="sidebar"
-                onAcademicYearChange={(val) =>
-                  updateUrl(val, branch, semester)
-                }
-                onBranchChange={(val) =>
-                  updateUrl(academicYear, val, semester)
-                }
-                onSemesterChange={(val) =>
-                  updateUrl(academicYear, branch, val)
-                }
-              />
-            </div>
-          </div>
-        )}
-
-        <div className="px-3 pt-3">
+      <div className="flex flex-col h-full select-none overflow-hidden rounded-[26px]">
+        {/* Header - Identical fixed h-14 row in both collapsed & expanded */}
+        <div
+          className={`h-14 flex items-center border-b border-border/50 shrink-0 relative overflow-hidden ${
+            isCollapsed ? "justify-center px-0" : "justify-between px-3.5"
+          }`}
+        >
           {isCollapsed ? (
-            <button
-              onClick={() => setCommandPaletteOpen(true)}
-              aria-label="Search resources"
-              className="w-full flex items-center justify-center min-h-10 p-2 bg-card border border-border/80 rounded-xl text-muted hover:text-foreground hover:border-border-strong active:bg-surface transition-all"
-              title="Search (Ctrl+K)"
-            >
-              <Search className="w-4 h-4 text-muted" />
-            </button>
+            <DockTooltip label="Expand sidebar">
+              {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+                <button
+                  ref={ref as React.RefObject<HTMLButtonElement>}
+                  onClick={handleCollapseToggle}
+                  onMouseEnter={onMouseEnter}
+                  onMouseLeave={onMouseLeave}
+                  onFocus={onFocus}
+                  onBlur={onBlur}
+                  aria-label="Expand sidebar"
+                  title="Expand sidebar"
+                  className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95 group relative cursor-pointer"
+                >
+                  <Layers className="w-5 h-5 transition-opacity duration-200 group-hover:opacity-0" />
+                  <ChevronRight className="w-5 h-5 absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
+                </button>
+              )}
+            </DockTooltip>
           ) : (
-            <button
-              onClick={() => setCommandPaletteOpen(true)}
-              aria-label="Search resources"
-              className="w-full flex items-center justify-between min-h-10 px-3 py-2 bg-card border border-border/80 rounded-xl text-xs text-muted hover:text-foreground hover:border-border-strong active:bg-surface transition-all group"
-            >
-              <span className="flex items-center gap-2 truncate">
-                <Search className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors" />
-                <span className="font-medium">Search…</span>
-              </span>
-              <kbd
-                className="kbd hidden sm:inline-flex"
-                suppressHydrationWarning
+            <>
+              <AppLink
+                href="/"
+                onClick={() => setSearchQuery("")}
+                aria-label="Utility OS Home"
+                className="flex items-center group min-w-0"
               >
-                {isMac ? "⌘K" : "Ctrl+K"}
-              </kbd>
-            </button>
+                <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center shadow-md transition-all group-hover:scale-105 group-hover:rotate-3 shrink-0">
+                  <Layers className="w-5 h-5" />
+                </div>
+                <div className="flex items-center ml-2.5 overflow-hidden min-w-0">
+                  <span className="font-display text-[1.15rem] leading-none font-bold tracking-tight text-foreground truncate">
+                    Utility
+                    <span className="ml-1.5 text-[0.65rem] font-mono font-bold uppercase tracking-widest px-1.5 py-0.5 rounded-md bg-surface border border-border/70 text-muted">
+                      OS
+                    </span>
+                  </span>
+                </div>
+              </AppLink>
+
+              <button
+                onClick={handleCollapseToggle}
+                aria-label="Collapse sidebar"
+                title="Collapse sidebar"
+                className="w-8 h-8 rounded-xl hover:bg-surface active:bg-surface-hover border border-transparent hover:border-border/70 text-muted hover:text-foreground transition-all shrink-0 hidden lg:inline-flex items-center justify-center cursor-pointer active:scale-95"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+            </>
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-2 py-4 space-y-5 custom-scrollbar">
+        {/* Workspace Scope Pill (Fixed h-10 row, opens floating popover) */}
+        {showSelectors && (
+          <div
+            ref={scopeRef}
+            className={`pt-2 relative z-30 shrink-0 ${
+              isCollapsed ? "px-0" : "px-2.5"
+            }`}
+          >
+            <DockTooltip
+              label="Switch Workspace"
+              badge={`${branch} · S${semester}`}
+              disabled={!isCollapsed}
+            >
+              {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+                <button
+                  ref={ref as React.RefObject<HTMLButtonElement>}
+                  onClick={() => setScopeOpen((o) => !o)}
+                  onMouseEnter={onMouseEnter}
+                  onMouseLeave={onMouseLeave}
+                  onFocus={onFocus}
+                  onBlur={onBlur}
+                  aria-label={`Workspace ${branch} Semester ${semester}`}
+                  className={`flex items-center rounded-xl bg-surface/50 hover:bg-surface border border-border/70 hover:border-border-strong text-muted hover:text-foreground active:scale-[0.98] transition-all shadow-xs ${
+                    isCollapsed
+                      ? "w-10 h-10 mx-auto justify-center px-0 flex-col"
+                      : "w-full h-10 px-3 justify-between"
+                  }`}
+                >
+                  {isCollapsed ? (
+                    <div className="flex flex-col items-center justify-center leading-none">
+                      <span className="text-[10px] font-bold tracking-tight text-foreground">
+                        {branch.slice(0, 4)}
+                      </span>
+                      <span className="text-[9px] font-semibold text-muted mt-0.5">
+                        S{semester}
+                      </span>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <span className="inline-flex items-center justify-center h-5 px-1.5 pt-[1px] rounded-md bg-foreground text-background text-[10px] font-extrabold tracking-wide uppercase leading-none shrink-0 shadow-2xs">
+                          {branch.slice(0, 4)}
+                        </span>
+                        <div className="flex items-baseline gap-1.5 overflow-hidden min-w-0">
+                          <span className="text-xs font-bold text-foreground truncate leading-none">
+                            Sem {semester}
+                          </span>
+                          <span className="text-[11px] font-medium text-muted truncate leading-none">
+                            · {academicYear.split("-")[0]}
+                          </span>
+                        </div>
+                      </div>
+                      <ChevronDown
+                        className={`w-3.5 h-3.5 text-muted transition-transform duration-200 shrink-0 ${
+                          scopeOpen ? "rotate-180" : ""
+                        }`}
+                      />
+                    </>
+                  )}
+                </button>
+              )}
+            </DockTooltip>
+
+            {/* Floating Workspace Popover */}
+            <AnimatePresence>
+              {scopeOpen && (
+                <motion.div
+                  initial={{
+                    opacity: 0,
+                    scale: 0.95,
+                    y: isCollapsed ? 0 : 4,
+                    x: isCollapsed ? -6 : 0,
+                  }}
+                  animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+                  exit={{
+                    opacity: 0,
+                    scale: 0.95,
+                    y: isCollapsed ? 0 : 4,
+                    x: isCollapsed ? -6 : 0,
+                  }}
+                  transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+                  className={`absolute bg-card/95 backdrop-blur-2xl border border-border/80 rounded-2xl shadow-2xl p-3 z-50 ${
+                    isCollapsed
+                      ? "w-72 left-full ml-3 top-0"
+                      : "w-[calc(100%-1rem)] left-2 top-full mt-2"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-2.5">
+                    <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-muted/70">
+                      Workspace Scope
+                    </p>
+                    <span className="text-2xs font-semibold text-muted tabular-nums px-1.5 py-0.5 rounded-md bg-surface border border-border/60">
+                      {branch} · Sem {semester}
+                    </span>
+                  </div>
+                  <ScopeSelector
+                    academicYear={academicYear}
+                    branch={branch}
+                    semester={semester}
+                    variant="sidebar"
+                    onAcademicYearChange={(val) => {
+                      updateUrl(val, branch, semester);
+                    }}
+                    onBranchChange={(val) => {
+                      updateUrl(academicYear, val, semester);
+                    }}
+                    onSemesterChange={(val) => {
+                      updateUrl(academicYear, branch, val);
+                    }}
+                  />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
+
+        {/* Search - Fixed h-10 row */}
+        <div
+          className={`pt-2 relative shrink-0 ${
+            isCollapsed ? "px-0" : "px-2.5"
+          }`}
+        >
+          <DockTooltip
+            label="Search"
+            shortcut={isMac ? "⌘K" : "Ctrl+K"}
+            disabled={!isCollapsed}
+          >
+            {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+              <button
+                ref={ref as React.RefObject<HTMLButtonElement>}
+                onClick={() => setCommandPaletteOpen(true)}
+                onMouseEnter={onMouseEnter}
+                onMouseLeave={onMouseLeave}
+                onFocus={onFocus}
+                onBlur={onBlur}
+                aria-label="Search resources"
+                className={`flex items-center rounded-xl bg-surface/50 hover:bg-surface border border-border/70 hover:border-border-strong text-muted hover:text-foreground active:scale-[0.98] transition-all shadow-xs ${
+                  isCollapsed
+                    ? "w-10 h-10 mx-auto justify-center px-0"
+                    : "w-full h-10 px-3 justify-between"
+                }`}
+              >
+                <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                  <Search className="w-4 h-4 text-muted group-hover:text-foreground transition-colors" />
+                </div>
+                {!isCollapsed && (
+                  <div className="flex items-center justify-between flex-1 ml-2 overflow-hidden min-w-0">
+                    <span className="text-xs font-medium truncate">Search…</span>
+                    <kbd
+                      className="kbd hidden sm:inline-flex bg-background/60 border border-border/70 text-[10px] ml-1.5 shrink-0"
+                      suppressHydrationWarning
+                    >
+                      {isMac ? "⌘K" : "Ctrl+K"}
+                    </kbd>
+                  </div>
+                )}
+              </button>
+            )}
+          </DockTooltip>
+        </div>
+
+        {/* Navigation Links */}
+        <div
+          className={`flex-1 overflow-y-auto space-y-3 custom-scrollbar overflow-x-hidden ${
+            isCollapsed ? "px-0 py-2.5" : "px-2.5 py-2.5"
+          }`}
+        >
           <NavSection title="Academic" collapsed={isCollapsed}>
             {ACADEMIC_LINKS.map(link)}
           </NavSection>
@@ -426,40 +648,79 @@ function NavigationInner() {
           <NavSection title="System" collapsed={isCollapsed}>
             {systemLinks.map(link)}
             {isAdmin && (
-              <AppLink
-                href="/admin"
-                onClick={() => setSearchQuery("")}
-                title={isCollapsed ? "Admin Dashboard" : undefined}
-                aria-label="Admin Dashboard"
-                className={`flex items-center min-h-10 ${isCollapsed ? "justify-center px-0" : "gap-2.5 px-2.5 py-2"} rounded-lg text-[13px] font-medium tracking-tight transition-colors border group ${
-                  isActive("/admin")
-                    ? "bg-primary/10 border-primary/20 text-primary shadow-xs"
-                    : "text-muted hover:text-foreground hover:bg-surface/60 active:bg-surface border-transparent"
-                }`}
+              <DockTooltip
+                label="Admin Dashboard"
+                disabled={!isCollapsed}
               >
-                <ShieldCheck className="w-[17px] h-[17px] text-muted group-hover:text-foreground" />
-                {!isCollapsed && <span>Admin Dashboard</span>}
-              </AppLink>
+                {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+                  <AppLink
+                    ref={ref as React.RefObject<HTMLAnchorElement>}
+                    href="/admin"
+                    onClick={() => setSearchQuery("")}
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                    aria-label="Admin Dashboard"
+                    className={`relative flex items-center my-0.5 rounded-xl group transition-all active:scale-[0.98] ${
+                      isCollapsed
+                        ? "w-10 h-10 mx-auto justify-center px-0"
+                        : "w-full h-10 px-2.5 justify-start"
+                    } ${
+                      isActive("/admin")
+                        ? "bg-primary/15 text-primary border border-primary/30 font-semibold"
+                        : "text-muted hover:text-foreground hover:bg-surface"
+                    }`}
+                  >
+                    <div
+                      className={`flex items-center justify-center shrink-0 relative z-10 ${
+                        isCollapsed ? "w-10 h-10" : "w-6 h-6"
+                      }`}
+                    >
+                      <ShieldCheck className="w-[18px] h-[18px]" />
+                    </div>
+                    {!isCollapsed && (
+                      <div className="flex items-center flex-1 min-w-0 ml-2.5 relative z-10 overflow-hidden">
+                        <span className="truncate text-sm font-medium tracking-tight">
+                          Admin Dashboard
+                        </span>
+                      </div>
+                    )}
+                  </AppLink>
+                )}
+              </DockTooltip>
             )}
           </NavSection>
         </div>
 
-        <div className="p-3 border-t border-border/50 space-y-2.5 bg-card/40">
+        {/* Dock Footer Deck */}
+        <div className="p-2.5 border-t border-border/50 space-y-2 bg-surface/30 dark:bg-card/40 rounded-b-[24px] shrink-0 overflow-hidden">
+          {/* Theme toggle */}
           {isCollapsed ? (
-            <button
-              onClick={cycleTheme}
-              className="w-full flex items-center justify-center min-h-11 p-2 bg-surface/60 border border-border/70 rounded-xl text-muted hover:text-foreground active:bg-surface transition-all"
-              title={`Theme: ${theme}`}
-              aria-label="Cycle color theme"
-            >
-              {theme === "light" ? (
-                <Sun className="w-4 h-4" />
-              ) : theme === "dark" ? (
-                <Moon className="w-4 h-4" />
-              ) : (
-                <Monitor className="w-4 h-4" />
-              )}
-            </button>
+            <div className="flex justify-center">
+              <DockTooltip label={`Theme: ${theme ?? "system"}`}>
+                {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+                  <button
+                    ref={ref as React.RefObject<HTMLButtonElement>}
+                    onClick={cycleTheme}
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                    className="w-10 h-10 flex items-center justify-center bg-surface/60 hover:bg-surface border border-border/70 rounded-xl text-muted hover:text-foreground active:scale-95 transition-all shadow-xs"
+                    aria-label="Cycle color theme"
+                  >
+                    {theme === "light" ? (
+                      <Sun className="w-4 h-4" />
+                    ) : theme === "dark" ? (
+                      <Moon className="w-4 h-4" />
+                    ) : (
+                      <Monitor className="w-4 h-4" />
+                    )}
+                  </button>
+                )}
+              </DockTooltip>
+            </div>
           ) : (
             <SegmentedThemeToggle theme={theme} setTheme={setTheme} />
           )}
@@ -476,31 +737,41 @@ function NavigationInner() {
             onUserChange={(u) => setUserEmail(u?.email)}
           />
 
-          {isCollapsed ? (
-            <div className="flex justify-center pt-2 border-t border-border/20">
-              <a
-                href="https://www.aryandani.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[9px] font-extrabold hover:text-foreground text-muted/70 transition-colors"
-                title="Crafted by Aryan Dani"
-              >
-                AD
-              </a>
-            </div>
-          ) : (
-            <p className="text-[10px] text-muted/50 text-center tracking-tight font-semibold pt-1 border-t border-border/20">
-              Crafted by{" "}
-              <a
-                href="https://www.aryandani.com"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="font-extrabold hover:underline hover:text-foreground text-muted/80 transition-colors"
-              >
-                Aryan Dani
-              </a>
-            </p>
-          )}
+          {/* Crafted By */}
+          <div className="flex justify-center pt-0.5 border-t border-border/20">
+            {isCollapsed ? (
+              <DockTooltip label="Crafted by Aryan Dani">
+                {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+                  <a
+                    ref={ref as React.RefObject<HTMLAnchorElement>}
+                    href="https://www.aryandani.com"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                    className="text-[10px] font-black text-muted/60 hover:text-foreground transition-colors py-0.5"
+                    aria-label="Crafted by Aryan Dani"
+                  >
+                    AD
+                  </a>
+                )}
+              </DockTooltip>
+            ) : (
+              <p className="text-[10px] text-muted/50 text-center tracking-tight font-semibold py-0.5">
+                Crafted by{" "}
+                <a
+                  href="https://www.aryandani.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-extrabold hover:underline hover:text-foreground text-muted/80 transition-colors"
+                >
+                  Aryan Dani
+                </a>
+              </p>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -515,27 +786,41 @@ function NavigationInner() {
         <NavigationUrlSync />
       </Suspense>
 
+      {/* Desktop Floating Dock */}
+      <div
+        className={`hidden lg:block shrink-0 transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+          collapsed ? "w-[5.75rem]" : "w-[18.75rem]"
+        }`}
+        aria-hidden="true"
+      />
       <aside
-        aria-label="Primary"
+        key="desktop-dock"
+        aria-label="Primary Navigation"
         data-app-chrome=""
-        className={`h-screen sticky top-0 left-0 border-r border-border/80 bg-background-subtle z-40 hidden lg:flex flex-col shrink-0 transition-all duration-400 ease-[cubic-bezier(0.2,0.8,0.2,1)] w-0 overflow-hidden lg:overflow-visible ${
-          collapsed ? SIDEBAR_COLLAPSED : SIDEBAR_EXPANDED
+        className={`hidden lg:flex fixed top-3.5 left-3.5 bottom-3.5 z-40 flex-col rounded-[26px] bg-card/85 dark:bg-card/75 backdrop-blur-2xl border border-border/80 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_24px_64px_-16px_rgba(0,0,0,0.7)] ring-1 ring-black/[0.04] dark:ring-white/[0.05] transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] select-none ${
+          collapsed ? "w-[4.75rem]" : "w-[17.5rem]"
         }`}
         style={{ willChange: "width" }}
       >
         {renderSidebarContent({ collapsed })}
       </aside>
 
+      {/* Tablet Floating Dock Rail */}
       {showTabletRail && (
-        <aside
-          aria-label="Primary"
-          data-app-chrome=""
-          className={`h-screen sticky top-0 left-0 border-r border-border/80 bg-background-subtle z-40 flex flex-col shrink-0 ${TABLET_RAIL}`}
-        >
-          {renderSidebarContent({ collapsed: true })}
-        </aside>
+        <>
+          <div className="hidden md:block lg:hidden shrink-0 w-[5.75rem]" aria-hidden="true" />
+          <aside
+            key="tablet-dock"
+            aria-label="Tablet Navigation"
+            data-app-chrome=""
+            className="hidden md:flex lg:hidden fixed top-3.5 left-3.5 bottom-3.5 z-40 flex-col w-[4.75rem] rounded-[26px] bg-card/85 dark:bg-card/75 backdrop-blur-2xl border border-border/80 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_24px_64px_-16px_rgba(0,0,0,0.7)] ring-1 ring-black/[0.04] dark:ring-white/[0.05] select-none"
+          >
+            {renderSidebarContent({ collapsed: true })}
+          </aside>
+        </>
       )}
 
+      {/* Mobile Header (< md) */}
       <header data-app-chrome="" className="fixed top-0 inset-x-0 w-full max-w-[100vw] h-[calc(3.5rem+env(safe-area-inset-top))] pt-[env(safe-area-inset-top)] border-b border-border/80 bg-background/80 backdrop-blur-md z-sticky flex items-center justify-between gap-3 pl-[max(1rem,env(safe-area-inset-left))] pr-[max(1rem,env(safe-area-inset-right))] md:hidden transition-colors">
         <AppLink
           href="/"
@@ -582,6 +867,7 @@ function NavigationInner() {
         </div>
       </header>
 
+      {/* Mobile TabBar (< md) */}
       <TabBar
         items={[
           ...PHONE_TABS.map((tab) => ({
@@ -599,6 +885,7 @@ function NavigationInner() {
         ]}
       />
 
+      {/* Mobile More Sheet (< md) */}
       <Sheet open={moreOpen} onClose={() => setMoreOpen(false)} title="More">
         <div className="px-1 pb-2">
           <div className="bg-card border border-border/80 p-3 rounded-2xl mb-3">

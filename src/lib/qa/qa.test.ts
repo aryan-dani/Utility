@@ -35,7 +35,6 @@ describe("QA constants and types", () => {
   it("defines standard categories", () => {
     expect(QUESTION_CATEGORIES.map((c) => c.value)).toEqual([
       "doubt",
-      "homework",
       "general",
     ]);
   });
@@ -129,5 +128,19 @@ describe("rankQuestions", () => {
     const originalCopy = [...original];
     rankQuestions(original);
     expect(original).toEqual(originalCopy);
+  });
+
+  it("handles questions with referenced notes/PPTs", () => {
+    const qWithRef = makeQuestion({
+      id: "ref-q",
+      subject_name: "Machine Learning",
+      resource_id: "res-101",
+      resource_title: "Module 2 - Gradient Descent Slides.pptx",
+      resource_url: "https://drive.google.com/file/d/xyz",
+    });
+
+    expect(qWithRef.resource_title).toBe("Module 2 - Gradient Descent Slides.pptx");
+    expect(qWithRef.resource_url).toBe("https://drive.google.com/file/d/xyz");
+    expect(rankQuestions([qWithRef])).toHaveLength(1);
   });
 });

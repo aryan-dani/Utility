@@ -88,6 +88,7 @@ export default function RootLayout({
       <head>
         <script
           id="utility-sw-recovery"
+          suppressHydrationWarning
           dangerouslySetInnerHTML={{ __html: SW_RECOVERY_SCRIPT }}
         />
       </head>

@@ -126,7 +126,7 @@ function PdfPage({
       let occurrence = 0;
       for (const el of divs) {
         const t = (el.textContent || "").toLowerCase();
-        // A single text span may contain multiple hits — count each.
+        // A single text span may contain multiple hits - count each.
         let from = 0;
         let hitCountInDiv = 0;
         while (from <= t.length) {
@@ -470,7 +470,7 @@ const PdfPreview = forwardRef<PdfPreviewHandle, PdfPreviewProps>(
               className="w-10 bg-transparent text-center text-xs font-semibold text-foreground outline-none"
               aria-label="Page number"
             />
-            <span className="text-muted tabular-nums pr-1 text-xs">/ {pageCount || "—"}</span>
+            <span className="text-muted tabular-nums pr-1 text-xs">/ {pageCount || "-"}</span>
             <IconButton
               size="sm"
               label="Next page"

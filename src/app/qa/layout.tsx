@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Doubt Board — Utility OS",
+  title: "Doubt Board",
   description:
     "Ask and answer questions about paper-format problems, syllabus scope, and share handwritten solutions with peers.",
 };

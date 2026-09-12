@@ -281,7 +281,7 @@ export default function TimerClient() {
     return 'stroke-muted';
   }, [mode]);
 
-  // Load focus history + session count — initialized via lazy useState above
+  // Load focus history + session count - initialized via lazy useState above
 
   useEffect(() => {
     try {

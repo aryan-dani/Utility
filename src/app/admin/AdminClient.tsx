@@ -1186,7 +1186,7 @@ function UserRows({
               />
               <span className="text-[9px] font-extrabold uppercase tracking-wide text-muted block mt-0.5">
                 {usr.provider || "Unknown"} · {usr.branch || "AIDS"} Sem{" "}
-                {usr.semester || "—"}
+                {usr.semester || "-"}
               </span>
             </div>
           </div>
@@ -1198,7 +1198,7 @@ function UserRows({
           {usr.resourceOpenCount || 0}
         </td>
         <td className="p-4 text-muted max-w-[12rem] truncate">
-          {usr.lastOpenedTitle || "—"}
+          {usr.lastOpenedTitle || "-"}
         </td>
         <td className="p-4 text-muted font-mono whitespace-nowrap">
           {formatWhen(usr.lastActive)}

@@ -731,7 +731,7 @@ export default function CommandPalette() {
               )}
             </div>
 
-            {/* Footer Navigation Hints — keyboard-only, hide on phones */}
+            {/* Footer Navigation Hints - keyboard-only, hide on phones */}
             <div className="hidden md:flex px-4 py-3 border-t border-border bg-surface/30 items-center justify-between text-xs font-medium text-muted select-none">
               <div className="flex items-center gap-4">
                 <span className="flex items-center gap-1.5">

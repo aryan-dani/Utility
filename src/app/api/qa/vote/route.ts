@@ -55,7 +55,7 @@ export async function POST(request: Request) {
       if (existingVote.exists) {
         const oldValue = existingVote.data()?.value as number;
         if (oldValue === value) {
-          // Same vote — remove it (toggle off)
+          // Same vote - remove it (toggle off)
           transaction.delete(voteRef);
           if (target_type === "question") {
             transaction.update(targetRef, { upvotes: FieldValue.increment(-1) });

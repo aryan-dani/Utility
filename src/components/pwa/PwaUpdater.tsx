@@ -5,7 +5,7 @@ import { notify } from '@/lib/toast';
 
 const TOAST_ID = 'utility-sw-update';
 const CONTROLLER_FALLBACK_MS = 1500;
-/** Focus/visibility SW checks — keep mount + hourly interval uncapped. */
+/** Focus/visibility SW checks - keep mount + hourly interval uncapped. */
 const VISIBILITY_UPDATE_DEBOUNCE_MS = 20 * 60 * 1000;
 
 /** Clear SW/runtime caches on update; never touch utility-pdf-v2 (Drive PDF Cache API). */

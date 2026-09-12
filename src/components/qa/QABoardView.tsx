@@ -7,6 +7,7 @@ import {
   MessageCircle,
   Bookmark,
   HelpCircle,
+  BookOpen,
 } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
@@ -18,6 +19,9 @@ import {
   PageHeader,
   Segmented,
   EmptyState,
+  Select,
+  Modal,
+  Input,
 } from "@/components/ui";
 import type {
   QAQuestion,
@@ -26,6 +30,7 @@ import type {
   VoteValue,
 } from "@/lib/qa/types";
 import { rankQuestions } from "@/lib/qa/types";
+import { useWorkspaceResources } from "@/lib/useWorkspaceResources";
 import QuestionCard from "./QuestionCard";
 import QuestionComposer from "./QuestionComposer";
 import QuestionThread from "./QuestionThread";
@@ -39,6 +44,8 @@ export default function QABoardView() {
   const branch = useAcademicStore((s) => s.branch);
   const semester = useAcademicStore((s) => s.semester);
 
+  const { subjects: catalogSubjects, resources } = useWorkspaceResources();
+
   const [questions, setQuestions] = useState<QAQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
@@ -51,6 +58,17 @@ export default function QABoardView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<QuestionCategory | "all">("all");
   const [statusFilter, setStatusFilter] = useState<QuestionStatus | "all">("all");
+  const [customSubjects, setCustomSubjects] = useState<string[]>(() => {
+    if (typeof window === "undefined") return [];
+    try {
+      const stored = localStorage.getItem("qa-custom-subjects");
+      return stored ? JSON.parse(stored) : [];
+    } catch {
+      return [];
+    }
+  });
+  const [customSubjectModalOpen, setCustomSubjectModalOpen] = useState(false);
+  const [newSubjectInput, setNewSubjectInput] = useState("");
 
   // Track user votes and saves
   const [userVotes, setUserVotes] = useState<Record<string, VoteValue | null>>({});
@@ -61,6 +79,43 @@ export default function QABoardView() {
       setCurrentUid(user?.uid ?? null);
     });
     return () => unsub();
+  }, []);
+
+  // Sync activeThreadId from URL query param & handle browser navigation (popstate)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const initialThread = urlParams.get("thread");
+    if (initialThread) {
+      setActiveThreadId(initialThread);
+    }
+
+    const handlePopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setActiveThreadId(params.get("thread"));
+    };
+
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
+
+  const handleOpenThread = useCallback((questionId: string) => {
+    setActiveThreadId(questionId);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("thread", questionId);
+      window.history.pushState({ thread: questionId }, "", url.toString());
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  }, []);
+
+  const handleCloseThread = useCallback(() => {
+    setActiveThreadId(null);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("thread");
+      window.history.pushState({}, "", url.toString());
+    }
   }, []);
 
   const fetchQuestions = useCallback(async (showLoading = false) => {
@@ -113,14 +168,35 @@ export default function QABoardView() {
     };
   }, [academicYear, branch, semester]);
 
-  // Derive subject list from loaded questions
+  // Combine subjects from catalog, custom added subjects, and existing questions
   const subjects = useMemo(() => {
-    const set = new Set(questions.map((q) => q.subject_name));
-    return Array.from(set).sort();
-  }, [questions]);
+    const set = new Set<string>();
+    catalogSubjects.forEach((s) => {
+      if (s) set.add(s);
+    });
+    questions.forEach((q) => {
+      if (q.subject_name) set.add(q.subject_name);
+    });
+    customSubjects.forEach((s) => {
+      if (s) set.add(s);
+    });
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [catalogSubjects, questions, customSubjects]);
 
-  const composerSubject =
-    subjectFilter !== "all" ? subjectFilter : subjects[0] || "General";
+  const handleAddCustomSubject = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setCustomSubjects((prev) => {
+      if (prev.includes(trimmed)) return prev;
+      const next = [...prev, trimmed];
+      try {
+        localStorage.setItem("qa-custom-subjects", JSON.stringify(next));
+      } catch {}
+      return next;
+    });
+    setSubjectFilter(trimmed);
+    notify.success(`Subject "${trimmed}" selected`);
+  }, []);
 
   const handleVote = async (questionId: string, value: VoteValue) => {
     const old = userVotes[questionId] ?? null;
@@ -175,6 +251,10 @@ export default function QABoardView() {
   };
 
   const handleCreateQuestion = async (data: {
+    subject_name: string;
+    resource_id?: string;
+    resource_title?: string;
+    resource_url?: string;
     category: QuestionCategory;
     topic_unit: string;
     body: string;
@@ -187,7 +267,6 @@ export default function QABoardView() {
         academic_year: academicYear,
         branch,
         semester,
-        subject_name: composerSubject,
         ...data,
       }),
     });
@@ -223,14 +302,27 @@ export default function QABoardView() {
     return rankQuestions(result);
   }, [questions, subjectFilter, categoryFilter, statusFilter, searchQuery]);
 
+  if (activeThreadId) {
+    return (
+      <div className="flex-1 w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto page-gutter pt-6 pb-24 min-h-[85vh]">
+        <QuestionThread
+          questionId={activeThreadId}
+          open={true}
+          onClose={handleCloseThread}
+          onQuestionUpdated={fetchQuestions}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="flex-1 w-full max-w-5xl mx-auto page-gutter py-8 min-h-[80vh]">
+    <div className="flex-1 w-full max-w-5xl mx-auto page-gutter pt-6 pb-24 min-h-[85vh]">
       {/* Header */}
       <PageHeader
         className="border-b border-border pb-6 mb-6"
         eyebrow={`${branch} · Sem ${semester} · ${academicYear}`}
         title="Doubt Board"
-        description="Ask questions about paper-format problems, syllabus scope, or share handwritten solutions. Not for generic doubts — use the AI assistant for those."
+        description="Ask questions about paper-format problems, syllabus scope, or share handwritten solutions. For generic doubts, use the AI assistant."
         actions={
           <Button
             variant="primary"
@@ -279,21 +371,30 @@ export default function QABoardView() {
           ]}
         />
 
-        {tab === "board" && subjects.length > 1 && (
+        {tab === "board" && (
           <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-muted">Subject:</span>
-            <select
+            <span className="text-xs font-semibold text-muted shrink-0">Subject:</span>
+            <Select<string>
               value={subjectFilter}
-              onChange={(e) => setSubjectFilter(e.target.value)}
-              className="px-3 py-1.5 rounded-lg border border-border bg-surface text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/30"
-            >
-              <option value="all">All subjects</option>
-              {subjects.map((s) => (
-                <option key={s} value={s}>
-                  {s}
-                </option>
-              ))}
-            </select>
+              onChange={setSubjectFilter}
+              options={[
+                { value: "all", label: "All subjects" },
+                ...subjects.map((s) => ({ value: s, label: s })),
+              ]}
+              size="sm"
+              align="right"
+              className="min-w-[150px] max-w-[220px]"
+              onCreateOption={handleAddCustomSubject}
+              createOptionLabel={(q) => `+ Add & filter by "${q}"`}
+              footerAction={{
+                label: "Add custom subject…",
+                icon: Plus,
+                onClick: () => {
+                  setNewSubjectInput("");
+                  setCustomSubjectModalOpen(true);
+                },
+              }}
+            />
           </div>
         )}
       </div>
@@ -327,7 +428,7 @@ export default function QABoardView() {
               }
             />
           ) : (
-            <div className="border border-border rounded-xl overflow-hidden shadow-sm">
+            <div className="space-y-4">
               {filtered.map((q) => (
                 <QuestionCard
                   key={q.id}
@@ -336,7 +437,7 @@ export default function QABoardView() {
                   isSaved={savedIds.has(q.id)}
                   onVote={(v) => handleVote(q.id, v)}
                   onSave={() => handleSave(q.id)}
-                  onClick={() => setActiveThreadId(q.id)}
+                  onClick={() => handleOpenThread(q.id)}
                 />
               ))}
             </div>
@@ -345,25 +446,76 @@ export default function QABoardView() {
       )}
 
       {/* Saved tab */}
-      {tab === "saved" && <SavedQuestionsView />}
+      {tab === "saved" && <SavedQuestionsView onOpenThread={handleOpenThread} />}
 
       {/* Composer */}
       <QuestionComposer
         open={composerOpen}
         onClose={() => setComposerOpen(false)}
         onSubmit={handleCreateQuestion}
-        subjectName={composerSubject}
+        initialSubject={subjectFilter !== "all" ? subjectFilter : undefined}
+        availableSubjects={subjects}
+        availableResources={resources}
       />
 
-      {/* Thread */}
-      {activeThreadId && (
-        <QuestionThread
-          questionId={activeThreadId}
-          open={!!activeThreadId}
-          onClose={() => setActiveThreadId(null)}
-          onQuestionUpdated={fetchQuestions}
-        />
-      )}
+      {/* Custom Subject Modal */}
+      <Modal
+        open={customSubjectModalOpen}
+        onClose={() => {
+          setCustomSubjectModalOpen(false);
+          setNewSubjectInput("");
+        }}
+        size="sm"
+        title={
+          <div className="flex items-center gap-2">
+            <BookOpen className="w-4 h-4 text-primary" />
+            <span>Add Custom Subject</span>
+          </div>
+        }
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!newSubjectInput.trim()) return;
+            handleAddCustomSubject(newSubjectInput.trim());
+            setNewSubjectInput("");
+            setCustomSubjectModalOpen(false);
+          }}
+          className="space-y-4"
+        >
+          <p className="text-xs text-muted leading-relaxed">
+            Add an elective, lab course, or custom topic to filter doubts and ask questions.
+          </p>
+          <Input
+            value={newSubjectInput}
+            onChange={(e) => setNewSubjectInput(e.target.value.slice(0, 100))}
+            placeholder="e.g. Cloud Computing or Robotics"
+            autoFocus
+            className="rounded-xl text-sm"
+          />
+          <div className="flex justify-end gap-2 pt-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              type="button"
+              onClick={() => {
+                setCustomSubjectModalOpen(false);
+                setNewSubjectInput("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="primary"
+              size="sm"
+              type="submit"
+              disabled={!newSubjectInput.trim()}
+            >
+              Add Subject
+            </Button>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 /** Shared types for the Q&A doubt board. */
 
-export type QuestionCategory = "doubt" | "homework" | "general";
+export type QuestionCategory = "doubt" | "general";
 export type QuestionStatus = "open" | "resolved";
 export type VoteTargetType = "question" | "answer";
 export type VoteValue = 1 | -1;
@@ -14,6 +14,8 @@ export interface QAQuestion {
   semester: number;
   subject_name: string;
   resource_id?: string;
+  resource_title?: string;
+  resource_url?: string;
   topic_unit?: string;
   category: QuestionCategory;
 
@@ -94,10 +96,9 @@ export function rankQuestions(questions: QAQuestion[]): QAQuestion[] {
   });
 }
 
-export const QUESTION_CATEGORIES: { value: QuestionCategory; label: string }[] = [
-  { value: "doubt", label: "Doubt" },
-  { value: "homework", label: "Homework Question" },
-  { value: "general", label: "General" },
+export const QUESTION_CATEGORIES: { value: QuestionCategory; label: string; desc: string }[] = [
+  { value: "doubt", label: "Doubt", desc: "Exam paper problems, past questions & step-by-step doubts" },
+  { value: "general", label: "General", desc: "Syllabus scope, course queries & academic discussion" },
 ];
 
 export const QUESTION_BODY_MAX = 5000;

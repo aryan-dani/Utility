@@ -52,7 +52,7 @@ describe("bandwidth policy: no file-byte proxying", () => {
   it("does not introduce middleware or proxy that would double origin transfer", () => {
     expect(
       existsSync(join(ROOT, "src/middleware.ts")),
-      "Do not add src/middleware.ts — it can double Fast Origin Transfer. See .cursor/rules/bandwidth-policy.mdc",
+      "Do not add src/middleware.ts: it can double Fast Origin Transfer. See .cursor/rules/bandwidth-policy.mdc",
     ).toBe(false);
     expect(
       existsSync(join(ROOT, "src/proxy.ts")),

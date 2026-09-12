@@ -58,7 +58,7 @@ export function getResourceCategory(
     return "pyq";
   }
 
-  // Solved question banks — must check before regular QBs
+  // Solved question banks - must check before regular QBs
   if (
     /solved.*\bqbs?\b|\bqbs?\b.*solved|solved.*question[_\s-]*bank/i.test(
       haystack,

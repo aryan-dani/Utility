@@ -12,7 +12,7 @@ function cleanPrivateKey(key: string | undefined): string | undefined {
   return cleaned.replace(/\\n/g, "\n");
 }
 
-/** Server-side Drive client for sync/index tooling and admin flows — never stream file bytes to browsers. */
+/** Server-side Drive client for sync/index tooling and admin flows - never stream file bytes to browsers. */
 export function getDriveClient() {
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   const privateKey = cleanPrivateKey(process.env.FIREBASE_PRIVATE_KEY);

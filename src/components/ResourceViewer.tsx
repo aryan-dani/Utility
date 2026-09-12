@@ -424,7 +424,7 @@ export default function ResourceViewer({
             <span
               title={
                 resource.category === "notes" || /notes?/i.test(resource.title)
-                  ? `${resource.title} — Reference only. Not a guarantee of exam content.`
+                  ? `${resource.title} (Reference only. Not a guarantee of exam content.)`
                   : resource.title
               }
             >

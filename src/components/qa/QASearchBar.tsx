@@ -55,7 +55,6 @@ export default function QASearchBar({
         options={[
           { value: "all", label: "All" },
           { value: "doubt", label: "Doubt" },
-          { value: "homework", label: "Homework" },
           { value: "general", label: "General" },
         ]}
       />

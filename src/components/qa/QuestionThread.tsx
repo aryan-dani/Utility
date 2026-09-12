@@ -5,14 +5,22 @@ import {
   ArrowLeft,
   CheckCircle2,
   RotateCcw,
-  User,
   Clock,
   Bookmark,
   BookmarkCheck,
   Trash2,
   Loader2,
+  Share2,
+  Eye,
+  Check,
+  MessageSquare,
+  BookOpen,
+  FileText,
+  ExternalLink,
+  X,
+  Hash,
 } from "lucide-react";
-import { Badge, Modal } from "@/components/ui";
+import { Badge } from "@/components/ui";
 import { authFetch } from "@/lib/authFetch";
 import { notify } from "@/lib/toast";
 import { auth } from "@/lib/firebase";
@@ -23,6 +31,7 @@ import type {
 import VoteButton from "./VoteButton";
 import AnswerCard from "./AnswerCard";
 import AnswerComposer from "./AnswerComposer";
+import QAImageViewer from "./QAImageViewer";
 
 interface QuestionThreadProps {
   questionId: string;
@@ -33,13 +42,11 @@ interface QuestionThreadProps {
 
 const CATEGORY_STYLES: Record<string, string> = {
   doubt: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  homework: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
   general: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
 };
 
 const CATEGORY_LABEL: Record<string, string> = {
   doubt: "Doubt",
-  homework: "Homework",
   general: "General",
 };
 
@@ -64,6 +71,10 @@ export default function QuestionThread({
   const [data, setData] = useState<QAQuestionWithAnswers | null>(null);
   const [loading, setLoading] = useState(true);
   const [answerVotes, setAnswerVotes] = useState<Record<string, VoteValue | null>>({});
+  const [copiedLink, setCopiedLink] = useState(false);
+  const [previewImageIndex, setPreviewImageIndex] = useState<number | null>(null);
+  const [answerSort, setAnswerSort] = useState<"top" | "newest">("top");
+
   const currentUid = auth.currentUser?.uid;
 
   const fetchThread = useCallback(async (showLoading = false) => {
@@ -185,7 +196,7 @@ export default function QuestionThread({
       if (!res.ok) throw new Error();
       await fetchThread();
       onQuestionUpdated?.();
-      notify.success("Answer accepted!");
+      notify.success("Answer accepted as verified solution!");
     } catch {
       notify.error("Could not accept answer.");
     }
@@ -203,6 +214,7 @@ export default function QuestionThread({
       if (!res.ok) throw new Error();
       setData((prev) => (prev ? { ...prev, status: newStatus } : prev));
       onQuestionUpdated?.();
+      notify.success(newStatus === "resolved" ? "Marked as resolved!" : "Reopened question.");
     } catch {
       notify.error("Could not update status.");
     }
@@ -218,8 +230,21 @@ export default function QuestionThread({
       if (!res.ok) throw new Error();
       const json = await res.json();
       setData((prev) => (prev ? { ...prev, is_saved: json.saved } : prev));
+      notify.success(json.saved ? "Saved to your bookmarks" : "Removed from bookmarks");
     } catch {
       notify.error("Could not toggle bookmark.");
+    }
+  };
+
+  const handleShare = async () => {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    try {
+      await navigator.clipboard.writeText(url);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+      notify.success("Question link copied to clipboard!");
+    } catch {
+      notify.error("Could not copy link.");
     }
   };
 
@@ -265,157 +290,349 @@ export default function QuestionThread({
     }
   };
 
+  // Keyboard close
+  useEffect(() => {
+    if (!open) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && previewImageIndex === null) {
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [open, onClose, previewImageIndex]);
+
+  if (open === false) return null;
+
   const isAuthor = currentUid && data?.author_uid === currentUid;
   const isResolved = data?.status === "resolved";
 
+  const sortedAnswers = [...(data?.answers || [])].sort((a, b) => {
+    // 1. Accepted always on top
+    if (a.is_accepted && !b.is_accepted) return -1;
+    if (!a.is_accepted && b.is_accepted) return 1;
+    if (answerSort === "top") {
+      return (b.upvotes - b.downvotes) - (a.upvotes - a.downvotes);
+    }
+    return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+  });
+
   return (
-    <Modal
-      open={open}
-      onClose={onClose}
-      size="lg"
-      title={
-        <button
-          type="button"
-          onClick={onClose}
-          className="inline-flex items-center gap-2 text-sm font-semibold text-muted hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          Back to questions
-        </button>
-      }
-      className="max-h-[85vh] overflow-y-auto"
-    >
+    <div className="w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto space-y-6 pb-20 animate-in fade-in duration-150">
+      {/* 1. Top Navigation Bar */}
+      <div className="flex items-center justify-between gap-4 pb-2 border-b border-border/70">
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold text-muted hover:text-foreground bg-surface/60 hover:bg-surface border border-border/70 hover:border-border transition-all active:scale-95 shrink-0 shadow-2xs"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            <span>Back to Doubt Board</span>
+          </button>
+
+          {data && (
+            <div className="hidden sm:flex items-center gap-2 min-w-0">
+              <span className="text-muted/30 select-none">/</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-bold text-primary px-3 py-1 rounded-full bg-primary/10 border border-primary/20 truncate">
+                <BookOpen className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">{data.subject_name}</span>
+              </span>
+              {data.topic_unit && (
+                <span className="inline-flex items-center gap-1 text-xs font-medium text-muted px-2.5 py-1 rounded-full bg-surface border border-border/70 truncate">
+                  <Hash className="w-3 h-3 text-muted" />
+                  <span className="truncate">{data.topic_unit}</span>
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={handleSaveToggle}
+            className={`inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border transition-all active:scale-95 ${
+              data?.is_saved
+                ? "bg-foreground text-background border-foreground shadow-xs"
+                : "bg-surface/60 hover:bg-surface border-border/70 text-muted hover:text-foreground"
+            }`}
+            title={data?.is_saved ? "Saved" : "Save question"}
+          >
+            {data?.is_saved ? <BookmarkCheck className="w-4 h-4" /> : <Bookmark className="w-4 h-4" />}
+            <span className="hidden sm:inline">{data?.is_saved ? "Saved" : "Save"}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleShare}
+            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-surface/60 hover:bg-surface border border-border/70 text-muted hover:text-foreground transition-all active:scale-95"
+            title="Share question"
+          >
+            {copiedLink ? <Check className="w-4 h-4 text-emerald-500" /> : <Share2 className="w-4 h-4" />}
+            <span className="hidden sm:inline">{copiedLink ? "Copied Link" : "Share"}</span>
+          </button>
+
+          {isAuthor && (
+            <button
+              type="button"
+              onClick={handleDeleteQuestion}
+              className="p-2 rounded-xl bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all active:scale-95"
+              title="Delete question"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* Content Viewport */}
       {loading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="w-6 h-6 animate-spin text-muted" />
+        <div className="flex flex-col items-center justify-center py-28 gap-3 bg-card rounded-2xl border border-border/80">
+          <Loader2 className="w-8 h-8 animate-spin text-muted" />
+          <p className="text-xs text-muted font-medium">Loading discussion thread…</p>
         </div>
       ) : !data ? (
-        <p className="text-sm text-muted text-center py-8">Question not found.</p>
+        <div className="py-24 text-center bg-card rounded-2xl border border-border/80 space-y-4">
+          <p className="text-sm font-semibold text-muted">Question not found or deleted.</p>
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-bold bg-primary text-primary-foreground"
+          >
+            Back to Doubt Board
+          </button>
+        </div>
       ) : (
-        <div className="-mt-2">
-          {/* Question header */}
-          <div className="flex items-start gap-3 mb-4">
-            <VoteButton
-              upvotes={data.upvotes}
-              userVote={data.user_vote}
-              onVote={handleQuestionVote}
-            />
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center flex-wrap gap-2 mb-2">
-                <span
-                  className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${CATEGORY_STYLES[data.category] || ""}`}
-                >
-                  {CATEGORY_LABEL[data.category] || data.category}
-                </span>
-                {data.topic_unit && (
-                  <Badge className="text-3xs font-mono">{data.topic_unit}</Badge>
-                )}
-                {isResolved && (
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
-                    <CheckCircle2 className="w-3 h-3" />
+        <div className="space-y-6">
+          {/* 2. Main Question Post Card (Reddit Style) */}
+          <article className="bg-card rounded-2xl sm:rounded-3xl border border-border/80 p-6 sm:p-8 shadow-xs space-y-6">
+            {/* Header: Author + Scope + Status Badge */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary/80 to-primary text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ring-2 ring-border/50">
+                  {data.author_name?.[0]?.toUpperCase() || "S"}
+                </div>
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-bold text-base text-foreground">{data.author_name}</span>
+                    <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-surface border border-border/70 text-muted">
+                      {data.branch} · Sem {data.semester}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-xs text-muted mt-0.5 font-medium">
+                    <Clock className="w-3.5 h-3.5 text-muted/80" />
+                    <span>{timeAgo(data.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {isResolved ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border border-emerald-500/25 shadow-2xs">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
                     Resolved
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-amber-600 dark:text-amber-400 bg-amber-500/10 border border-amber-500/25 shadow-2xs">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    Open Doubt
                   </span>
                 )}
               </div>
             </div>
-          </div>
 
-          {/* Question body */}
-          <div className="mb-4">
-            <p className="text-sm text-foreground leading-relaxed whitespace-pre-wrap">
-              {data.body}
-            </p>
-            {data.attachments.length > 0 && (
-              <div className="flex flex-wrap gap-2 mt-3">
-                {data.attachments.map((url, i) => (
-                  <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={url}
-                      alt={`Attachment ${i + 1}`}
-                      className="max-w-[240px] max-h-[200px] rounded-lg border border-border object-cover hover:opacity-80 transition-opacity"
-                    />
+            {/* Context Capsules Row: Subject, Category, Topic, Reference Notes/PPT */}
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary border border-primary/25 shadow-2xs">
+                <BookOpen className="w-3.5 h-3.5" />
+                <span>{data.subject_name}</span>
+              </span>
+
+              <span
+                className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider border shadow-2xs ${
+                  CATEGORY_STYLES[data.category] || CATEGORY_STYLES.general
+                }`}
+              >
+                {CATEGORY_LABEL[data.category] || data.category}
+              </span>
+
+              {data.topic_unit && (
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-medium bg-surface/80 text-foreground/80 border border-border/80 shadow-2xs">
+                  <Hash className="w-3 h-3 text-muted" />
+                  <span>{data.topic_unit}</span>
+                </span>
+              )}
+
+              {data.resource_title && (
+                data.resource_url ? (
+                  <a
+                    href={data.resource_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-primary bg-primary/10 hover:bg-primary/15 border border-primary/25 hover:border-primary/40 transition-all group shadow-2xs"
+                    title="Open referenced notes/PPT in new tab"
+                  >
+                    <FileText className="w-3.5 h-3.5" />
+                    <span className="font-semibold max-w-[280px] truncate">Ref: {data.resource_title}</span>
+                    <ExternalLink className="w-3 h-3 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all" />
                   </a>
-                ))}
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-muted-foreground bg-surface/80 border border-border/80 shadow-2xs">
+                    <FileText className="w-3.5 h-3.5 text-primary/80" />
+                    <span className="max-w-[280px] truncate">Ref: {data.resource_title}</span>
+                  </span>
+                )
+              )}
+            </div>
+
+            {/* Question Body */}
+            <div className="text-xl sm:text-2xl font-bold text-foreground leading-relaxed whitespace-pre-wrap select-text tracking-tight">
+              {data.body}
+            </div>
+
+            {/* Attachments Gallery */}
+            {data.attachments && data.attachments.length > 0 && (
+              <div className="pt-2">
+                <p className="text-xs font-bold text-foreground mb-3">
+                  Attachments ({data.attachments.length})
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+                  {data.attachments.map((url, i) => (
+                    <div
+                      key={i}
+                      onClick={() => setPreviewImageIndex(i)}
+                      className="relative group rounded-2xl overflow-hidden border border-border/80 bg-surface/50 cursor-pointer shadow-xs aspect-4/3 flex items-center justify-center hover:border-primary/40 transition-all"
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={url}
+                        alt={`Question attachment ${i + 1}`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                      />
+                      <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-1.5 text-white text-xs font-semibold backdrop-blur-xs">
+                        <Eye className="w-4 h-4" />
+                        <span>Expand View</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-          </div>
 
-          {/* Question meta + actions */}
-          <div className="flex items-center justify-between gap-3 pb-4 border-b border-border">
-            <div className="flex items-center gap-3 text-xs text-muted">
-              <span className="inline-flex items-center gap-1.5">
-                <User className="w-3 h-3" />
-                {data.author_name}
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <Clock className="w-3 h-3" />
-                {timeAgo(data.created_at)}
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handleSaveToggle}
-                className="p-1.5 rounded-lg text-muted hover:text-foreground hover:bg-surface transition-colors"
-                title={data.is_saved ? "Unsave" : "Save"}
-              >
-                {data.is_saved ? (
-                  <BookmarkCheck className="w-4 h-4 text-primary fill-primary/20" />
-                ) : (
-                  <Bookmark className="w-4 h-4" />
-                )}
-              </button>
-              {isAuthor && (
-                <>
+            {/* Reddit-Style Bottom Action Bar */}
+            <div className="flex items-center justify-between gap-4 pt-4 border-t border-border/60">
+              <div className="flex items-center gap-3">
+                <VoteButton
+                  upvotes={data.upvotes}
+                  userVote={data.user_vote}
+                  onVote={handleQuestionVote}
+                />
+
+                {isAuthor && (
                   <button
                     type="button"
                     onClick={handleResolveToggle}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium transition-colors ${
+                    className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all active:scale-95 ${
                       isResolved
-                        ? "text-amber-600 hover:bg-amber-500/10"
-                        : "text-emerald-600 hover:bg-emerald-500/10"
+                        ? "bg-surface hover:bg-surface-hover text-muted border border-border"
+                        : "bg-emerald-600 hover:bg-emerald-500 text-white shadow-xs"
                     }`}
                   >
                     {isResolved ? (
-                      <><RotateCcw className="w-3.5 h-3.5" /> Reopen</>
+                      <>
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Reopen Doubt
+                      </>
                     ) : (
-                      <><CheckCircle2 className="w-3.5 h-3.5" /> Resolve</>
+                      <>
+                        <CheckCircle2 className="w-3.5 h-3.5" />
+                        Mark as Resolved
+                      </>
                     )}
+                  </button>
+                )}
+              </div>
+
+              <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-surface/80 border border-border/60">
+                <MessageSquare className="w-3.5 h-3.5 text-muted" />
+                <span>
+                  {data.answer_count} {data.answer_count === 1 ? "answer" : "answers"}
+                </span>
+              </span>
+            </div>
+          </article>
+
+          {/* 3. Contribute an Answer (Reddit Comment Box) */}
+          <div className="bg-card rounded-2xl sm:rounded-3xl border border-border/80 p-6 sm:p-8 shadow-xs space-y-3">
+            <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-primary" />
+              <span>Contribute an Answer or Solution</span>
+            </h3>
+            <AnswerComposer
+              onSubmit={handleSubmitAnswer}
+              placeholder="Explain the solution step-by-step or attach photos of your handwritten solving steps…"
+            />
+          </div>
+
+          {/* 4. Comments & Solutions Section (Reddit Comments Stream) */}
+          <div className="space-y-4 pt-2">
+            <div className="flex items-center justify-between gap-4">
+              <h3 className="text-base font-bold text-foreground flex items-center gap-2">
+                <span>Solutions & Discussion</span>
+                <span className="px-2 py-0.5 rounded-md bg-surface text-foreground font-mono text-xs">
+                  {data.answers.length}
+                </span>
+              </h3>
+
+              {data.answers.length > 1 && (
+                <div className="flex items-center gap-1 bg-surface/50 border border-border/60 p-0.5 rounded-xl text-xs">
+                  <button
+                    type="button"
+                    onClick={() => setAnswerSort("top")}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                      answerSort === "top"
+                        ? "bg-card text-foreground shadow-xs font-bold"
+                        : "text-muted hover:text-foreground"
+                    }`}
+                  >
+                    Top Voted
                   </button>
                   <button
                     type="button"
-                    onClick={handleDeleteQuestion}
-                    className="p-1.5 rounded-lg text-muted hover:text-destructive hover:bg-destructive/10 transition-colors"
-                    title="Delete question"
+                    onClick={() => setAnswerSort("newest")}
+                    className={`px-2.5 py-1 rounded-lg font-medium transition-all ${
+                      answerSort === "newest"
+                        ? "bg-card text-foreground shadow-xs font-bold"
+                        : "text-muted hover:text-foreground"
+                    }`}
                   >
-                    <Trash2 className="w-4 h-4" />
+                    Newest
                   </button>
-                </>
+                </div>
               )}
             </div>
-          </div>
 
-          {/* Answers section */}
-          <div className="mt-4">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-muted mb-3">
-              {data.answers.length} {data.answers.length === 1 ? "Answer" : "Answers"}
-            </h3>
-
-            {data.answers.length === 0 ? (
-              <p className="text-sm text-muted text-center py-6 border border-dashed border-border rounded-xl">
-                No answers yet. Be the first to help!
-              </p>
+            {sortedAnswers.length === 0 ? (
+              <div className="p-10 text-center rounded-2xl border border-dashed border-border/80 bg-card/40">
+                <MessageSquare className="w-8 h-8 text-muted/40 mx-auto mb-2" />
+                <p className="text-sm font-semibold text-foreground mb-1">
+                  No answers yet
+                </p>
+                <p className="text-xs text-muted">
+                  Be the first to help your peer solve this doubt!
+                </p>
+              </div>
             ) : (
-              <div className="border border-border rounded-xl overflow-hidden">
-                {data.answers.map((answer) => (
+              <div className="space-y-3">
+                {sortedAnswers.map((answer) => (
                   <AnswerCard
                     key={answer.id}
                     answer={answer}
-                    userVote={answerVotes[answer.id] ?? null}
-                    isQuestionAuthor={!!isAuthor}
-                    isOwnAnswer={currentUid === answer.author_uid}
-                    onVote={(v) => handleAnswerVote(answer.id, v)}
+                    userVote={answerVotes[answer.id]}
+                    isQuestionAuthor={Boolean(isAuthor)}
+                    isOwnAnswer={Boolean(currentUid && answer.author_uid === currentUid)}
+                    onVote={(val) => handleAnswerVote(answer.id, val)}
                     onAccept={() => handleAccept(answer.id)}
                     onDelete={() => handleDeleteAnswer(answer.id)}
                   />
@@ -423,13 +640,16 @@ export default function QuestionThread({
               </div>
             )}
           </div>
-
-          {/* Answer composer */}
-          <div className="mt-4 border border-border rounded-xl overflow-hidden">
-            <AnswerComposer onSubmit={handleSubmitAnswer} />
-          </div>
         </div>
       )}
-    </Modal>
+
+      {/* Lightbox for question attachments */}
+      <QAImageViewer
+        open={previewImageIndex !== null}
+        images={data?.attachments || []}
+        initialIndex={previewImageIndex ?? 0}
+        onClose={() => setPreviewImageIndex(null)}
+      />
+    </div>
   );
 }

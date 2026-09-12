@@ -26,7 +26,7 @@ const SUFFIX_RULES: Array<[RegExp, string]> = [
   [/s$/, ""],
 ];
 
-/** Light suffix stemmer — deterministic, no external deps. */
+/** Light suffix stemmer - deterministic, no external deps. */
 export function stemWord(word: string): string {
   if (word.length <= 4) return word;
   for (const [pattern, replacement] of SUFFIX_RULES) {

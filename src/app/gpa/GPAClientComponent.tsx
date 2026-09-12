@@ -290,7 +290,7 @@ export default function GPAClient() {
     setSimSelections({});
   }
 
-  // Save to LocalStorage — only after hydration so defaults cannot wipe saved data
+  // Save to LocalStorage - only after hydration so defaults cannot wipe saved data
   useEffect(() => {
     if (!hydrated || storageCorrupt) return;
     localStorage.setItem('gpa_strategy_v1', JSON.stringify({
@@ -597,7 +597,7 @@ export default function GPAClient() {
                   Saved GPA data could not be read
                 </p>
                 <p className="text-xs text-muted mt-0.5">
-                  Local storage may be corrupt. Reset to start fresh — unsaved values on this page will be cleared.
+                  Local storage may be corrupt. Reset to start fresh. Unsaved values on this page will be cleared.
                 </p>
               </div>
             </div>

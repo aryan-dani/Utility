@@ -1,7 +1,7 @@
 import { TreeNode, TreeState } from "@/lib/visualize/tree";
 import { AlgorithmStep } from "@/lib/visualize/types";
 
-/** Stable leaf score from node id — safe for SSR and hydration. */
+/** Stable leaf score from node id - safe for SSR and hydration. */
 function leafValueFromId(id: string): number {
   let hash = 0;
   for (let i = 0; i < id.length; i += 1) {
@@ -35,7 +35,7 @@ function buildTree(
   };
 }
 
-/** Deterministic demo tree — same output on server and client. */
+/** Deterministic demo tree - same output on server and client. */
 export function generateDefaultTree(
   depth: number,
   isMax: boolean = true,
@@ -44,7 +44,7 @@ export function generateDefaultTree(
   return buildTree(depth, isMax, idPrefix, leafValueFromId);
 }
 
-/** Random tree for replay — call only after hydration (e.g. button click). */
+/** Random tree for replay - call only after hydration (e.g. button click). */
 export function generateRandomTree(
   depth: number,
   isMax: boolean = true,

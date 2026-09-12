@@ -73,7 +73,7 @@ function buildSystemPrompt(params: {
     ? `\nSYLLABUS REFERENCE:\n${params.syllabusBlock}`
     : "";
 
-  return `You are the Academic OS AI — a grounded tutor for ${params.branch} semester ${params.semester} students.
+  return `You are the Academic OS AI, a grounded tutor for ${params.branch} semester ${params.semester} students.
 
 STUDENT SUBJECTS: ${subjectList}
 QUERY TYPE: ${params.routedIntent}
@@ -188,7 +188,7 @@ export async function POST(req: Request) {
 
   const routed = routeQuery(lastMessage);
 
-  // Single embed per turn — reuse for cache lookup, retrieve, and cache store
+  // Single embed per turn - reuse for cache lookup, retrieve, and cache store
   let queryEmbedding: number[] | undefined;
   if (process.env.GEMINI_API_KEY && lastMessage.length > 5) {
     try {

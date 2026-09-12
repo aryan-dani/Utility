@@ -6,7 +6,7 @@ import type { QAQuestion, QAAnswer } from "@/lib/qa/types";
 
 export const dynamic = "force-dynamic";
 
-// ─── GET — single question with answers ──────────────────────────────────────
+// ─── GET - single question with answers ──────────────────────────────────────
 
 export async function GET(
   request: Request,
@@ -77,7 +77,7 @@ export async function GET(
   }
 }
 
-// ─── PATCH — update status / accept answer ───────────────────────────────────
+// ─── PATCH - update status / accept answer ───────────────────────────────────
 
 export async function PATCH(
   request: Request,
@@ -142,7 +142,7 @@ export async function PATCH(
   }
 }
 
-// ─── DELETE — delete own question ────────────────────────────────────────────
+// ─── DELETE - delete own question ────────────────────────────────────────────
 
 export async function DELETE(
   request: Request,

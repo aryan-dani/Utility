@@ -96,11 +96,11 @@ export default function PrivacyPage() {
             Processors
           </h2>
           <ul className="list-disc pl-5 space-y-2">
-            <li>Firebase (Google) — authentication and Firestore.</li>
-            <li>Google Drive — file host; fetched by your browser.</li>
-            <li>Groq — processes Ask AI prompts and retrieved snippets.</li>
-            <li>Vercel — hosting, Analytics, and Speed Insights (sampled).</li>
-            <li>Upstash — rate limiting for API routes.</li>
+            <li>Firebase (Google): authentication and Firestore.</li>
+            <li>Google Drive: file host; fetched by your browser.</li>
+            <li>Groq: processes Ask AI prompts and retrieved snippets.</li>
+            <li>Vercel: hosting, Analytics, and Speed Insights (sampled).</li>
+            <li>Upstash: rate limiting for API routes.</li>
           </ul>
         </section>
 

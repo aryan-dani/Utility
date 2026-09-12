@@ -2,7 +2,7 @@ import { useSyncExternalStore } from "react";
 
 /**
  * Becomes true after the hydration commit (timeout 0), not during the first
- * client render — so getSnapshot matches getServerSnapshot and React #418
+ * client render - so getSnapshot matches getServerSnapshot and React #418
  * is avoided. Shared across hooks that must wait for the client.
  */
 let clientReady = false;

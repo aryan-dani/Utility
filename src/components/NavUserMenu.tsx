@@ -188,10 +188,10 @@ export default function NavUserMenu({
       <AppLink
         href="/login"
         aria-label="Sign In"
-        className={`flex items-center justify-center ${collapsed ? "w-8 h-8 rounded-lg" : "w-full py-2 rounded-xl"} bg-foreground text-background font-semibold text-xs hover:opacity-90 transition-all shadow-xs`}
+        className={`flex items-center justify-center ${collapsed ? "w-10 h-10 rounded-xl" : "w-full py-2.5 rounded-xl"} bg-foreground text-background font-semibold text-xs hover:opacity-90 transition-all shadow-xs active:scale-95`}
         title={collapsed ? "Sign In" : undefined}
       >
-        {collapsed ? <LogOut className="w-3.5 h-3.5 rotate-180" /> : "Sign in"}
+        {collapsed ? <LogOut className="w-4 h-4 rotate-180" /> : "Sign in"}
       </AppLink>
     );
   }
@@ -201,11 +201,11 @@ export default function NavUserMenu({
       <button
         onClick={() => setUserMenuOpen((o) => !o)}
         aria-label="User Menu"
-        className={`flex items-center ${collapsed ? "justify-center w-8 h-8" : "justify-between w-full p-1.5"} rounded-xl border border-transparent hover:border-border/80 hover:bg-surface/50 transition-all group`}
+        className={`flex items-center ${collapsed ? "justify-center w-10 h-10" : "justify-between w-full p-2"} rounded-xl border border-transparent hover:border-border/80 hover:bg-surface/60 transition-all group active:scale-95`}
         title={collapsed ? user.email : undefined}
       >
-        <div className="flex items-center gap-2 min-w-0">
-          <div className="w-7 h-7 rounded-lg bg-foreground text-background flex items-center justify-center text-xs font-extrabold uppercase shadow-xs shrink-0 overflow-hidden">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="w-7 h-7 rounded-lg bg-foreground text-background flex items-center justify-center text-xs font-extrabold uppercase shadow-xs shrink-0 overflow-hidden ring-1 ring-border/50 group-hover:ring-foreground/20 transition-all">
             {user.photoURL ? (
               <Image
                 src={user.photoURL}
@@ -232,30 +232,34 @@ export default function NavUserMenu({
           )}
         </div>
         {!collapsed && (
-          <ChevronDown className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors shrink-0 mr-1" />
+          <ChevronDown className="w-3.5 h-3.5 text-muted group-hover:text-foreground transition-colors shrink-0 mr-0.5" />
         )}
       </button>
 
       <AnimatePresence>
         {userMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: -4, scale: 0.95 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -4, scale: 0.95 }}
-            transition={{ duration: 0.1, ease: "easeOut" }}
-            className={`absolute bottom-full mb-2 bg-card border border-border rounded-xl shadow-popover overflow-hidden z-50 p-1 flex flex-col gap-0.5 ${collapsed ? "w-32 left-1/2 -translate-x-1/2" : "left-0 right-0"}`}
+            initial={{ opacity: 0, y: collapsed ? 0 : 4, x: collapsed ? -6 : 0, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+            exit={{ opacity: 0, y: collapsed ? 0 : 4, x: collapsed ? -6 : 0, scale: 0.95 }}
+            transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+            className={`absolute bg-card/95 backdrop-blur-xl border border-border/80 rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5 flex flex-col gap-0.5 ${
+              collapsed
+                ? "w-44 left-full ml-3 bottom-0"
+                : "bottom-full mb-2 left-0 right-0"
+            }`}
           >
             <AppLink
               href="/profile"
               onClick={() => setUserMenuOpen(false)}
-              className="flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-surface rounded-lg transition-colors text-left"
+              className="flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-surface rounded-xl transition-colors text-left"
             >
               <User className="w-3.5 h-3.5 shrink-0 text-muted" />
               <span>Profile Settings</span>
             </AppLink>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 rounded-lg transition-colors text-left"
+              className="flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 rounded-xl transition-colors text-left"
             >
               <LogOut className="w-3.5 h-3.5 shrink-0" />
               <span>Sign out</span>

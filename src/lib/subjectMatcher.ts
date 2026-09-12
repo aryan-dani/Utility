@@ -30,7 +30,7 @@ const ALIASES: Record<string, string[]> = {
   aisa: ["ai systems and applications"],
 };
 
-/** Exact key / phrase / token hit — no substring includes across subjects. */
+/** Exact key / phrase / token hit - no substring includes across subjects. */
 function matchesAliasKey(cleaned: string, key: string, list: string[]) {
   if (cleaned === key) return true;
   if (cleaned.split(" ").includes(key)) return true;
@@ -77,7 +77,7 @@ export const isSubjectMatch = (nameA: string, nameB: string): boolean => {
     return false;
   }
 
-  // Token equality only — never substring containment (GML ≠ ML).
+  // Token equality only - never substring containment (GML ≠ ML).
   const tokensA = a.split(" ").filter(Boolean);
   const tokensB = b.split(" ").filter(Boolean);
   if (
@@ -117,7 +117,7 @@ export const isSubjectMatch = (nameA: string, nameB: string): boolean => {
   const abbrA = getAbbreviation(a);
   const abbrB = getAbbreviation(b);
 
-  // Exact abbreviation equality only — never includes().
+  // Exact abbreviation equality only - never includes().
   if (abbrA && abbrB && abbrA === abbrB) {
     return true;
   }

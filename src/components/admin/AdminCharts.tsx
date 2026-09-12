@@ -15,7 +15,7 @@ export function pct(part: number, whole: number): number {
   return Math.max(0, Math.min(100, (part / whole) * 100));
 }
 
-/** Horizontal rank bars — used for top resources / active users. */
+/** Horizontal rank bars - used for top resources / active users. */
 export function RankBars({
   items,
   empty,

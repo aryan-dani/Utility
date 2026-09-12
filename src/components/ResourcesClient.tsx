@@ -123,7 +123,7 @@ export default function ResourcesClient() {
   const initialFolder = searchParams.get("folder");
   const initialSubject = searchParams.get("subject");
 
-  // Defaults only for first paint — URL deep-links apply in useEffect after mount
+  // Defaults only for first paint - URL deep-links apply in useEffect after mount
   // so static SSR (empty searchParams) matches the client hydration pass.
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<ResourceFilter>("all");
@@ -892,7 +892,7 @@ export default function ResourcesClient() {
         <ErrorState
           className="mb-8"
           title="Couldn’t load the vault catalog"
-          description={`${catalogError}. This isn’t an empty semester — try again.`}
+          description={`${catalogError}. This isn’t an empty semester. Please try again.`}
           onRetry={retryCatalog}
         />
       ) : resources.length === 0 ? (

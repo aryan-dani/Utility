@@ -181,7 +181,7 @@ export async function DELETE(
     upvoteSnap.docs.forEach((d) => batch.delete(d.ref));
     // Also try doc-id convention `{uid}_{deckId}` if field query returns empty
     if (upvoteSnap.empty) {
-      // Best-effort: no secondary index — skip bulk scan
+      // Best-effort: no secondary index - skip bulk scan
     }
     await batch.commit();
 

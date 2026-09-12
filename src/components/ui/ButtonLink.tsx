@@ -26,7 +26,7 @@ export interface ButtonLinkProps
   children: ReactNode;
 }
 
-/** Link styled like Button — for Share/Open external actions. */
+/** Link styled like Button - for Share/Open external actions. */
 export function ButtonLink({
   variant = "primary",
   size = "md",

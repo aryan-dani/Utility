@@ -21,6 +21,6 @@ export function generateId(): string {
     return Array.from(buf, (b) => b.toString(16).padStart(2, "0")).join("").slice(0, 9);
   }
 
-  // Last resort (should never hit in practice — keep for SSR edge cases)
+  // Last resort (should never hit in practice - keep for SSR edge cases)
   return Math.random().toString(36).slice(2, 11);
 }

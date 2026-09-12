@@ -8,7 +8,7 @@ import {
   useState,
   type KeyboardEvent,
 } from "react";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, Search, Check, Plus } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/cn";
 
@@ -22,9 +22,9 @@ export type SelectOption<T extends string | number> = {
 export type SelectSize = "sm" | "md" | "lg";
 
 const triggerSizeClasses: Record<SelectSize, string> = {
-  sm: "px-2 py-1.5 text-2xs font-semibold rounded-lg",
-  md: "px-3 py-2 text-xs font-semibold rounded-xl",
-  lg: "px-4 py-3 text-sm rounded-xl",
+  sm: "h-8 px-2.5 text-xs font-medium rounded-lg",
+  md: "h-9 px-3 text-xs font-semibold rounded-xl",
+  lg: "h-11 px-4 text-sm rounded-xl",
 };
 
 const SEARCHABLE_OPTION_THRESHOLD = 8;
@@ -44,6 +44,17 @@ export interface SelectProps<T extends string | number> {
   /** Show a filter field. Defaults to on when there are many options. */
   searchable?: boolean;
   searchPlaceholder?: string;
+  /** Align menu to left (default) or right of the trigger button */
+  align?: "left" | "right";
+  /** Allow creating a custom option when typing in search */
+  onCreateOption?: (query: string) => void;
+  createOptionLabel?: (query: string) => string;
+  /** Action button pinned to the bottom of the dropdown menu */
+  footerAction?: {
+    label: string;
+    icon?: React.ComponentType<{ className?: string }>;
+    onClick: () => void;
+  };
 }
 
 function SelectInner<T extends string | number>({
@@ -59,6 +70,10 @@ function SelectInner<T extends string | number>({
   optionsLayout = "list",
   searchable,
   searchPlaceholder = "Search…",
+  align = "left",
+  onCreateOption,
+  createOptionLabel,
+  footerAction,
 }: SelectProps<T>) {
   const [isOpen, setIsOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -134,6 +149,14 @@ function SelectInner<T extends string | number>({
     closeMenu();
   };
 
+  const showCreateOption = Boolean(
+    onCreateOption &&
+      query.trim().length > 0 &&
+      !options.some(
+        (o) => o.label.toLowerCase() === query.trim().toLowerCase(),
+      ),
+  );
+
   const handleSearchKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "ArrowDown") {
       e.preventDefault();
@@ -143,6 +166,11 @@ function SelectInner<T extends string | number>({
       setHighlighted((i) => Math.max(i - 1, 0));
     } else if (e.key === "Enter") {
       e.preventDefault();
+      if (filtered.length === 0 && showCreateOption && onCreateOption) {
+        onCreateOption(query.trim());
+        closeMenu();
+        return;
+      }
       const opt = filtered[highlighted];
       if (opt) selectOption(opt.value);
     }
@@ -165,9 +193,11 @@ function SelectInner<T extends string | number>({
         title={selected?.label}
         className={cn(
           "w-full flex items-center justify-between gap-1.5",
-          "bg-background border border-border text-foreground",
-          "hover:border-border-strong hover:bg-surface/55 transition-colors",
-          "focus-visible:outline-offset-1 disabled:opacity-40 disabled:cursor-not-allowed",
+          "bg-card/75 backdrop-blur-sm border border-border text-foreground shadow-xs",
+          "hover:border-border-strong hover:bg-surface/80 transition-all",
+          isOpen && "border-border-strong ring-2 ring-primary/20 bg-surface/80",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/20",
+          "disabled:opacity-40 disabled:cursor-not-allowed",
           triggerSizeClasses[size],
         )}
       >
@@ -192,11 +222,11 @@ function SelectInner<T extends string | number>({
             transition={{ duration: 0.1, ease: "easeOut" }}
             className={cn(
               "absolute top-full mt-1.5 z-dropdown",
-              "bg-card border border-border rounded-xl shadow-popover overflow-hidden",
-              enableSearch
-                ? "left-0 flex flex-col min-w-full w-max max-w-[min(22rem,calc(100vw-2rem))]"
-                : "left-0 right-0",
-              optionsLayout === "grid-4" && "grid grid-cols-4 gap-1 p-1",
+              "bg-card/95 backdrop-blur-md border border-border rounded-xl shadow-popover overflow-hidden",
+              align === "right"
+                ? "right-0 flex flex-col min-w-full w-max max-w-[min(22rem,calc(100vw-2rem))]"
+                : "left-0 flex flex-col min-w-full w-max max-w-[min(22rem,calc(100vw-2rem))]",
+              optionsLayout === "grid-4" && "grid grid-cols-4 gap-1 p-1 w-full",
             )}
           >
             {enableSearch && (
@@ -234,45 +264,106 @@ function SelectInner<T extends string | number>({
               )}
             >
               {filtered.length === 0 ? (
-                <p className="px-3 py-4 text-xs text-muted text-center">
-                  No matches for “{query.trim()}”
-                </p>
+                showCreateOption ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onCreateOption?.(query.trim());
+                      closeMenu();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2.5 text-xs font-semibold text-primary hover:bg-surface rounded-lg transition-colors text-left"
+                  >
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                    <span className="truncate">
+                      {createOptionLabel
+                        ? createOptionLabel(query.trim())
+                        : `Add "${query.trim()}"`}
+                    </span>
+                  </button>
+                ) : (
+                  <p className="px-3 py-4 text-xs text-muted text-center">
+                    No matches for “{query.trim()}”
+                  </p>
+                )
               ) : (
-                filtered.map((opt, idx) => {
-                  const isSelected = value === opt.value;
-                  const isActive = highlighted === idx;
-                  return (
+                <>
+                  {filtered.map((opt, idx) => {
+                    const isSelected = value === opt.value;
+                    const isActive = highlighted === idx;
+                    return (
+                      <button
+                        key={String(opt.value)}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        data-active-option={isActive ? "true" : undefined}
+                        title={opt.menuLabel ?? opt.label}
+                        onMouseEnter={() => setHighlighted(idx)}
+                        onClick={() => selectOption(opt.value)}
+                        className={cn(
+                          "text-left transition-colors rounded-lg min-w-0",
+                          optionsLayout === "grid-4"
+                            ? "py-2 text-xs font-semibold text-center"
+                            : "w-full flex items-center justify-between px-3 py-2 text-xs font-medium gap-2",
+                          isSelected
+                            ? "bg-primary text-primary-foreground font-semibold"
+                            : isActive
+                              ? "bg-surface text-foreground"
+                              : "text-muted hover:bg-surface hover:text-foreground",
+                        )}
+                      >
+                        {optionsLayout === "grid-4" ? (
+                          String(opt.value)
+                        ) : (
+                          <>
+                            <span className="truncate">{opt.menuLabel ?? opt.label}</span>
+                            {isSelected && (
+                              <Check className="w-3.5 h-3.5 shrink-0 text-primary-foreground" />
+                            )}
+                          </>
+                        )}
+                      </button>
+                    );
+                  })}
+                  {showCreateOption && (
                     <button
-                      key={String(opt.value)}
                       type="button"
-                      role="option"
-                      aria-selected={isSelected}
-                      data-active-option={isActive ? "true" : undefined}
-                      title={opt.menuLabel ?? opt.label}
-                      onMouseEnter={() => setHighlighted(idx)}
-                      onClick={() => selectOption(opt.value)}
-                      className={cn(
-                        "text-left transition-colors rounded-lg min-w-0",
-                        optionsLayout === "grid-4"
-                          ? "py-2 text-xs font-semibold text-center"
-                          : "w-full flex items-center px-3 py-2 text-xs font-medium",
-                        isSelected
-                          ? "bg-primary text-primary-foreground font-semibold"
-                          : isActive
-                            ? "bg-surface text-foreground"
-                            : "text-muted hover:bg-surface hover:text-foreground",
-                      )}
+                      onClick={() => {
+                        onCreateOption?.(query.trim());
+                        closeMenu();
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-semibold text-primary hover:bg-surface rounded-lg transition-colors text-left mt-0.5 border-t border-border/50 pt-2"
                     >
-                      {optionsLayout === "grid-4" ? (
-                        String(opt.value)
-                      ) : (
-                        <span className="truncate">{opt.menuLabel ?? opt.label}</span>
-                      )}
+                      <Plus className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">
+                        {createOptionLabel
+                          ? createOptionLabel(query.trim())
+                          : `Add "${query.trim()}"`}
+                      </span>
                     </button>
-                  );
-                })
+                  )}
+                </>
               )}
             </div>
+            {footerAction && (
+              <div className="p-1 border-t border-border/70 shrink-0 bg-surface/30">
+                <button
+                  type="button"
+                  onClick={() => {
+                    footerAction.onClick();
+                    closeMenu();
+                  }}
+                  className="w-full flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-primary hover:bg-surface hover:text-primary-hover rounded-lg transition-colors text-left cursor-pointer"
+                >
+                  {footerAction.icon ? (
+                    <footerAction.icon className="w-3.5 h-3.5 shrink-0" />
+                  ) : (
+                    <Plus className="w-3.5 h-3.5 shrink-0" />
+                  )}
+                  <span>{footerAction.label}</span>
+                </button>
+              </div>
+            )}
           </motion.div>
         )}
       </AnimatePresence>

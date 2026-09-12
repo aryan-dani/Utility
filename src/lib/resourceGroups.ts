@@ -434,7 +434,7 @@ export function folderIdForResource(item: ResourceItem): string | null {
       parseAssignmentKey(item.title) || parseWriteUpKey(item.title);
     if (key) {
       const num = assignmentBaseNum(key);
-      // Letter variants (2A/2B) nest under Assignment 2 — deep-link the child folder.
+      // Letter variants (2A/2B) nest under Assignment 2 - deep-link the child folder.
       if (isLetterVariant(key) && key.toUpperCase() !== String(num)) {
         const childBase = `assignment-${key.toLowerCase()}`;
         return subject ? scopedFolderId(subject, childBase) : childBase;

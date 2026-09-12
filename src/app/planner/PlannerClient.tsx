@@ -1678,7 +1678,7 @@ export default function PlannerClient() {
             </div>
           ))}
 
-          {/* Day cells — fixed equal height so empty/full days match */}
+          {/* Day cells - fixed equal height so empty/full days match */}
           {calendarDays.map(({ date, dayNum, isCurrentMonth }) => {
             const tasks = planData[date] || [];
             const isToday = date === today;

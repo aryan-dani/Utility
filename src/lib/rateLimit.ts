@@ -28,7 +28,7 @@ function memoryLimit(
 
 /**
  * Upstash Redis REST sliding window when UPSTASH_REDIS_REST_URL + TOKEN are set.
- * Falls back to in-memory (per-instance) otherwise — fine for local/dev.
+ * Falls back to in-memory (per-instance) otherwise - fine for local/dev.
  */
 async function upstashLimit(
   key: string,

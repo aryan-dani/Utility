@@ -434,7 +434,7 @@ export default function AskClient() {
   const [isListening, setIsListening] = useState(false);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  // Chat History / Sessions — empty until after mount (avoids SSR generateId/localStorage mismatch)
+  // Chat History / Sessions - empty until after mount (avoids SSR generateId/localStorage mismatch)
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [sessionsReady, setSessionsReady] = useState(false);
@@ -678,7 +678,7 @@ export default function AskClient() {
     }
   }, [status, messages, assistantSources, setMessages]);
 
-  // Load chat sessions on mount — lazy useState initializer above
+  // Load chat sessions on mount - lazy useState initializer above
 
   const displaySessions = useMemo(() => {
     if (!activeSessionId || (status !== 'ready' && status !== 'error')) return sessions;
@@ -714,7 +714,7 @@ export default function AskClient() {
     localStorage.setItem('utility_chat_sessions', JSON.stringify(updated));
   };
 
-  // Sync current messages back to active session — persisted via localStorage effect above
+  // Sync current messages back to active session - persisted via localStorage effect above
 
   const handleNewChat = () => {
     const newId = generateId();
@@ -817,7 +817,7 @@ export default function AskClient() {
     setInput('');
   };
 
-  // Keep the transcript pinned to the chat scroller — never the window.
+  // Keep the transcript pinned to the chat scroller - never the window.
   useEffect(() => {
     const container = scrollContainerRef.current;
     if (!container || activeTab !== 'chat') return;
@@ -1091,7 +1091,7 @@ export default function AskClient() {
       if (!res.ok) {
         throw new Error('Could not send the report.');
       }
-      notify.success('Thanks — we received your report.');
+      notify.success('Thanks, we received your report.');
       setReportOpen(false);
       setReportText('');
     } catch (err) {
@@ -1141,7 +1141,7 @@ export default function AskClient() {
       {activeTab === 'chat' && (
         <div className="min-h-0 min-w-0 flex overflow-hidden w-full relative">
           
-          {/* Chat Sessions — overlay drawer on mobile, inline rail on md+ */}
+          {/* Chat Sessions - overlay drawer on mobile, inline rail on md+ */}
           {sidebarOpen && (
             <>
               <button

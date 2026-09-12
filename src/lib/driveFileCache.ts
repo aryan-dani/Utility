@@ -1,6 +1,6 @@
 /**
  * Browser-side Cache API for Drive files fetched directly from Google.
- * Bytes never touch a Vercel Function — keeps Fast Origin Transfer near zero.
+ * Bytes never touch a Vercel Function - keeps Fast Origin Transfer near zero.
  */
 
 const CACHE_NAME = "utility-pdf-v2";

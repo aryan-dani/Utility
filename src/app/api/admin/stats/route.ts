@@ -55,7 +55,7 @@ export async function GET(request: Request) {
           .limit(20)
           .get()
           .catch(async () => {
-            // Index may not exist yet — fall back to unordered sample.
+            // Index may not exist yet - fall back to unordered sample.
             return db.collection("resource_totals").limit(40).get();
           }),
         db

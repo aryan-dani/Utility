@@ -432,7 +432,7 @@ async function completeMerge(auth: Auth): Promise<User> {
 
   const ids = providerIds(current);
 
-  // Google is the surviving identity — never delete Auth users.
+  // Google is the surviving identity - never delete Auth users.
   if (ids.includes("google.com")) {
     try {
       const linked = await attachGithub(current, githubCred);

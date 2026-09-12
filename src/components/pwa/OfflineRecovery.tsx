@@ -50,7 +50,7 @@ export default function OfflineRecovery() {
 
   return (
     <p className="text-xs text-muted mt-4">
-      You appear to be online — recovering a fresh copy of the app…
+      You appear to be online. Recovering a fresh copy of the app…
     </p>
   );
 }

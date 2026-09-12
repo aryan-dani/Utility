@@ -1,6 +1,6 @@
 /**
  * Server-side client for Ishani FastAPI campus data.
- * Same public endpoints Ishani uses — no local copy of JSON.
+ * Same public endpoints Ishani uses - no local copy of JSON.
  */
 
 export type FacultySeat = {

@@ -133,7 +133,7 @@ export async function GET(request: Request) {
   }
 }
 
-// ── POST: Push (Upsert) Plan — owner or editor collaborator ──
+// ── POST: Push (Upsert) Plan - owner or editor collaborator ──
 export async function POST(request: Request) {
   try {
     const auth = await requireUser(request);

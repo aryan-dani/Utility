@@ -69,7 +69,7 @@ export function getDriveFileId(url: string): string | null {
   return null;
 }
 
-/** Google Drive embed URL — works in-app for PDFs, slides, and docs when files are shared. */
+/** Google Drive embed URL - works in-app for PDFs, slides, and docs when files are shared. */
 export function getDriveEmbedUrl(fileId: string): string {
   return `https://drive.google.com/file/d/${fileId}/preview`;
 }

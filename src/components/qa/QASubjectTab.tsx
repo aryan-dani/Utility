@@ -96,6 +96,10 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
   }, [academicYear, branch, semester, subjectName, resourceId]);
 
   const handleCreateQuestion = async (data: {
+    subject_name: string;
+    resource_id?: string;
+    resource_title?: string;
+    resource_url?: string;
     category: QuestionCategory;
     topic_unit: string;
     body: string;
@@ -108,9 +112,9 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
         academic_year: academicYear,
         branch,
         semester,
-        subject_name: subjectName,
-        resource_id: resourceId,
         ...data,
+        subject_name: data.subject_name || subjectName,
+        resource_id: data.resource_id || resourceId,
       }),
     });
     if (!res.ok) {
@@ -194,6 +198,19 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
     return rankQuestions(result);
   }, [questions, categoryFilter, statusFilter, searchQuery]);
 
+  if (activeThreadId) {
+    return (
+      <div className="py-2">
+        <QuestionThread
+          questionId={activeThreadId}
+          open={true}
+          onClose={() => setActiveThreadId(null)}
+          onQuestionUpdated={fetchQuestions}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Header */}
@@ -249,7 +266,7 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
           }
         />
       ) : (
-        <div className="border border-border rounded-xl overflow-hidden">
+        <div className="space-y-4">
           {filtered.map((q) => (
             <QuestionCard
               key={q.id}
@@ -272,15 +289,6 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
         subjectName={subjectName}
       />
 
-      {/* Thread modal */}
-      {activeThreadId && (
-        <QuestionThread
-          questionId={activeThreadId}
-          open={!!activeThreadId}
-          onClose={() => setActiveThreadId(null)}
-          onQuestionUpdated={fetchQuestions}
-        />
-      )}
     </div>
   );
 }

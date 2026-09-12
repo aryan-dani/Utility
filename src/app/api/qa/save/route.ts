@@ -44,7 +44,7 @@ export async function POST(request: Request) {
     const existing = await ref.get();
 
     if (existing.exists) {
-      // Toggle off — unsave
+      // Toggle off - unsave
       await ref.delete();
       return NextResponse.json({ success: true, saved: false });
     } else {

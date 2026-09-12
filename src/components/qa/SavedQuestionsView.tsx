@@ -10,7 +10,11 @@ import type { QAQuestion, VoteValue } from "@/lib/qa/types";
 import QuestionCard from "./QuestionCard";
 import QuestionThread from "./QuestionThread";
 
-export default function SavedQuestionsView() {
+interface SavedQuestionsViewProps {
+  onOpenThread?: (questionId: string) => void;
+}
+
+export default function SavedQuestionsView({ onOpenThread }: SavedQuestionsViewProps = {}) {
   const [questions, setQuestions] = useState<QAQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
@@ -123,35 +127,35 @@ export default function SavedQuestionsView() {
       <EmptyState
         icon={<Bookmark className="w-10 h-10" />}
         title="No saved questions"
-        description="Bookmark questions you want to come back to — they'll show up here."
+        description="Bookmark questions you want to come back to. They will show up here."
+      />
+    );
+  }
+
+  if (activeThreadId && !onOpenThread) {
+    return (
+      <QuestionThread
+        questionId={activeThreadId}
+        open={true}
+        onClose={() => setActiveThreadId(null)}
+        onQuestionUpdated={fetchSaved}
       />
     );
   }
 
   return (
-    <>
-      <div className="border border-border rounded-xl overflow-hidden shadow-sm">
-        {questions.map((q) => (
-          <QuestionCard
-            key={q.id}
-            question={q}
-            userVote={userVotes[q.id] ?? null}
-            isSaved={true}
-            onVote={(v) => handleVote(q.id, v)}
-            onSave={() => handleUnsave(q.id)}
-            onClick={() => setActiveThreadId(q.id)}
-          />
-        ))}
-      </div>
-
-      {activeThreadId && (
-        <QuestionThread
-          questionId={activeThreadId}
-          open={!!activeThreadId}
-          onClose={() => setActiveThreadId(null)}
-          onQuestionUpdated={fetchSaved}
+    <div className="space-y-4">
+      {questions.map((q) => (
+        <QuestionCard
+          key={q.id}
+          question={q}
+          userVote={userVotes[q.id] ?? null}
+          isSaved={true}
+          onVote={(v) => handleVote(q.id, v)}
+          onSave={() => handleUnsave(q.id)}
+          onClick={() => (onOpenThread ? onOpenThread(q.id) : setActiveThreadId(q.id))}
         />
-      )}
-    </>
+      ))}
+    </div>
   );
 }

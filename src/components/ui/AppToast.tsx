@@ -77,7 +77,7 @@ export function AppToast({
       role="status"
       style={{ boxShadow: "var(--elev-3)" }}
     >
-      {/* Title bar — matches WindowChrome */}
+      {/* Title bar - matches WindowChrome */}
       <div
         className={cn(
           "flex items-center gap-2 border-b px-3 py-2",

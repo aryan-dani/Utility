@@ -51,7 +51,7 @@ describe("pathfinding engines", () => {
   });
 
   it("reports failure when the goal is fully walled off", () => {
-    // Goal (0,2) neighbors are only (0,1) and (1,2) — wall both.
+    // Goal (0,2) neighbors are only (0,1) and (1,2) - wall both.
     const wallOff = [
       { row: 0, col: 1 },
       { row: 1, col: 2 },
