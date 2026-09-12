@@ -13,6 +13,7 @@ import {
   Sparkles,
   ArrowRight,
   Hash,
+  Trash2,
 } from "lucide-react";
 import type { QAQuestion } from "@/lib/qa/types";
 import VoteButton from "./VoteButton";
@@ -21,8 +22,10 @@ interface QuestionCardProps {
   question: QAQuestion;
   userVote?: 1 | -1 | null;
   isSaved?: boolean;
+  canDelete?: boolean;
   onVote: (value: 1 | -1) => void;
   onSave: () => void;
+  onDelete?: () => void;
   onClick: () => void;
 }
 
@@ -42,8 +45,10 @@ export default function QuestionCard({
   question,
   userVote,
   isSaved,
+  canDelete,
   onVote,
   onSave,
+  onDelete,
   onClick,
 }: QuestionCardProps) {
   const isResolved = question.status === "resolved";
@@ -82,8 +87,8 @@ export default function QuestionCard({
           </div>
         </div>
 
-        {/* Right Status & Save */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* Right Status & Save & Delete */}
+        <div className="flex items-center gap-1.5 shrink-0">
           {isResolved && (
             <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/25 shadow-2xs">
               <CheckCircle2 className="w-3.5 h-3.5" />
@@ -108,6 +113,22 @@ export default function QuestionCard({
               <Bookmark className="w-4 h-4" />
             )}
           </button>
+
+          {/* Delete Button (Author or Admin) */}
+          {canDelete && onDelete && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete();
+              }}
+              className="p-1.5 sm:p-2 rounded-xl text-muted/70 hover:text-destructive hover:bg-destructive/10 border border-transparent hover:border-destructive/20 transition-all active:scale-95"
+              title="Delete question"
+              aria-label="Delete question"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 

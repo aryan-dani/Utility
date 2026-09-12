@@ -17,13 +17,12 @@ import {
   BookOpen,
   FileText,
   ExternalLink,
-  X,
   Hash,
 } from "lucide-react";
-import { Badge } from "@/components/ui";
 import { authFetch } from "@/lib/authFetch";
 import { notify } from "@/lib/toast";
 import { auth } from "@/lib/firebase";
+import { useAdminStatus } from "@/lib/adminStatus";
 import type {
   QAQuestionWithAnswers,
   VoteValue,
@@ -76,6 +75,8 @@ export default function QuestionThread({
   const [answerSort, setAnswerSort] = useState<"top" | "newest">("top");
 
   const currentUid = auth.currentUser?.uid;
+  const { isAdmin } = useAdminStatus();
+  const canModerate = Boolean(isAdmin);
 
   const fetchThread = useCallback(async (showLoading = false) => {
     if (!questionId) return;
@@ -304,7 +305,8 @@ export default function QuestionThread({
 
   if (open === false) return null;
 
-  const isAuthor = currentUid && data?.author_uid === currentUid;
+  const isAuthor = Boolean(currentUid && data?.author_uid === currentUid);
+  const canDeleteQuestion = isAuthor || canModerate;
   const isResolved = data?.status === "resolved";
 
   const sortedAnswers = [...(data?.answers || [])].sort((a, b) => {
@@ -373,12 +375,12 @@ export default function QuestionThread({
             <span className="hidden sm:inline">{copiedLink ? "Copied Link" : "Share"}</span>
           </button>
 
-          {isAuthor && (
+          {canDeleteQuestion && (
             <button
               type="button"
               onClick={handleDeleteQuestion}
               className="p-2 rounded-xl bg-destructive/10 hover:bg-destructive/20 text-destructive transition-all active:scale-95"
-              title="Delete question"
+              title={canModerate && !isAuthor ? "Delete as admin" : "Delete question"}
             >
               <Trash2 className="w-4 h-4" />
             </button>
@@ -630,8 +632,9 @@ export default function QuestionThread({
                     key={answer.id}
                     answer={answer}
                     userVote={answerVotes[answer.id]}
-                    isQuestionAuthor={Boolean(isAuthor)}
+                    isQuestionAuthor={isAuthor}
                     isOwnAnswer={Boolean(currentUid && answer.author_uid === currentUid)}
+                    canModerate={canModerate}
                     onVote={(val) => handleAnswerVote(answer.id, val)}
                     onAccept={() => handleAccept(answer.id)}
                     onDelete={() => handleDeleteAnswer(answer.id)}

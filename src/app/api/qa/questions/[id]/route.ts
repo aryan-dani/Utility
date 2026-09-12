@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
-import { isAuthFailure, requireUser, optionalUser } from "@/lib/apiAuth";
+import { isAuthFailure, requireUser, optionalUser, getAdminEmails } from "@/lib/apiAuth";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 import type { QAQuestion, QAAnswer } from "@/lib/qa/types";
 
@@ -100,8 +100,10 @@ export async function PATCH(
     }
 
     const data = qDoc.data()!;
-    if (data.author_uid !== auth.uid) {
-      return NextResponse.json({ error: "Only the author can update this question" }, { status: 403 });
+    const userEmail = auth.email?.toLowerCase() ?? "";
+    const isAdmin = !!userEmail && getAdminEmails().includes(userEmail);
+    if (data.author_uid !== auth.uid && !isAdmin) {
+      return NextResponse.json({ error: "Only the author or an admin can update this question" }, { status: 403 });
     }
 
     const body = await request.json();
@@ -172,8 +174,12 @@ export async function DELETE(
       return NextResponse.json({ error: "Question not found" }, { status: 404 });
     }
 
-    if (qDoc.data()?.author_uid !== auth.uid) {
-      return NextResponse.json({ error: "Forbidden: can only delete your own questions" }, { status: 403 });
+    const userEmail = auth.email?.toLowerCase() ?? "";
+    const isAdmin = !!userEmail && getAdminEmails().includes(userEmail);
+    const isAuthor = qDoc.data()?.author_uid === auth.uid;
+
+    if (!isAuthor && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden: can only delete your own questions or as an admin" }, { status: 403 });
     }
 
     // Delete answers, votes, and saved items for this question

@@ -12,6 +12,7 @@ interface AnswerCardProps {
   userVote?: 1 | -1 | null;
   isQuestionAuthor: boolean;
   isOwnAnswer: boolean;
+  canModerate?: boolean;
   onVote: (value: 1 | -1) => void;
   onAccept?: () => void;
   onDelete?: () => void;
@@ -34,11 +35,13 @@ export default function AnswerCard({
   userVote,
   isQuestionAuthor,
   isOwnAnswer,
+  canModerate = false,
   onVote,
   onAccept,
   onDelete,
 }: AnswerCardProps) {
   const [previewIndex, setPreviewIndex] = useState<number | null>(null);
+  const canDelete = (isOwnAnswer || canModerate) && Boolean(onDelete);
 
   return (
     <>
@@ -84,12 +87,12 @@ export default function AnswerCard({
                 <span>Accept Solution</span>
               </button>
             )}
-            {isOwnAnswer && onDelete && (
+            {canDelete && (
               <button
                 type="button"
                 onClick={onDelete}
                 className="p-1.5 rounded-lg text-muted hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-95"
-                title="Delete your answer"
+                title={canModerate && !isOwnAnswer ? "Delete as admin" : "Delete your answer"}
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>

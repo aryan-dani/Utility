@@ -14,6 +14,7 @@ import type {
   VoteValue,
 } from "@/lib/qa/types";
 import { rankQuestions } from "@/lib/qa/types";
+import { useAdminStatus } from "@/lib/adminStatus";
 import QuestionCard from "./QuestionCard";
 import QuestionComposer from "./QuestionComposer";
 import QuestionThread from "./QuestionThread";
@@ -42,6 +43,8 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
   // Track user votes and saves for optimistic UI
   const [userVotes, setUserVotes] = useState<Record<string, VoteValue | null>>({});
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const { isAdmin } = useAdminStatus();
+  const currentUid = auth.currentUser?.uid ?? null;
 
   const fetchQuestions = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -178,6 +181,27 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
     }
   };
 
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (
+      !window.confirm(
+        "Delete this question and all its answers? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await authFetch(`/api/qa/questions/${questionId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error();
+      setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+      if (activeThreadId === questionId) setActiveThreadId(null);
+      notify.success("Question deleted.");
+    } catch {
+      notify.error("Could not delete question.");
+    }
+  };
+
   const filtered = useMemo(() => {
     let result = questions;
     if (categoryFilter !== "all") {
@@ -273,8 +297,12 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
               question={q}
               userVote={userVotes[q.id] ?? null}
               isSaved={savedIds.has(q.id)}
+              canDelete={Boolean(
+                isAdmin || (currentUid && q.author_uid === currentUid),
+              )}
               onVote={(v) => handleVote(q.id, v)}
               onSave={() => handleSave(q.id)}
+              onDelete={() => void handleDeleteQuestion(q.id)}
               onClick={() => setActiveThreadId(q.id)}
             />
           ))}

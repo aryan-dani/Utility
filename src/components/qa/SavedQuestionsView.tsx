@@ -6,6 +6,7 @@ import { authFetch } from "@/lib/authFetch";
 import { notify } from "@/lib/toast";
 import { auth } from "@/lib/firebase";
 import { EmptyState } from "@/components/ui";
+import { useAdminStatus } from "@/lib/adminStatus";
 import type { QAQuestion, VoteValue } from "@/lib/qa/types";
 import QuestionCard from "./QuestionCard";
 import QuestionThread from "./QuestionThread";
@@ -19,6 +20,8 @@ export default function SavedQuestionsView({ onOpenThread }: SavedQuestionsViewP
   const [loading, setLoading] = useState(true);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
   const [userVotes, setUserVotes] = useState<Record<string, VoteValue | null>>({});
+  const { isAdmin } = useAdminStatus();
+  const currentUid = auth.currentUser?.uid ?? null;
 
   const fetchSaved = async (showLoading = false) => {
     if (!auth.currentUser) {
@@ -104,6 +107,27 @@ export default function SavedQuestionsView({ onOpenThread }: SavedQuestionsViewP
     }
   };
 
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (
+      !window.confirm(
+        "Delete this question and all its answers? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await authFetch(`/api/qa/questions/${questionId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error();
+      setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+      if (activeThreadId === questionId) setActiveThreadId(null);
+      notify.success("Question deleted.");
+    } catch {
+      notify.error("Could not delete question.");
+    }
+  };
+
   if (!auth.currentUser) {
     return (
       <EmptyState
@@ -151,8 +175,12 @@ export default function SavedQuestionsView({ onOpenThread }: SavedQuestionsViewP
           question={q}
           userVote={userVotes[q.id] ?? null}
           isSaved={true}
+          canDelete={Boolean(
+            isAdmin || (currentUid && q.author_uid === currentUid),
+          )}
           onVote={(v) => handleVote(q.id, v)}
           onSave={() => handleUnsave(q.id)}
+          onDelete={() => void handleDeleteQuestion(q.id)}
           onClick={() => (onOpenThread ? onOpenThread(q.id) : setActiveThreadId(q.id))}
         />
       ))}

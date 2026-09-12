@@ -1,5 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase";
+
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const CACHE_PREFIX = "utility-admin-status:";
 
@@ -64,4 +68,50 @@ export async function fetchAdminStatus(
   };
   writeCache(uid, status);
   return status;
+}
+
+/**
+ * React hook to observe and query the current user's admin status.
+ */
+export function useAdminStatus(): { isAdmin: boolean; loading: boolean; email: string | null } {
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    const unsub = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        if (!cancelled) {
+          setIsAdmin(false);
+          setEmail(null);
+          setLoading(false);
+        }
+        return;
+      }
+      try {
+        const status = await fetchAdminStatus(
+          () => user.getIdToken(),
+          user.uid,
+        );
+        if (!cancelled) {
+          setIsAdmin(status.isAdmin);
+          setEmail(status.email);
+          setLoading(false);
+        }
+      } catch {
+        if (!cancelled) {
+          setIsAdmin(false);
+          setEmail(null);
+          setLoading(false);
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, []);
+
+  return { isAdmin, loading, email };
 }

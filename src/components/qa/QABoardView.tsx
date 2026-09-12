@@ -31,6 +31,7 @@ import type {
 } from "@/lib/qa/types";
 import { rankQuestions } from "@/lib/qa/types";
 import { useWorkspaceResources } from "@/lib/useWorkspaceResources";
+import { useAdminStatus } from "@/lib/adminStatus";
 import QuestionCard from "./QuestionCard";
 import QuestionComposer from "./QuestionComposer";
 import QuestionThread from "./QuestionThread";
@@ -49,7 +50,10 @@ export default function QABoardView() {
   const [questions, setQuestions] = useState<QAQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("thread");
+  });
   const [tab, setTab] = useState<BoardTab>("board");
   const [currentUid, setCurrentUid] = useState<string | null>(null);
 
@@ -73,6 +77,7 @@ export default function QABoardView() {
   // Track user votes and saves
   const [userVotes, setUserVotes] = useState<Record<string, VoteValue | null>>({});
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const { isAdmin } = useAdminStatus();
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -81,15 +86,8 @@ export default function QABoardView() {
     return () => unsub();
   }, []);
 
-  // Sync activeThreadId from URL query param & handle browser navigation (popstate)
+  // Keep thread view in sync with browser back/forward.
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    const urlParams = new URLSearchParams(window.location.search);
-    const initialThread = urlParams.get("thread");
-    if (initialThread) {
-      setActiveThreadId(initialThread);
-    }
-
     const handlePopState = () => {
       const params = new URLSearchParams(window.location.search);
       setActiveThreadId(params.get("thread"));
@@ -247,6 +245,27 @@ export default function QABoardView() {
         }
         return next;
       });
+    }
+  };
+
+  const handleDeleteQuestion = async (questionId: string) => {
+    if (
+      !window.confirm(
+        "Delete this question and all its answers? This cannot be undone.",
+      )
+    ) {
+      return;
+    }
+    try {
+      const res = await authFetch(`/api/qa/questions/${questionId}`, {
+        method: "DELETE",
+      });
+      if (!res.ok) throw new Error();
+      setQuestions((prev) => prev.filter((q) => q.id !== questionId));
+      if (activeThreadId === questionId) setActiveThreadId(null);
+      notify.success("Question deleted.");
+    } catch {
+      notify.error("Could not delete question.");
     }
   };
 
@@ -435,8 +454,12 @@ export default function QABoardView() {
                   question={q}
                   userVote={userVotes[q.id] ?? null}
                   isSaved={savedIds.has(q.id)}
+                  canDelete={Boolean(
+                    isAdmin || (currentUid && q.author_uid === currentUid),
+                  )}
                   onVote={(v) => handleVote(q.id, v)}
                   onSave={() => handleSave(q.id)}
+                  onDelete={() => void handleDeleteQuestion(q.id)}
                   onClick={() => handleOpenThread(q.id)}
                 />
               ))}

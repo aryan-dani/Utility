@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
 import { adminDb } from "@/lib/firebaseAdmin";
-import { isAuthFailure, requireUser } from "@/lib/apiAuth";
+import { isAuthFailure, requireUser, getAdminEmails } from "@/lib/apiAuth";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -35,8 +35,12 @@ export async function DELETE(
     }
 
     const data = aDoc.data()!;
-    if (data.author_uid !== auth.uid) {
-      return NextResponse.json({ error: "Forbidden: can only delete your own answers" }, { status: 403 });
+    const userEmail = auth.email?.toLowerCase() ?? "";
+    const isAdmin = !!userEmail && getAdminEmails().includes(userEmail);
+    const isAuthor = data.author_uid === auth.uid;
+
+    if (!isAuthor && !isAdmin) {
+      return NextResponse.json({ error: "Forbidden: can only delete your own answers or as an admin" }, { status: 403 });
     }
 
     const questionId = data.question_id as string;
