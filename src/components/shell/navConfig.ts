@@ -13,6 +13,7 @@ import {
   Building2,
   Waypoints,
   Home,
+  HelpCircle,
 } from "lucide-react";
 
 export interface NavLinkItem {
@@ -33,6 +34,7 @@ export const HOME_LINK: NavLinkItem = {
 export const ACADEMIC_LINKS: NavLinkItem[] = [
   { href: "/resources", label: "Resources", Icon: FileText, featured: true, desc: "Subject files. Notes are reference-only" },
   { href: "/ask", label: "Ask AI", Icon: Brain, desc: "RAG-powered academic assistant" },
+  { href: "/qa", label: "Doubt Board", Icon: HelpCircle, desc: "Paper doubts & syllabus scope" },
   { href: "/syllabus", label: "Syllabus", Icon: BookOpen, desc: "Course syllabus tracker" },
   { href: "/visualize", label: "Visualize", Icon: Waypoints, desc: "AI algorithm visualizers" },
 ];

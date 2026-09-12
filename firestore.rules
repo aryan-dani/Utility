@@ -118,6 +118,31 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Q&A doubt board — reads require auth; writes via Admin SDK (API routes)
+    match /qa_questions/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /qa_answers/{id} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
+    match /qa_votes/{id} {
+      allow read, write: if false;
+    }
+
+    match /qa_saved/{id} {
+      allow read: if signedIn() && resource.data.user_uid == request.auth.uid;
+      allow write: if false;
+    }
+
+    match /qa_reputation/{uid} {
+      allow read: if signedIn();
+      allow write: if false;
+    }
+
     // Deny everything else by default
     match /{document=**} {
       allow read, write: if false;

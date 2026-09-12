@@ -48,19 +48,42 @@
         { "fieldPath": "logged_date", "order": "ASCENDING" }
       ]
     },
-    {
-      "collectionGroup": "resource_totals",
-      "queryScope": "COLLECTION",
-      "fields": [
-        { "fieldPath": "opens", "order": "DESCENDING" }
-      ]
-    },
+
     {
       "collectionGroup": "resource_usage",
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "user_id", "order": "ASCENDING" },
         { "fieldPath": "count", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "qa_questions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "academic_year", "order": "ASCENDING" },
+        { "fieldPath": "branch", "order": "ASCENDING" },
+        { "fieldPath": "semester", "order": "ASCENDING" },
+        { "fieldPath": "subject_name", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "qa_questions",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "academic_year", "order": "ASCENDING" },
+        { "fieldPath": "branch", "order": "ASCENDING" },
+        { "fieldPath": "semester", "order": "ASCENDING" },
+        { "fieldPath": "created_at", "order": "DESCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "qa_answers",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "question_id", "order": "ASCENDING" },
+        { "fieldPath": "upvotes", "order": "DESCENDING" }
       ]
     }
   ],

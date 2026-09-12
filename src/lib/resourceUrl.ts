@@ -1,9 +1,10 @@
 import { ResourceCategory } from "@/lib/dataFetcher";
 
-export type ResourceFilter = "all" | ResourceCategory;
+export type ResourceFilter = "all" | "social" | ResourceCategory;
 
 const FILTER_VALUES = new Set<string>([
   "all",
+  "social",
   "notes",
   "question-bank",
   "solved-question-bank",

@@ -25,6 +25,7 @@ import {
   Clock,
   Star,
   X,
+  MessageCircle,
   type LucideIcon,
 } from "lucide-react";
 import dynamic from "next/dynamic";
@@ -75,6 +76,7 @@ import type { RAGSearchResult } from "@/lib/ragSearch";
 
 const ResourceViewer = dynamic(() => import("./ResourceViewer"), { ssr: false });
 const SummaryModal = dynamic(() => import("./SummaryModal"), { ssr: false });
+const QASubjectTab = dynamic(() => import("./qa/QASubjectTab"), { ssr: false });
 
 const RESOURCE_FILTERS: { value: ResourceFilter; label: string; Icon: LucideIcon }[] =
   [
@@ -85,6 +87,7 @@ const RESOURCE_FILTERS: { value: ResourceFilter; label: string; Icon: LucideIcon
     { value: "pyq", label: "PYQ", Icon: FileText },
     { value: "writeup", label: "Writeups", Icon: PenTool },
     { value: "codes", label: "Codes", Icon: Code2 },
+    { value: "social", label: "Social", Icon: MessageCircle },
   ];
 
 function isAssignmentCategory(category: string): boolean {
@@ -93,6 +96,7 @@ function isAssignmentCategory(category: string): boolean {
 
 function filterLabel(filter: ResourceFilter): string | null {
   if (filter === "all") return null;
+  if (filter === "social") return "Social";
   if (filter === "writeup" || filter === "codes") return "Assignments";
   const match = RESOURCE_FILTERS.find((f) => f.value === filter);
   return match?.label ?? filter;
@@ -360,7 +364,7 @@ export default function ResourcesClient() {
   }
 
   const effectiveSelectedFilter = useMemo(() => {
-    if (!selectedSubject || selectedFilter === "all") return selectedFilter;
+    if (!selectedSubject || selectedFilter === "all" || selectedFilter === "social") return selectedFilter;
     const items = subjectsMap[selectedSubject] ?? [];
     const hasItems =
       selectedFilter === "question-bank"
@@ -663,6 +667,8 @@ export default function ResourcesClient() {
         (acc, filter) => {
           if (filter.value === "all") {
             acc[filter.value] = searchedResources.length;
+          } else if (filter.value === "social") {
+            acc[filter.value] = 0;
           } else if (filter.value === "question-bank") {
             acc[filter.value] = searchedResources.filter(
               (r) =>
@@ -1085,7 +1091,7 @@ export default function ResourcesClient() {
                       <h2 className="text-xl font-bold text-foreground tracking-tight">
                         {selectedSubject}
                       </h2>
-                      {(searchQuery || selectedFilter !== "all") && (
+                      {(searchQuery || (selectedFilter !== "all" && selectedFilter !== "social")) && (
                         <div className="flex items-center gap-2">
                           <Badge>
                             {filteredResources.length}{" "}
@@ -1115,17 +1121,19 @@ export default function ResourcesClient() {
                     )}
                   </div>
 
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted pointer-events-none" />
-                    <Input
-                      type="search"
-                      value={searchQuery}
-                      onChange={(e) => handleVaultSearch(e.target.value)}
-                      placeholder="Search files… (3+ chars for content match)"
-                      className="pl-9 rounded-xl"
-                      aria-label="Search vault"
-                    />
-                  </div>
+                  {selectedFilter !== "social" && (
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted pointer-events-none" />
+                      <Input
+                        type="search"
+                        value={searchQuery}
+                        onChange={(e) => handleVaultSearch(e.target.value)}
+                        placeholder="Search files… (3+ chars for content match)"
+                        className="pl-9 rounded-xl"
+                        aria-label="Search vault"
+                      />
+                    </div>
+                  )}
 
                   <div
                     key={selectedSubject}
@@ -1134,7 +1142,7 @@ export default function ResourcesClient() {
                     {RESOURCE_FILTERS.map(({ value, label, Icon }) => {
                       const count = filterCounts[value] ?? 0;
                       const active = selectedFilter === value;
-                      if (value !== "all" && count === 0) return null;
+                      if (value !== "all" && value !== "social" && count === 0) return null;
                       return (
                         <Button
                           key={value}
@@ -1163,19 +1171,30 @@ export default function ResourcesClient() {
                             className={`w-3 h-3 z-10 ${active ? "text-background" : "text-muted"}`}
                           />
                           <span className="z-10">{label}</span>
-                          <Badge
-                            variant={active ? "active" : "default"}
-                            className={`text-[9px] z-10 ${active ? "bg-background/20 text-background/70 border-transparent" : ""}`}
-                          >
-                            {count}
-                          </Badge>
+                          {value !== "social" ? (
+                            <Badge
+                              variant={active ? "active" : "default"}
+                              className={`text-[9px] z-10 ${active ? "bg-background/20 text-background/70 border-transparent" : ""}`}
+                            >
+                              {count}
+                            </Badge>
+                          ) : (
+                            <Badge
+                              variant={active ? "active" : "default"}
+                              className={`text-[9px] z-10 ${active ? "bg-background/20 text-background/70 border-transparent" : ""}`}
+                            >
+                              Q&A
+                            </Badge>
+                          )}
                         </Button>
                       );
                     })}
                   </div>
                 </div>
 
-                {filteredResources.length === 0 ? (
+                {selectedFilter === "social" ? (
+                  <QASubjectTab subjectName={selectedSubject} />
+                ) : filteredResources.length === 0 ? (
                   <Card
                     padding="lg"
                     className="flex flex-col items-center justify-center py-16 text-center border-dashed bg-surface/50"
