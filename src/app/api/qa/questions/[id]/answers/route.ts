@@ -5,6 +5,7 @@ import { isAuthFailure, requireUser } from "@/lib/apiAuth";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 import { ANSWER_BODY_MAX, ATTACHMENT_MAX } from "@/lib/qa/types";
+import { resolveAuthorProfile } from "@/lib/qa/authorProfile";
 
 export const dynamic = "force-dynamic";
 
@@ -25,7 +26,6 @@ const answerSchema = z.object({
     )
     .max(ATTACHMENT_MAX)
     .optional(),
-  author_name: z.string().max(80).optional(),
 });
 
 export async function POST(
@@ -63,17 +63,14 @@ export async function POST(
     }
 
     const data = parsed.data;
-    const authorName =
-      data.author_name?.trim() ||
-      auth.email?.split("@")[0] ||
-      "Anonymous Scholar";
-
+    const profile = await resolveAuthorProfile(auth.uid, auth.email);
     const now = new Date().toISOString();
 
     const answerRef = await db.collection("qa_answers").add({
       question_id: questionId,
       author_uid: auth.uid,
-      author_name: authorName.slice(0, 80),
+      author_name: profile.author_name,
+      author_photo_url: profile.author_photo_url,
       body: data.body.slice(0, ANSWER_BODY_MAX),
       attachments: data.attachments || [],
       upvotes: 0,

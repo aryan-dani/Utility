@@ -21,6 +21,8 @@ export interface QAQuestion {
 
   author_uid: string;
   author_name: string;
+  /** Denormalized profile photo; may be enriched from live profile on read. */
+  author_photo_url?: string | null;
   body: string;
   attachments: string[];
 
@@ -42,6 +44,8 @@ export interface QAAnswer {
   question_id: string;
   author_uid: string;
   author_name: string;
+  /** Denormalized profile photo; may be enriched from live profile on read. */
+  author_photo_url?: string | null;
   body: string;
   attachments: string[];
   upvotes: number;
