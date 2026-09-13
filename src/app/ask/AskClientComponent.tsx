@@ -1102,8 +1102,8 @@ export default function AskClient() {
   };
 
   return (
-    <PageShell width="full" className="flex flex-col">
-      <section className="shell-island flex flex-col overflow-hidden min-h-0 h-[calc(100dvh-8.5rem)] md:h-[calc(100dvh-1.75rem-2*var(--space-page-y))]">
+    <PageShell width="full" className="flex flex-col flex-1 min-h-0">
+      <section className="shell-island flex flex-col overflow-hidden flex-1 min-h-0">
         <div className="grid grid-rows-[auto_minmax(0,1fr)] min-h-0 flex-1">
       {/* Top Navigation Tabs */}
       <div className="border-b border-border/60 bg-card/60 px-4 sm:px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">

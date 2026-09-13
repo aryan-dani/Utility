@@ -21,7 +21,7 @@ export default function Footer() {
   };
 
   return (
-    <div className="page-shell max-w-[1800px] 2xl:max-w-[2040px] mt-auto !pt-10 pb-20 md:!pb-4">
+    <div className="w-full max-w-[1800px] 2xl:max-w-[2040px] mx-auto shrink-0 mt-auto page-gutter pt-10 pb-20 md:pb-4">
       <footer className="shell-island relative p-6 sm:p-10 lg:p-12">
         <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-50 pointer-events-none" />
         <div className="relative z-10">
