@@ -32,7 +32,7 @@ import AppLink from "@/components/ui/AppLink";
 import type { Branch, Semester } from "@/lib/academic/scope";
 import { BRANCH_OPTIONS, SEMESTER_OPTIONS } from "@/lib/academic/scope";
 import { Select } from "@/components/ui/Select";
-import { PageHeader, Card, Segmented, Button, Input } from "@/components/ui";
+import { PageHeader, Card, Segmented, Button, Input, PageShell } from "@/components/ui";
 import {
   ActivityFunnel,
   DonutChart,
@@ -490,7 +490,7 @@ export default function AdminClient({
 
   if (!isAdmin) {
     return (
-      <div className="flex-1 flex flex-col items-center justify-center w-full page-gutter py-16 text-center">
+      <PageShell className="flex flex-col items-center justify-center text-center">
         <Card className="max-w-md w-full rounded-2xl p-8 flex flex-col items-center" padding="none">
           <ShieldAlert className="w-12 h-12 text-destructive mb-4 animate-pulse" />
           <PageHeader
@@ -505,12 +505,12 @@ export default function AdminClient({
             Return Home
           </AppLink>
         </Card>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="w-full max-w-7xl mx-auto page-gutter py-6 sm:py-10 flex flex-col gap-6">
+    <PageShell className="flex flex-col gap-6">
       <PageHeader
         eyebrow="System"
         title="Admin"
@@ -1119,7 +1119,7 @@ export default function AdminClient({
           </Card>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }
 

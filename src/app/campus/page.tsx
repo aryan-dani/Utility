@@ -5,7 +5,7 @@ import {
   FlaskConical,
   ArrowRight,
 } from "lucide-react";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, PageShell } from "@/components/ui";
 
 const CAMPUS_LINKS = [
   {
@@ -33,7 +33,7 @@ const CAMPUS_LINKS = [
 
 export default function CampusHubPage() {
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+    <PageShell>
       <PageHeader
         className="mb-10 pb-6 border-b border-border"
         eyebrow="Campus"
@@ -61,6 +61,6 @@ export default function CampusHubPage() {
           </AppLink>
         ))}
       </div>
-    </div>
+    </PageShell>
   );
 }

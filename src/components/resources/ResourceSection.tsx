@@ -17,6 +17,7 @@ import ResourceCard from "./ResourceCard";
 import ResourceFolder from "./ResourceFolder";
 import ResourceFileRow from "./ResourceFileRow";
 import { NotesDisclaimer } from "../NotesDisclaimer";
+import { MOTION } from "@/lib/motion";
 
 interface ResourceSectionProps {
   title: string;
@@ -194,7 +195,7 @@ export default function ResourceSection({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: MOTION.duration.enter, ease: MOTION.ease }}
             className="overflow-hidden"
           >
             {/notes/i.test(title) && (
@@ -223,9 +224,9 @@ export default function ResourceSection({
                         initial={{ opacity: 0, y: 8 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{
-                          duration: 0.22,
+                          duration: MOTION.duration.base,
                           delay: Math.min(index * 0.03, 0.15),
-                          ease: "easeOut",
+                          ease: MOTION.ease,
                         }}
                         className={`h-full bg-card ${
                           highlighted ? "ring-2 ring-inset ring-foreground/20" : ""
@@ -295,9 +296,9 @@ export default function ResourceSection({
                     initial={{ opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{
-                      duration: 0.22,
+                      duration: MOTION.duration.base,
                       delay: Math.min(index * 0.03, 0.15),
-                      ease: "easeOut",
+                      ease: MOTION.ease,
                     }}
                     className="h-full bg-card"
                     style={{ willChange: "transform, opacity" }}

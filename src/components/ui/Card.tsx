@@ -24,7 +24,7 @@ export function Card({
   return (
     <div
       className={cn(
-        "rounded-xl border border-border bg-card shadow-card",
+        "rounded-2xl border border-border bg-card shadow-card",
         paddingClasses[padding],
         hover && "card-premium-hover",
         className,

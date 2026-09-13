@@ -18,7 +18,7 @@ export const metadata: Metadata = {
 
 export default function PrivacyPage() {
   return (
-    <article className="flex-1 w-full max-w-3xl mx-auto page-gutter py-12 sm:py-16 page-fade-in">
+    <article className="page-shell max-w-3xl">
       <PageHeader
         eyebrow="Legal"
         title={`${APP_LEGAL_NAME} privacy policy`}

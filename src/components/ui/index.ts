@@ -21,7 +21,14 @@ export { EmptyState, ErrorState } from "./States";
 export { Skeleton } from "./Skeleton";
 export { Textarea, type TextareaProps } from "./Textarea";
 export { Switch } from "./Switch";
-export { Field, SectionHeader, ListRow } from "./LayoutPrimitives";
+export {
+  Field,
+  SectionHeader,
+  ListRow,
+  PageShell,
+  type PageShellProps,
+  type PageShellWidth,
+} from "./LayoutPrimitives";
 export {
   IconButton,
   type IconButtonProps,

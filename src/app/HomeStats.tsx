@@ -3,13 +3,19 @@
 import { useEffect, useRef, useState } from "react";
 import { useInView } from "framer-motion";
 
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined") return false;
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 function StatsCounter({ value }: { value: number }) {
   const [count, setCount] = useState(0);
   const ref = useRef<HTMLSpanElement>(null);
   const isInView = useInView(ref, { once: true, margin: "-50px" });
 
   const end = value;
-  const skipAnimation = !Number.isFinite(end) || end <= 0;
+  const skipAnimation =
+    !Number.isFinite(end) || end <= 0 || prefersReducedMotion();
   const displayCount =
     !isInView ? 0 : skipAnimation ? Math.max(0, end || 0) : count;
 

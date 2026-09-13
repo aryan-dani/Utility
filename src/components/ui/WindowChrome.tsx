@@ -10,6 +10,7 @@ export interface WindowChromeProps {
   actions?: ReactNode;
   className?: string;
   titleId?: string;
+  variant?: "default" | "island";
 }
 
 /** OS-style in-flow window title bar (icon + title + optional kbd hints + actions). */
@@ -21,11 +22,15 @@ export function WindowChrome({
   actions,
   className,
   titleId,
+  variant = "default",
 }: WindowChromeProps) {
   return (
     <div
       className={cn(
-        "flex items-center gap-2 border-b border-border bg-card/90 px-2.5 py-2 shrink-0 min-w-0",
+        "flex items-center gap-2 border-b shrink-0 min-w-0 px-2.5 py-2",
+        variant === "island"
+          ? "border-border/60 bg-card/60"
+          : "border-border bg-card/90",
         className,
       )}
     >

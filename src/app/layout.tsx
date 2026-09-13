@@ -86,6 +86,8 @@ export default function RootLayout({
       {/* Inline in <head> so it runs before paint; next/script beforeInteractive
           triggers a React 19 client warning when rendered in <body>. */}
       <head>
+        {/* Static: Lightning CSS cannot parse ::highlight() yet */}
+        <link rel="stylesheet" href="/find-highlight.css" />
         <script
           id="utility-sw-recovery"
           suppressHydrationWarning

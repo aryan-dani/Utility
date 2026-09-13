@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import { useIsClient } from "@/lib/clientHooks";
+import { useMotionSafe } from "@/lib/motion";
 
 interface DockTooltipProps {
   label: string;
@@ -27,10 +28,13 @@ export function DockTooltip({
   children,
 }: DockTooltipProps) {
   const [open, setOpen] = useState(false);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number } | null>(
+    null,
+  );
   const mounted = useIsClient();
   const triggerRef = useRef<HTMLElement | null>(null);
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const motionSafe = useMotionSafe();
 
   useEffect(() => {
     return () => {
@@ -58,6 +62,8 @@ export function DockTooltip({
     }, 50);
   };
 
+  const tip = motionSafe.tooltip;
+
   return (
     <>
       {children({
@@ -75,10 +81,21 @@ export function DockTooltip({
         createPortal(
           <AnimatePresence>
             <motion.div
-              initial={{ opacity: 0, scale: 0.92, x: -6, y: "-50%" }}
-              animate={{ opacity: 1, scale: 1, x: 0, y: "-50%" }}
-              exit={{ opacity: 0, scale: 0.92, x: -4, y: "-50%" }}
-              transition={{ duration: 0.12, ease: [0.16, 1, 0.3, 1] }}
+              initial={
+                tip.initial === false
+                  ? false
+                  : { ...tip.initial, y: "-50%" }
+              }
+              animate={{ ...tip.animate, y: "-50%" }}
+              exit={
+                "exit" in tip && tip.exit
+                  ? { ...tip.exit, y: "-50%" }
+                  : { opacity: 0, y: "-50%" }
+              }
+              transition={{
+                duration: motionSafe.durations.fast,
+                ease: motionSafe.ease,
+              }}
               style={{
                 position: "fixed",
                 top: coords.top,

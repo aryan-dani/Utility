@@ -9,14 +9,17 @@ export const fadeUp = {
   show: {
     opacity: 1,
     y: 0,
-    transition: { duration: 0.5, ease: easeOut },
+    transition: { duration: MOTION.duration.enter, ease: easeOut },
   },
 };
 
 export const stagger = {
   hidden: {},
   show: {
-    transition: { staggerChildren: 0.07, delayChildren: 0.06 },
+    transition: {
+      staggerChildren: MOTION.stagger.children,
+      delayChildren: MOTION.stagger.delay,
+    },
   },
 };
 
@@ -37,12 +40,12 @@ const reducedStagger = {
 };
 
 export function useVizMotion() {
-  const { reduce } = useMotionSafe();
+  const { reduce, durations } = useMotionSafe();
   return {
     reduce,
     fadeUp: reduce ? reducedFadeUp : fadeUp,
     stagger: reduce ? reducedStagger : stagger,
     ease: easeOut,
-    duration: reduce ? 0 : MOTION.duration.slow,
+    duration: durations.enter,
   };
 }

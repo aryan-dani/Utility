@@ -36,6 +36,7 @@ import { workspaceQuery } from '@/lib/workspace';
 import { notify } from '@/lib/toast';
 import { useIsMac } from '@/lib/clientHooks';
 import { Kbd, IconButton } from '@/components/ui';
+import { useMotionSafe } from '@/lib/motion';
 
 interface CommandItem {
   id: string;
@@ -77,6 +78,7 @@ function highlightMatch(text: string, query: string) {
 export default function CommandPalette() {
   const router = useRouter();
   const { academicYear, branch, semester, isCommandPaletteOpen, setCommandPaletteOpen } = useAcademicStore();
+  const motionSafe = useMotionSafe();
   const navigate = useCallback((href: string) => {
     startNavigationProgress();
     router.push(href);
@@ -589,10 +591,8 @@ export default function CommandPalette() {
         <div className="fixed inset-0 z-launcher flex items-start justify-center pt-[calc(4rem+env(safe-area-inset-top))] sm:pt-24 px-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
           {/* Backdrop */}
           <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.15 }}
+            {...motionSafe.fade}
+            transition={{ duration: motionSafe.duration }}
             onClick={() => setCommandPaletteOpen(false)}
             className="fixed inset-0 bg-background/80 backdrop-blur-sm"
           />
@@ -603,10 +603,8 @@ export default function CommandPalette() {
             role="dialog"
             aria-modal="true"
             aria-label="Command palette"
-            initial={{ opacity: 0, scale: 0.97, y: -8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.97, y: -8 }}
-            transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            {...motionSafe.pop}
+            transition={{ duration: motionSafe.duration, ease: motionSafe.ease }}
             className="relative w-full max-w-2xl os-window shadow-window flex flex-col z-10"
           >
 
@@ -679,7 +677,7 @@ export default function CommandPalette() {
                             <motion.div
                               layoutId="activePaletteIndicator"
                               className="absolute left-0 top-2.5 bottom-2.5 w-1 bg-primary rounded-full"
-                              transition={{ type: 'spring', stiffness: 350, damping: 35 }}
+                              transition={motionSafe.spring}
                             />
                           )}
 

@@ -39,7 +39,7 @@ export default function VoteButton({
         onClick={() => onVote(1)}
         disabled={disabled}
         className={cn(
-          "inline-flex items-center justify-center rounded-full transition-all active:scale-90",
+          "inline-flex items-center justify-center rounded-full transition-all active:scale-[0.97]",
           size === "sm" ? "p-1" : "p-1.5",
           userVote === 1
             ? "bg-primary text-primary-foreground shadow-xs"
@@ -74,7 +74,7 @@ export default function VoteButton({
           onClick={() => onVote(-1)}
           disabled={disabled}
           className={cn(
-            "inline-flex items-center justify-center rounded-full transition-all active:scale-90",
+            "inline-flex items-center justify-center rounded-full transition-all active:scale-[0.97]",
             size === "sm" ? "p-1" : "p-1.5",
             userVote === -1
               ? "bg-destructive text-destructive-foreground shadow-xs"

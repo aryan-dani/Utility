@@ -16,6 +16,7 @@ import {
   Trash2,
 } from "lucide-react";
 import type { QAQuestion } from "@/lib/qa/types";
+import { Card } from "@/components/ui";
 import VoteButton from "./VoteButton";
 
 interface QuestionCardProps {
@@ -56,8 +57,10 @@ export default function QuestionCard({
   const firstAttachment = hasAttachments ? question.attachments[0] : null;
 
   return (
-    <article
-      className="group relative bg-card/80 hover:bg-card p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-border/80 hover:border-primary/40 shadow-xs hover:shadow-xl hover:shadow-black/5 dark:hover:shadow-black/30 transition-all duration-300 cursor-pointer active:scale-[0.998]"
+    <Card
+      hover
+      padding="lg"
+      className="group relative bg-card/80 hover:bg-card hover:border-primary/40 cursor-pointer active:scale-[0.97] p-5 sm:p-6"
       onClick={onClick}
       role="button"
       tabIndex={0}
@@ -231,6 +234,6 @@ export default function QuestionCard({
           <ArrowRight className="w-3.5 h-3.5 transition-transform duration-200 group-hover:translate-x-0.5" />
         </div>
       </div>
-    </article>
+    </Card>
   );
 }

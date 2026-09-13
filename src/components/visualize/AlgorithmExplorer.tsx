@@ -16,7 +16,7 @@ import {
 } from "@/components/visualize/TopicMarks";
 import { useVizMotion } from "@/components/visualize/motion";
 import type { AlgorithmMeta, VisualizerType } from "@/lib/visualize/types";
-import { ButtonLink, PageHeader, SectionHeader } from "@/components/ui";
+import { ButtonLink, PageHeader, SectionHeader, PageShell } from "@/components/ui";
 
 const START_MARKS = [RippleMark, StarMark, QueenMark];
 
@@ -117,7 +117,7 @@ export function AlgorithmExplorer() {
   );
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 sm:py-12 min-h-[80vh]">
+    <PageShell>
       <motion.header
         variants={stagger}
         initial="hidden"
@@ -216,6 +216,6 @@ export function AlgorithmExplorer() {
           );
         })}
       </motion.section>
-    </div>
+    </PageShell>
   );
 }

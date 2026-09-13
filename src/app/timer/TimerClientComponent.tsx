@@ -26,6 +26,7 @@ import {
   PageHeader,
   SectionHeader,
   Segmented,
+  PageShell,
 } from '@/components/ui';
 import { useMotionSafe } from '@/lib/motion';
 import { logActivity, localDateKey } from '@/lib/activity';
@@ -440,7 +441,7 @@ export default function TimerClient() {
   }, [weeklyChartData]);
 
   return (
-    <div className="flex-1 w-full page-gutter py-5 sm:py-10 flex flex-col md:flex-row items-center justify-center gap-12 min-h-screen">
+    <PageShell className="flex flex-col md:flex-row items-center justify-center gap-12">
       <div className="flex-1 flex flex-col items-center max-w-md w-full">
         <FadeIn className="w-full mb-6 flex flex-col items-center">
           <div className={`inline-flex items-center gap-2 px-3 py-1 rounded-lg text-2xs font-semibold uppercase tracking-wider mb-4 border border-border ${themeColorClass}`}>
@@ -777,6 +778,6 @@ export default function TimerClient() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageShell>
   );
 }

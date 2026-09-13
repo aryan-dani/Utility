@@ -42,7 +42,7 @@ export function Button({
     <button
       type={type}
       className={cn(
-        "inline-flex items-center justify-center rounded-lg font-medium transition-colors disabled:cursor-not-allowed",
+        "inline-flex items-center justify-center rounded-lg font-medium transition-[color,background-color,border-color,box-shadow,opacity,transform] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] active:scale-[0.97] disabled:cursor-not-allowed disabled:active:scale-100",
         variantClasses[variant],
         sizeClasses[size],
         className,

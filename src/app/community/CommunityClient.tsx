@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import { logActivity } from "@/lib/activity";
 import { notify } from "@/lib/toast";
-import { Button, Badge, Card, Modal, Segmented, PageHeader } from "@/components/ui";
+import { Button, Badge, Card, Modal, Segmented, PageHeader, PageShell } from "@/components/ui";
 import { authFetch } from "@/lib/authFetch";
 
 const WHATSAPP_COMMUNITY_URL =
@@ -293,7 +293,7 @@ export default function CommunityClient({
   }, [decks, selectedBranch, searchQuery, sortBy]);
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+    <PageShell>
       {/* WhatsApp community */}
       <section className="mb-12 space-y-5">
         <PageHeader
@@ -614,6 +614,6 @@ export default function CommunityClient({
           </>
         )}
       </Modal>
-    </div>
+    </PageShell>
   );
 }

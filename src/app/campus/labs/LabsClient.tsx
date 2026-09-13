@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { Search, ChevronLeft } from "lucide-react";
 import type { LabFacility } from "@/lib/ishani";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, PageShell } from "@/components/ui";
 
 interface LabsClientProps {
   initialLabs: LabFacility[];
@@ -49,7 +49,7 @@ export default function LabsClient({
   }, [labs, search, floorFilter]);
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+    <PageShell>
       <div className="mb-8 border-b border-border pb-6">
         <Link
           href="/campus"
@@ -189,6 +189,6 @@ export default function LabsClient({
           )}
         </>
       )}
-    </div>
+    </PageShell>
   );
 }

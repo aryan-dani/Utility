@@ -1,6 +1,7 @@
-'use client';
+"use client";
 
-import { motion, useReducedMotion } from 'framer-motion';
+import { motion } from "framer-motion";
+import { useMotionSafe } from "@/lib/motion";
 
 export function FadeIn({
   children,
@@ -13,21 +14,18 @@ export function FadeIn({
   y?: number;
   className?: string;
 }) {
-  const shouldReduceMotion = useReducedMotion();
+  const { reduce, springSoft } = useMotionSafe();
   return (
     <motion.div
       suppressHydrationWarning
-      initial={{ opacity: 0, y: shouldReduceMotion ? 0 : y }}
+      initial={{ opacity: 0, y: reduce ? 0 : y }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        type: 'spring',
-        stiffness: 300,
-        damping: 30,
-        mass: 0.8,
-        delay: shouldReduceMotion ? 0 : delay, 
+      transition={{
+        ...springSoft,
+        delay: reduce ? 0 : delay,
       }}
       className={className}
-      style={{ willChange: 'transform, opacity' }}
+      style={{ willChange: reduce ? "auto" : "transform, opacity" }}
     >
       {children}
     </motion.div>
@@ -38,17 +36,19 @@ export function ScaleButton({
   children,
   className,
   ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement> & { children: React.ReactNode }) {
-  const shouldReduceMotion = useReducedMotion();
+}: React.ButtonHTMLAttributes<HTMLButtonElement> & {
+  children: React.ReactNode;
+}) {
+  const { reduce, press, hoverLift, spring } = useMotionSafe();
   return (
     <motion.button
       suppressHydrationWarning
-      whileHover={shouldReduceMotion ? {} : { y: -2, scale: 1.02 }}
-      whileTap={shouldReduceMotion ? {} : { scale: 0.96 }}
-      transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+      whileHover={reduce ? {} : { ...hoverLift, scale: 1.01 }}
+      whileTap={reduce ? {} : press}
+      transition={spring}
       className={className}
       {...(props as object)}
-      style={{ willChange: shouldReduceMotion ? 'auto' : 'transform' }}
+      style={{ willChange: reduce ? "auto" : "transform" }}
     >
       {children}
     </motion.button>
@@ -62,18 +62,18 @@ export function StaggerContainer({
   children: React.ReactNode;
   className?: string;
 }) {
-  const shouldReduceMotion = useReducedMotion();
+  const { stagger } = useMotionSafe();
   return (
     <motion.div
       suppressHydrationWarning
       initial="hidden"
       animate="visible"
       variants={{
-        visible: { 
-          transition: { 
-            staggerChildren: shouldReduceMotion ? 0 : 0.04,
-            delayChildren: 0.02
-          } 
+        visible: {
+          transition: {
+            staggerChildren: stagger.children,
+            delayChildren: stagger.delay,
+          },
         },
       }}
       className={className}
@@ -83,26 +83,27 @@ export function StaggerContainer({
   );
 }
 
-export function StaggerItem({ children, className }: { children: React.ReactNode; className?: string }) {
-  const shouldReduceMotion = useReducedMotion();
+export function StaggerItem({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
+  const { reduce, springSoft } = useMotionSafe();
   return (
     <motion.div
       suppressHydrationWarning
       variants={{
-        hidden: { opacity: 0, y: shouldReduceMotion ? 0 : 8 },
-        visible: { 
-          opacity: 1, 
-          y: 0, 
-          transition: { 
-            type: 'spring',
-            stiffness: 300,
-            damping: 30,
-            mass: 0.8
-          } 
+        hidden: { opacity: 0, y: reduce ? 0 : 8 },
+        visible: {
+          opacity: 1,
+          y: 0,
+          transition: springSoft,
         },
       }}
       className={className}
-      style={{ willChange: 'transform, opacity' }}
+      style={{ willChange: reduce ? "auto" : "transform, opacity" }}
     >
       {children}
     </motion.div>
@@ -120,9 +121,5 @@ export function AnimatedList({
   children: React.ReactNode;
   className?: string;
 }) {
-  return (
-    <StaggerContainer className={className}>
-      {children}
-    </StaggerContainer>
-  );
+  return <StaggerContainer className={className}>{children}</StaggerContainer>;
 }

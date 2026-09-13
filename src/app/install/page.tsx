@@ -9,7 +9,7 @@ export default function InstallPage() {
   const standalone = useIsStandalone();
 
   return (
-    <div className="flex-1 flex flex-col items-center max-w-xl mx-auto page-gutter py-20 page-fade-in text-center">
+    <div className="page-shell max-w-xl flex flex-col items-center text-center">
       <PageHeader
         className="mb-10 sm:flex-col sm:items-center [&_p]:mx-auto"
         size="hero"

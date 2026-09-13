@@ -22,6 +22,8 @@ import {
   Select,
   Modal,
   Input,
+  PageShell,
+  Card,
 } from "@/components/ui";
 import type {
   QAQuestion,
@@ -323,22 +325,21 @@ export default function QABoardView() {
 
   if (activeThreadId) {
     return (
-      <div className="flex-1 w-full max-w-5xl lg:max-w-6xl xl:max-w-7xl mx-auto page-gutter pt-6 pb-24 min-h-[85vh]">
+      <PageShell width="narrow" className="max-w-5xl lg:max-w-6xl xl:max-w-7xl">
         <QuestionThread
           questionId={activeThreadId}
           open={true}
           onClose={handleCloseThread}
           onQuestionUpdated={fetchQuestions}
         />
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="flex-1 w-full max-w-5xl mx-auto page-gutter pt-6 pb-24 min-h-[85vh]">
-      {/* Header */}
+    <PageShell width="narrow">
       <PageHeader
-        className="border-b border-border pb-6 mb-6"
+        divider
         eyebrow={`${branch} · Sem ${semester} · ${academicYear}`}
         title="Doubt Board"
         description="Ask questions about paper-format problems, syllabus scope, or share handwritten solutions. For generic doubts, use the AI assistant."
@@ -346,7 +347,7 @@ export default function QABoardView() {
           <Button
             variant="primary"
             size="md"
-            className="shrink-0 rounded-xl"
+            className="shrink-0"
             onClick={() => {
               if (!currentUid) {
                 notify.error("Sign in to ask a question.");
@@ -361,77 +362,78 @@ export default function QABoardView() {
         }
       />
 
-      {/* Tab switcher */}
-      <div className="flex items-center justify-between gap-4 mb-6">
-        <Segmented
-          value={tab}
-          onChange={setTab}
-          size="sm"
-          aria-label="Board view"
-          options={[
-            {
-              value: "board",
-              label: (
-                <span className="inline-flex items-center gap-1.5">
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  Questions
-                </span>
-              ),
-            },
-            {
-              value: "saved",
-              label: (
-                <span className="inline-flex items-center gap-1.5">
-                  <Bookmark className="w-3.5 h-3.5" />
-                  Saved
-                </span>
-              ),
-            },
-          ]}
-        />
+      <Card padding="sm" className="mb-6 space-y-4">
+        <div className="flex items-center justify-between gap-4 flex-wrap">
+          <Segmented
+            value={tab}
+            onChange={setTab}
+            size="sm"
+            aria-label="Board view"
+            options={[
+              {
+                value: "board",
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    Questions
+                  </span>
+                ),
+              },
+              {
+                value: "saved",
+                label: (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Bookmark className="w-3.5 h-3.5" />
+                    Saved
+                  </span>
+                ),
+              },
+            ]}
+          />
+
+          {tab === "board" && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs font-semibold text-muted shrink-0">Subject:</span>
+              <Select<string>
+                value={subjectFilter}
+                onChange={setSubjectFilter}
+                options={[
+                  { value: "all", label: "All subjects" },
+                  ...subjects.map((s) => ({ value: s, label: s })),
+                ]}
+                size="sm"
+                align="right"
+                className="min-w-[150px] max-w-[220px]"
+                onCreateOption={handleAddCustomSubject}
+                createOptionLabel={(q) => `+ Add & filter by "${q}"`}
+                footerAction={{
+                  label: "Add custom subject…",
+                  icon: Plus,
+                  onClick: () => {
+                    setNewSubjectInput("");
+                    setCustomSubjectModalOpen(true);
+                  },
+                }}
+              />
+            </div>
+          )}
+        </div>
 
         {tab === "board" && (
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-semibold text-muted shrink-0">Subject:</span>
-            <Select<string>
-              value={subjectFilter}
-              onChange={setSubjectFilter}
-              options={[
-                { value: "all", label: "All subjects" },
-                ...subjects.map((s) => ({ value: s, label: s })),
-              ]}
-              size="sm"
-              align="right"
-              className="min-w-[150px] max-w-[220px]"
-              onCreateOption={handleAddCustomSubject}
-              createOptionLabel={(q) => `+ Add & filter by "${q}"`}
-              footerAction={{
-                label: "Add custom subject…",
-                icon: Plus,
-                onClick: () => {
-                  setNewSubjectInput("");
-                  setCustomSubjectModalOpen(true);
-                },
-              }}
-            />
-          </div>
+          <QASearchBar
+            query={searchQuery}
+            onQueryChange={setSearchQuery}
+            category={categoryFilter}
+            onCategoryChange={setCategoryFilter}
+            status={statusFilter}
+            onStatusChange={setStatusFilter}
+          />
         )}
-      </div>
+      </Card>
 
       {/* Board tab */}
       {tab === "board" && (
         <>
-          <div className="mb-4">
-            <QASearchBar
-              query={searchQuery}
-              onQueryChange={setSearchQuery}
-              category={categoryFilter}
-              onCategoryChange={setCategoryFilter}
-              status={statusFilter}
-              onStatusChange={setStatusFilter}
-            />
-          </div>
-
           {loading ? (
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-6 h-6 animate-spin text-muted" />
@@ -539,6 +541,6 @@ export default function QABoardView() {
           </div>
         </form>
       </Modal>
-    </div>
+    </PageShell>
   );
 }

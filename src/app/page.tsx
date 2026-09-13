@@ -132,7 +132,7 @@ export default async function Home() {
   }
 
   return (
-    <div className="flex-1 w-full flex flex-col relative overflow-x-clip page-fade-in">
+    <div className="flex-1 w-full flex flex-col relative overflow-x-clip">
       {/* Hero grid overlay */}
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(var(--foreground)/0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgb(var(--foreground)/0.06)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none -z-20" />
 

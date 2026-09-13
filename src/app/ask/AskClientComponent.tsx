@@ -42,7 +42,7 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import AcademicBreadcrumb from '@/components/AcademicBreadcrumb';
 import AppLink from '@/components/ui/AppLink';
 import { buildResourcesHref, pageFromSectionLabel } from '@/lib/resourceUrl';
-import { Button, ButtonLink, Modal, Select, PageHeader, Segmented, IconButton } from '@/components/ui';
+import { Button, ButtonLink, Modal, Select, PageHeader, Segmented, IconButton, PageShell, Input } from '@/components/ui';
 import { SourceCardList, renderWithCitations } from '@/components/ask/SourceCard';
 import type { RetrievalSource } from '@/lib/rag/types';
 import { stripInvalidCitations, validMarkerSet } from '@/lib/agent/router';
@@ -60,7 +60,7 @@ const ASK_TAB_OPTIONS: { value: AskTab; label: string }[] = [
 
 /** Shared height so sidebar + chat toolbars share one baseline. */
 const ASK_CHROME_ROW =
-  'h-11 shrink-0 border-b border-border flex items-center px-3 gap-2';
+  'h-11 shrink-0 border-b border-border/50 flex items-center px-3 sm:px-4 gap-2';
 
 /** Legacy persisted messages may include a plain `content` field. */
 type ChatMessage = UIMessage & { content?: string };
@@ -195,7 +195,7 @@ const MessageContent = memo(function MessageContent({
 }) {
   const markdown = showCursor ? stabilizeStreamingMarkdown(content) : content;
   return (
-    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-surface prose-pre:border prose-pre:border-border prose-pre:rounded-lg prose-code:text-primary prose-code:bg-primary/5 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
+    <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-surface prose-pre:border prose-pre:border-border prose-pre:rounded-xl prose-code:text-primary prose-code:bg-primary/5 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -207,7 +207,7 @@ const MessageContent = memo(function MessageContent({
             
             if (!inline && match) {
               return (
-                <div className="rounded-lg overflow-hidden border border-border">
+                <div className="rounded-xl overflow-hidden border border-border">
                   <div className="flex items-center justify-between px-3 py-1.5 bg-surface-hover border-b border-border text-[10px] font-mono text-muted uppercase tracking-wider">
                     {lang}
                     <CopyButton text={code} />
@@ -1102,9 +1102,11 @@ export default function AskClient() {
   };
 
   return (
-    <div className="flex-1 min-h-0 w-full mx-auto grid grid-rows-[auto_minmax(0,1fr)] overflow-hidden overscroll-none h-full max-h-full page-gutter">
+    <PageShell width="full" className="flex flex-col">
+      <section className="shell-island flex flex-col overflow-hidden min-h-0 h-[calc(100dvh-8.5rem)] md:h-[calc(100dvh-1.75rem-2*var(--space-page-y))]">
+        <div className="grid grid-rows-[auto_minmax(0,1fr)] min-h-0 flex-1">
       {/* Top Navigation Tabs */}
-      <div className="border-b border-border px-4 sm:px-6 py-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+      <div className="border-b border-border/60 bg-card/60 px-4 sm:px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
         <div className="flex flex-col gap-1.5 min-w-0">
           <AcademicBreadcrumb
             branch={branch}
@@ -1150,8 +1152,8 @@ export default function AskClient() {
                 onClick={() => setSidebarOpen(false)}
                 className="absolute inset-0 bg-black/50 z-30 lg:hidden"
               />
-              <div className="absolute lg:relative inset-y-0 left-0 z-40 lg:z-auto w-[min(16rem,85vw)] lg:w-64 min-h-0 border-r border-border bg-background-subtle flex flex-col shrink-0 shadow-popover lg:shadow-none">
-              <div className={`${ASK_CHROME_ROW} justify-between bg-surface/30`}>
+              <div className="absolute lg:relative inset-y-0 left-0 z-40 lg:z-auto w-[min(16rem,85vw)] lg:w-64 min-h-0 lg:m-2 lg:mr-0 lg:rounded-xl lg:border lg:border-border/60 lg:bg-surface/40 border-r border-border bg-background-subtle flex flex-col shrink-0 shadow-popover lg:shadow-none rounded-r-2xl lg:rounded-xl overflow-hidden">
+              <div className={`${ASK_CHROME_ROW} justify-between`}>
                 <span className="text-[10px] uppercase font-bold text-muted tracking-wider">
                   Chat History
                 </span>
@@ -1221,7 +1223,7 @@ export default function AskClient() {
           <div className="flex-1 min-h-0 min-w-0 grid grid-rows-[auto_minmax(0,1fr)_auto] overflow-hidden">
             
             {/* Top Toolbar: Sidebar toggle & grounded document selector */}
-            <div className={`${ASK_CHROME_ROW} justify-between flex-nowrap bg-surface/30 sm:px-4`}>
+            <div className={`${ASK_CHROME_ROW} justify-between flex-nowrap`}>
               <div className="flex items-center gap-2 min-w-0 flex-1">
                 <IconButton
                   variant="secondary"
@@ -1291,7 +1293,7 @@ export default function AskClient() {
                       <button
                         key={prompt}
                         onClick={() => handleSuggestion(prompt)}
-                        className="text-left px-3.5 py-2.5 bg-card hover:bg-surface/50 text-sm text-muted hover:text-foreground transition-all duration-200 leading-snug w-full h-full"
+                        className="text-left px-3.5 py-2.5 bg-card hover:bg-surface/50 text-sm text-muted hover:text-foreground transition-all duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] leading-snug w-full h-full"
                       >
                         {prompt}
                       </button>
@@ -1389,7 +1391,7 @@ export default function AskClient() {
               )}
             </div>
 
-            <div className="border-t border-border px-4 sm:px-6 py-4 shrink-0 md:safe-bottom">
+            <div className="shrink-0 px-4 sm:px-6 pb-4 md:safe-bottom bg-gradient-to-t from-card via-card/95 to-transparent pt-2">
               {messages.length > 0 && (
                 <div className="flex items-center gap-4 mb-2">
                   <Button
@@ -1435,7 +1437,7 @@ export default function AskClient() {
                     <button
                       type="button"
                       onClick={toggleListening}
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-205 hover:scale-105 active:scale-95 ${
+                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] active:scale-[0.97] ${
                         isListening
                           ? 'bg-red-500 text-white animate-pulse shadow-md shadow-red-500/25'
                           : 'bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-hover'
@@ -1449,7 +1451,7 @@ export default function AskClient() {
                       type={isLoading ? "button" : "submit"}
                       disabled={!isLoading && !(input || '').trim()}
                       onClick={isLoading ? () => stop?.() : undefined}
-                      className="w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center disabled:opacity-30 hover:scale-105 active:scale-95 transition-all duration-200 shadow-sm"
+                      className="w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center disabled:opacity-30 active:scale-[0.97] transition-all duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] shadow-sm disabled:active:scale-100"
                       title={isLoading ? "Stop generating" : "Send"}
                       aria-label={isLoading ? "Stop generating" : "Send"}
                     >
@@ -1463,11 +1465,7 @@ export default function AskClient() {
                 </div>
               </form>
 
-              <p className="text-[10px] text-muted mt-2 text-center flex items-center justify-center gap-1.5 flex-wrap">
-                <span>Powered by Groq. Responses may not always be accurate</span>
-                <span className="text-muted/40">•</span>
-                <span>Crafted by <a href="https://www.aryandani.com" target="_blank" rel="noopener noreferrer" className="font-semibold text-muted hover:text-foreground hover:underline transition-all">Aryan Dani</a></span>
-              </p>
+              <p className="text-[10px] text-muted mt-2 text-center">Responses may not always be accurate</p>
             </div>
           </div>
         </div>
@@ -1475,16 +1473,17 @@ export default function AskClient() {
 
       {/* Tab 2: Flashcards */}
       {activeTab === 'flashcards' && (
-        <div className="min-h-0 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col items-center">
+        <div className="p-4 sm:p-6 overflow-y-auto min-h-0 flex flex-col items-center">
           <div className="w-full max-w-2xl mb-8">
             <form onSubmit={handleGenerateFlashcards} className="flex gap-2">
-              <input
+              <Input
                 type="text"
+                inputSize="sm"
                 placeholder="Enter a topic (e.g. DBMS Normalization, CPU Scheduling, Binary Trees)..."
                 value={flashcardTopic}
                 onChange={(e) => setFlashcardTopic(e.target.value)}
                 disabled={isGeneratingFlashcards}
-                className="flex-1 bg-surface border border-border rounded-lg px-3 min-h-9 text-sm outline-none text-foreground placeholder:text-muted focus:ring-0 focus-visible:ring-0 transition-[border-color,box-shadow] duration-150 shadow-xs input-premium-focus"
+                className="flex-1 shadow-xs"
               />
               <Button
                 type="submit"
@@ -1709,16 +1708,17 @@ export default function AskClient() {
 
       {/* Tab 3: Practice Quiz */}
       {activeTab === 'quiz' && (
-        <div className="min-h-0 overflow-y-auto px-4 sm:px-6 py-6 flex flex-col items-center">
+        <div className="p-4 sm:p-6 overflow-y-auto min-h-0 flex flex-col items-center">
           <div className="w-full max-w-2xl mb-8">
             <form onSubmit={handleGenerateQuiz} className="flex gap-2">
-              <input
+              <Input
                 type="text"
+                inputSize="sm"
                 placeholder="Enter a topic for your quiz (e.g. OS Memory Management, Computer Networks)..."
                 value={quizTopic}
                 onChange={(e) => setQuizTopic(e.target.value)}
                 disabled={isGeneratingQuiz}
-                className="flex-1 bg-surface border border-border rounded-lg px-3 min-h-9 text-sm outline-none text-foreground placeholder:text-muted focus:ring-0 focus-visible:ring-0 transition-[border-color,box-shadow] duration-150 shadow-xs input-premium-focus"
+                className="flex-1 shadow-xs"
               />
               <Button
                 type="submit"
@@ -1899,6 +1899,8 @@ export default function AskClient() {
           )}
         </div>
       )}
+        </div>
+      </section>
       <Modal
         open={reportOpen}
         onClose={() => {
@@ -1948,6 +1950,6 @@ export default function AskClient() {
           </Button>
         </div>
       </Modal>
-    </div>
+    </PageShell>
   );
 }

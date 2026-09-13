@@ -11,6 +11,7 @@ import {
   singletonFile,
 } from "@/lib/resourceGroups";
 import ResourceFileRow from "./ResourceFileRow";
+import { MOTION } from "@/lib/motion";
 
 interface ResourceFolderProps {
   folder: ResourceFolderNode;
@@ -92,7 +93,7 @@ export default function ResourceFolder({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }}
+            transition={{ duration: MOTION.duration.base, ease: MOTION.ease }}
             className="overflow-hidden"
           >
             <div className="border-t border-border/40 bg-card/50">

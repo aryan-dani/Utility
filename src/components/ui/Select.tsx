@@ -11,6 +11,7 @@ import {
 import { ChevronDown, Search, Check, Plus } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { cn } from "@/lib/cn";
+import { useMotionSafe } from "@/lib/motion";
 
 export type SelectOption<T extends string | number> = {
   value: T;
@@ -81,6 +82,7 @@ function SelectInner<T extends string | number>({
   const ref = useRef<HTMLDivElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const motionSafe = useMotionSafe();
 
   const enableSearch =
     optionsLayout !== "grid-4" &&
@@ -216,10 +218,11 @@ function SelectInner<T extends string | number>({
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 4, scale: 0.98 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 4, scale: 0.98 }}
-            transition={{ duration: 0.1, ease: "easeOut" }}
+            {...motionSafe.menu}
+            transition={{
+              duration: motionSafe.durations.fast,
+              ease: motionSafe.ease,
+            }}
             className={cn(
               "absolute top-full mt-1.5 z-dropdown",
               "bg-card/95 backdrop-blur-md border border-border rounded-xl shadow-popover overflow-hidden",

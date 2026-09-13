@@ -25,6 +25,7 @@ import {
   isImageExtension,
 } from "@/lib/fileUtils";
 import { motion, useReducedMotion } from "framer-motion";
+import { MOTION } from "@/lib/motion";
 import { cleanResourceTitle, shortCodeLabel } from "@/lib/titleUtils";
 import dynamic from "next/dynamic";
 import type { PdfPreviewHandle } from "@/components/PdfPreview";
@@ -409,7 +410,7 @@ export default function ResourceViewer({
       initial={reduceMotion ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={reduceMotion ? undefined : { opacity: 0 }}
-      transition={{ duration: 0.18 }}
+      transition={{ duration: MOTION.duration.base, ease: MOTION.ease }}
       className="fixed inset-0 z-modal bg-background outline-none flex flex-col overscroll-none p-2 sm:p-3"
     >
       <div
@@ -702,7 +703,11 @@ export default function ResourceViewer({
         <motion.div
           initial={reduceMotion ? false : { y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          transition={{ delay: 0.1, duration: 0.2 }}
+          transition={{
+            delay: reduceMotion ? 0 : MOTION.duration.fast,
+            duration: MOTION.duration.base,
+            ease: MOTION.ease,
+          }}
           className="absolute bottom-4 inset-x-0 z-10 flex justify-center px-4 pointer-events-none"
         >
           <div className="pointer-events-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-card/95 backdrop-blur-md border border-border rounded-2xl pl-3 pr-1.5 py-1.5 shadow-popover max-w-[min(96vw,48rem)]">

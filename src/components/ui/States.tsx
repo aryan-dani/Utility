@@ -18,7 +18,7 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center text-center rounded-xl border border-dashed border-border bg-surface px-6 py-12",
+        "flex flex-col items-center justify-center text-center rounded-2xl border border-dashed border-border bg-surface px-6 py-12",
         className,
       )}
     >
@@ -49,7 +49,7 @@ export function ErrorState({
     <div
       role="alert"
       className={cn(
-        "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-xl border border-dashed border-destructive/30 bg-surface px-4 py-4",
+        "flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-dashed border-destructive/30 bg-surface px-4 py-4",
         className,
       )}
     >

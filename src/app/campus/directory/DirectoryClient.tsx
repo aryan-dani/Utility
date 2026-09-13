@@ -10,7 +10,7 @@ import {
   X,
 } from "lucide-react";
 import type { StaffMember } from "@/lib/ishani";
-import { PageHeader } from "@/components/ui";
+import { PageHeader, PageShell } from "@/components/ui";
 
 const FACULTY_GROUP_ORDER = [
   "B.Tech Computer Science & Engineering",
@@ -89,7 +89,7 @@ export default function DirectoryClient({
   }, [filtered]);
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+    <PageShell>
       <div className="mb-8 border-b border-border pb-6">
         <Link
           href="/campus"
@@ -276,6 +276,6 @@ export default function DirectoryClient({
           </div>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

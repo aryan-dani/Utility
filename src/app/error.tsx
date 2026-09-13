@@ -5,6 +5,7 @@ import { AlertCircle, RotateCcw, Home, Terminal, ChevronDown, ChevronUp } from '
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { PageHeader } from '@/components/ui';
+import { MOTION } from '@/lib/motion';
 
 export default function GlobalError({
   error,
@@ -28,7 +29,7 @@ export default function GlobalError({
       <motion.div
         initial={{ opacity: 0, scale: 0.96, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+        transition={{ duration: MOTION.duration.enter, ease: MOTION.ease }}
         className="bg-card border border-border max-w-lg w-full rounded-2xl p-8 sm:p-10 shadow-md relative z-10 text-center"
       >
         <div className="w-16 h-16 rounded-2xl bg-destructive/10 border border-destructive/20 flex items-center justify-center mb-6 mx-auto shadow-sm">
@@ -92,14 +93,14 @@ export default function GlobalError({
         <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
           <button
             onClick={() => reset()}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background text-sm font-semibold hover:opacity-90 transition-all shadow-sm active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-foreground text-background text-sm font-semibold hover:opacity-90 transition-all shadow-sm active:scale-[0.97]"
           >
             <RotateCcw className="w-4 h-4" />
             Try Again
           </button>
           <Link
             href="/"
-            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-surface border border-border text-foreground text-sm font-semibold hover:bg-surface-hover transition-all shadow-xs active:scale-95"
+            className="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 rounded-xl bg-surface border border-border text-foreground text-sm font-semibold hover:bg-surface-hover transition-all shadow-xs active:scale-[0.97]"
           >
             <Home className="w-4 h-4" />
             Return Home

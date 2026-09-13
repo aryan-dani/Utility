@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
+import { useMotionSafe } from "@/lib/motion";
 
 export interface ModalProps {
   open: boolean;
@@ -38,6 +39,7 @@ export function Modal({
 }: ModalProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   const previouslyFocused = useRef<HTMLElement | null>(null);
+  const motionSafe = useMotionSafe();
 
   useEffect(() => {
     if (!open) return;
@@ -90,19 +92,16 @@ export function Modal({
           <motion.button
             type="button"
             aria-label="Close dialog"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            {...motionSafe.fade}
+            transition={{ duration: motionSafe.duration }}
             onClick={onClose}
             className="absolute inset-0 bg-background/90"
           />
 
           <motion.div
             ref={panelRef}
-            initial={{ opacity: 0, scale: 0.96, y: 12 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96, y: 12 }}
-            transition={{ duration: 0.18, ease: "easeOut" }}
+            {...motionSafe.pop}
+            transition={{ duration: motionSafe.duration, ease: motionSafe.ease }}
             className={cn(
               "relative z-modal w-full rounded-2xl border border-border bg-card shadow-lg",
               "max-h-[min(85vh,720px)] flex flex-col overflow-hidden",

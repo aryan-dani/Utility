@@ -8,6 +8,8 @@ export interface PageHeaderProps {
   actions?: ReactNode;
   /** Home / marketing: larger display. App pages: compact. */
   size?: "app" | "hero";
+  /** Adds a bottom hairline + spacing used by app list pages. */
+  divider?: boolean;
   className?: string;
 }
 
@@ -17,12 +19,14 @@ export function PageHeader({
   description,
   actions,
   size = "app",
+  divider = false,
   className,
 }: PageHeaderProps) {
   return (
     <header
       className={cn(
         "flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between sm:gap-6",
+        divider && "border-b border-border pb-6 mb-6",
         className,
       )}
     >

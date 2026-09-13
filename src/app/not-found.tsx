@@ -3,7 +3,7 @@ import { PageHeader } from "@/components/ui";
 
 export default function NotFound() {
   return (
-    <div className="flex-1 w-full flex flex-col items-center justify-center min-h-[70vh] px-6 py-16 page-fade-in relative overflow-hidden">
+    <div className="flex-1 w-full flex flex-col items-center justify-center min-h-[70vh] px-6 py-16 relative overflow-hidden">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(var(--foreground)/0.05)_1px,transparent_1px),linear-gradient(to_bottom,rgb(var(--foreground)/0.05)_1px,transparent_1px)] bg-[size:3rem_3rem] [mask-image:radial-gradient(ellipse_50%_45%_at_50%_40%,#000_60%,transparent_100%)] pointer-events-none -z-10" />
 
       <p className="font-display text-2xl text-foreground tracking-tight mb-6">

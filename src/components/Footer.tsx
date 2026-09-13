@@ -21,8 +21,8 @@ export default function Footer() {
   };
 
   return (
-    <div className="w-full max-w-[1800px] 2xl:max-w-[2040px] mx-auto px-4 sm:px-6 lg:px-10 mt-auto pt-10 pb-20 md:pb-4">
-      <footer className="relative overflow-hidden rounded-[26px] bg-card/85 dark:bg-card/75 backdrop-blur-2xl border border-border/80 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_24px_64px_-16px_rgba(0,0,0,0.7)] ring-1 ring-black/[0.04] dark:ring-white/[0.05] p-6 sm:p-10 lg:p-12">
+    <div className="page-shell max-w-[1800px] 2xl:max-w-[2040px] mt-auto !pt-10 pb-20 md:!pb-4">
+      <footer className="shell-island relative p-6 sm:p-10 lg:p-12">
         <div className="absolute inset-0 bg-gradient-to-t from-background/40 via-transparent to-transparent opacity-50 pointer-events-none" />
         <div className="relative z-10">
           <div className="flex flex-col md:flex-row justify-between items-start gap-10 md:gap-12 mb-10 md:mb-12">

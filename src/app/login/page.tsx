@@ -9,6 +9,7 @@ import {
 import Link from "next/link";
 import { ArrowLeft, Loader2, Eye, EyeOff, Layers } from "lucide-react";
 import { motion } from "framer-motion";
+import { MOTION } from "@/lib/motion";
 import { sanitizeRedirectTo } from "@/lib/workspace";
 import {
   signInWithPopupOrRedirect,
@@ -178,7 +179,7 @@ function LoginContent() {
         <motion.div 
           initial={{ opacity: 0, scale: 0.98, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+          transition={{ duration: MOTION.duration.enter, ease: MOTION.ease }}
           className="bg-card border border-border rounded-2xl p-8 shadow-md"
         >
           {/* Logo */}
@@ -209,7 +210,7 @@ function LoginContent() {
               type="button"
               onClick={handleGoogleSignIn}
               disabled={googleLoading || githubLoading || loading}
-              className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-colors flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 duration-150"
+              className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
             >
               {googleLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -224,7 +225,7 @@ function LoginContent() {
               type="button"
               onClick={handleGithubSignIn}
               disabled={googleLoading || githubLoading || loading}
-              className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-colors flex items-center justify-center gap-2 hover:scale-[1.01] active:scale-95 duration-150"
+              className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
             >
               {githubLoading ? (
                 <Loader2 className="w-4 h-4 animate-spin text-primary" />
@@ -306,7 +307,7 @@ function LoginContent() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-foreground text-background py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-opacity flex items-center justify-center gap-2 mt-2 hover:scale-[1.01] active:scale-95 duration-150"
+              className="w-full bg-foreground text-background py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] disabled:active:scale-100"
             >
               {loading ? (
                 <>

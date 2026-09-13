@@ -10,7 +10,7 @@ export default function PlannerError({
   reset: () => void;
 }) {
   return (
-    <div className="flex-1 w-full max-w-lg mx-auto page-gutter py-16">
+    <div className="page-shell max-w-lg">
       <ErrorState
         title="Planner failed to load"
         description={error.message || "Something went wrong."}

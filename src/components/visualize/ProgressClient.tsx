@@ -22,6 +22,7 @@ import {
   PageHeader,
   SectionHeader,
   Skeleton,
+  PageShell,
 } from "@/components/ui";
 import { Map } from "lucide-react";
 
@@ -77,7 +78,7 @@ export function ProgressClient() {
   const showLoading = signedIn === null || loading;
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 sm:py-12 min-h-[80vh]">
+    <PageShell>
       <motion.div
         variants={stagger}
         initial="hidden"
@@ -224,6 +225,6 @@ export function ProgressClient() {
           </section>
         </div>
       )}
-    </div>
+    </PageShell>
   );
 }

@@ -16,6 +16,7 @@ import {
 } from "lucide-react";
 import { useIsClient } from "@/lib/clientHooks";
 import { notify } from "@/lib/toast";
+import { useMotionSafe } from "@/lib/motion";
 
 interface QAImageViewerProps {
   images: string[];
@@ -35,6 +36,7 @@ export default function QAImageViewer({
   const [copied, setCopied] = useState(false);
   const mounted = useIsClient();
   const containerRef = useRef<HTMLDivElement>(null);
+  const motionSafe = useMotionSafe();
 
   const [prevOpen, setPrevOpen] = useState(open);
   const [prevInitialIndex, setPrevInitialIndex] = useState(initialIndex);
@@ -253,10 +255,13 @@ export default function QAImageViewer({
             drag={scale > 1}
             dragConstraints={containerRef}
             dragElastic={0.1}
-            initial={{ opacity: 0, scale: 0.94 }}
+            initial={{ opacity: 0, scale: motionSafe.reduce ? 1 : 0.96 }}
             animate={{ opacity: 1, scale }}
-            exit={{ opacity: 0, scale: 0.94 }}
-            transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+            exit={{ opacity: 0, scale: motionSafe.reduce ? 1 : 0.96 }}
+            transition={{
+              duration: motionSafe.duration,
+              ease: motionSafe.ease,
+            }}
             className="flex items-center justify-center max-w-full max-h-full"
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}

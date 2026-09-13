@@ -56,6 +56,7 @@ module.exports = {
         xl: 'var(--radius-xl)',
         '2xl': 'var(--radius-2xl)',
         '3xl': 'var(--radius-3xl)',
+        shell: 'var(--radius-shell)',
       },
       borderWidth: {
         DEFAULT: '1px',

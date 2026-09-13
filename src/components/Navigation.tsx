@@ -53,18 +53,34 @@ const NavUserMenu = dynamic(() => import("./NavUserMenu"), {
   ),
 });
 
+function branchMonogram(branch: string): string {
+  const code = branch.trim().toUpperCase();
+  if (code === "AIDS") return "AI";
+  if (code === "CSE") return "CS";
+  if (code === "ECE") return "EC";
+  if (code.length <= 2) return code;
+  return code.slice(0, 2);
+}
+
 function NavSection({
   title,
   collapsed,
+  hideCollapsedDivider = false,
   children,
 }: {
   title: string;
   collapsed: boolean;
+  /** Skip the hairline when the previous chrome already separates the first group. */
+  hideCollapsedDivider?: boolean;
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-0.5">
-      <div className="h-6 flex items-center px-2.5 relative overflow-hidden">
+    <div className={collapsed ? "space-y-0" : "space-y-0.5"}>
+      <div
+        className={`flex items-center px-2.5 relative overflow-hidden ${
+          collapsed ? (hideCollapsedDivider ? "h-0.5" : "h-3") : "h-6"
+        }`}
+      >
         {/* Expanded label */}
         <div
           className="flex items-center gap-2 w-full transition-[opacity,transform] duration-200"
@@ -81,12 +97,14 @@ function NavSection({
         </div>
 
         {/* Collapsed divider */}
-        <div
-          className="absolute inset-0 flex items-center justify-center transition-opacity duration-200 pointer-events-none"
-          style={{ opacity: collapsed ? 1 : 0 }}
-        >
-          <div className="w-5 h-px bg-border/60" />
-        </div>
+        {!hideCollapsedDivider && (
+          <div
+            className="absolute inset-0 flex items-center justify-center transition-opacity duration-200 pointer-events-none"
+            style={{ opacity: collapsed ? 1 : 0 }}
+          >
+            <div className="w-3.5 h-px rounded-full bg-border/40" />
+          </div>
+        )}
       </div>
       {children}
     </div>
@@ -329,7 +347,7 @@ function NavigationInner() {
               onFocus={onFocus}
               onBlur={onBlur}
               aria-label={link.label}
-              className={`relative flex items-center my-0.5 rounded-xl group transition-all active:scale-[0.98] ${
+              className={`relative flex items-center my-0.5 rounded-xl group transition-all active:scale-[0.97] ${
                 isCollapsed
                   ? "w-10 h-10 mx-auto justify-center px-0"
                   : "w-full h-10 px-2.5 justify-start"
@@ -342,7 +360,7 @@ function NavigationInner() {
                   transition={
                     motionSafe.reduce
                       ? { duration: 0 }
-                      : { type: "spring", stiffness: 450, damping: 35 }
+                      : motionSafe.spring
                   }
                 />
               )}
@@ -360,7 +378,7 @@ function NavigationInner() {
                   className={`w-[18px] h-[18px] transition-all ${
                     active
                       ? "text-background"
-                      : "text-muted group-hover:text-foreground group-hover:scale-105"
+                      : "text-muted group-hover:text-foreground"
                   }`}
                 />
               </div>
@@ -395,7 +413,7 @@ function NavigationInner() {
         </DockTooltip>
       );
     },
-    [isActive, setSearchQuery, scopedHref, motionSafe.reduce],
+    [isActive, setSearchQuery, scopedHref, motionSafe.reduce, motionSafe.spring],
   );
 
   const renderSidebarContent = (opts: { collapsed: boolean }) => {
@@ -403,7 +421,7 @@ function NavigationInner() {
     const link = (item: NavLinkItem) => renderNavLink(item, isCollapsed);
 
     return (
-      <div className="flex flex-col h-full select-none overflow-hidden rounded-[26px]">
+      <div className="flex flex-col h-full select-none overflow-hidden rounded-shell">
         {/* Header - Identical fixed h-14 row in both collapsed & expanded */}
         <div
           className={`h-14 flex items-center border-b border-border/50 shrink-0 relative overflow-hidden ${
@@ -422,7 +440,7 @@ function NavigationInner() {
                   onBlur={onBlur}
                   aria-label="Expand sidebar"
                   title="Expand sidebar"
-                  className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center shadow-md transition-all hover:scale-105 active:scale-95 group relative cursor-pointer"
+                  className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center shadow-md transition-all active:scale-[0.97] group relative cursor-pointer"
                 >
                   <Layers className="w-5 h-5 transition-opacity duration-200 group-hover:opacity-0" />
                   <ChevronRight className="w-5 h-5 absolute opacity-0 group-hover:opacity-100 transition-opacity duration-200" />
@@ -437,7 +455,7 @@ function NavigationInner() {
                 aria-label="Utility OS Home"
                 className="flex items-center group min-w-0"
               >
-                <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center shadow-md transition-all group-hover:scale-105 group-hover:rotate-3 shrink-0">
+                <div className="w-10 h-10 rounded-xl bg-foreground text-background flex items-center justify-center shadow-md transition-all shrink-0">
                   <Layers className="w-5 h-5" />
                 </div>
                 <div className="flex items-center ml-2.5 overflow-hidden min-w-0">
@@ -454,7 +472,7 @@ function NavigationInner() {
                 onClick={handleCollapseToggle}
                 aria-label="Collapse sidebar"
                 title="Collapse sidebar"
-                className="w-8 h-8 rounded-xl hover:bg-surface active:bg-surface-hover border border-transparent hover:border-border/70 text-muted hover:text-foreground transition-all shrink-0 hidden lg:inline-flex items-center justify-center cursor-pointer active:scale-95"
+                className="w-8 h-8 rounded-xl hover:bg-surface active:bg-surface-hover border border-transparent hover:border-border/70 text-muted hover:text-foreground transition-all shrink-0 hidden lg:inline-flex items-center justify-center cursor-pointer active:scale-[0.97]"
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -462,174 +480,184 @@ function NavigationInner() {
           )}
         </div>
 
-        {/* Workspace Scope Pill (Fixed h-10 row, opens floating popover) */}
-        {showSelectors && (
-          <div
-            ref={scopeRef}
-            className={`pt-2 relative z-30 shrink-0 ${
-              isCollapsed ? "px-0" : "px-2.5"
-            }`}
-          >
+        {/* Workspace + Search chrome */}
+        <div
+          className={`relative z-30 shrink-0 ${
+            isCollapsed
+              ? "flex flex-col items-center gap-1.5 px-0 pt-2"
+              : "space-y-0"
+          }`}
+        >
+          {showSelectors && (
+            <div
+              ref={scopeRef}
+              className={`relative ${isCollapsed ? "" : "pt-2 px-2.5"}`}
+            >
+              <DockTooltip
+                label={`${branch} · Sem ${semester}`}
+                badge="Switch"
+                disabled={!isCollapsed}
+              >
+                {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
+                  <button
+                    ref={ref as React.RefObject<HTMLButtonElement>}
+                    onClick={() => setScopeOpen((o) => !o)}
+                    onMouseEnter={onMouseEnter}
+                    onMouseLeave={onMouseLeave}
+                    onFocus={onFocus}
+                    onBlur={onBlur}
+                    aria-expanded={scopeOpen}
+                    aria-label={`Workspace ${branch} Semester ${semester}`}
+                    className={`relative flex items-center rounded-xl active:scale-[0.97] transition-all ${
+                      isCollapsed
+                        ? `w-10 h-10 justify-center flex-col gap-0.5 shadow-md ${
+                            scopeOpen
+                              ? "bg-foreground/90 text-background ring-2 ring-foreground/30 ring-offset-1 ring-offset-card"
+                              : "bg-foreground text-background"
+                          }`
+                        : "w-full h-10 px-3 justify-between bg-surface/50 hover:bg-surface border border-border/70 hover:border-border-strong text-muted hover:text-foreground shadow-xs"
+                    }`}
+                  >
+                    {isCollapsed ? (
+                      <>
+                        <span className="text-[12px] font-extrabold tracking-tight uppercase leading-none">
+                          {branchMonogram(branch)}
+                        </span>
+                        <span className="text-[9px] font-bold tabular-nums leading-none text-background/65">
+                          S{semester}
+                        </span>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <span className="inline-flex items-center justify-center h-5 px-1.5 pt-[1px] rounded-md bg-foreground text-background text-[10px] font-extrabold tracking-wide uppercase leading-none shrink-0 shadow-2xs">
+                            {branch.slice(0, 4)}
+                          </span>
+                          <div className="flex items-baseline gap-1.5 overflow-hidden min-w-0">
+                            <span className="text-xs font-bold text-foreground truncate leading-none">
+                              Sem {semester}
+                            </span>
+                            <span className="text-[11px] font-medium text-muted truncate leading-none">
+                              · {academicYear.split("-")[0]}
+                            </span>
+                          </div>
+                        </div>
+                        <ChevronDown
+                          className={`w-3.5 h-3.5 text-muted transition-transform duration-200 shrink-0 ${
+                            scopeOpen ? "rotate-180" : ""
+                          }`}
+                        />
+                      </>
+                    )}
+                  </button>
+                )}
+              </DockTooltip>
+
+              {/* Floating Workspace Popover */}
+              <AnimatePresence>
+                {scopeOpen && (
+                  <motion.div
+                    initial={{
+                      opacity: 0,
+                      scale: 0.96,
+                      y: isCollapsed ? 0 : 4,
+                      x: isCollapsed ? -6 : 0,
+                    }}
+                    animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+                    exit={{
+                      opacity: 0,
+                      scale: 0.96,
+                      y: isCollapsed ? 0 : 4,
+                      x: isCollapsed ? -6 : 0,
+                    }}
+                    transition={{
+                      duration: motionSafe.durations.fast,
+                      ease: motionSafe.ease,
+                    }}
+                    className={`absolute bg-card/95 backdrop-blur-2xl border border-border/80 rounded-2xl shadow-2xl p-3 z-50 ${
+                      isCollapsed
+                        ? "w-72 left-full ml-3 top-0"
+                        : "w-[calc(100%-1rem)] left-2 top-full mt-2"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-2.5">
+                      <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-muted/70">
+                        Workspace Scope
+                      </p>
+                      <span className="text-2xs font-semibold text-muted tabular-nums px-1.5 py-0.5 rounded-md bg-surface border border-border/60">
+                        {branch} · Sem {semester}
+                      </span>
+                    </div>
+                    <ScopeSelector
+                      academicYear={academicYear}
+                      branch={branch}
+                      semester={semester}
+                      variant="sidebar"
+                      onAcademicYearChange={(val) => {
+                        updateUrl(val, branch, semester);
+                      }}
+                      onBranchChange={(val) => {
+                        updateUrl(academicYear, val, semester);
+                      }}
+                      onSemesterChange={(val) => {
+                        updateUrl(academicYear, branch, val);
+                      }}
+                    />
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
+
+          {/* Search */}
+          <div className={isCollapsed ? "" : "pt-2 px-2.5"}>
             <DockTooltip
-              label="Switch Workspace"
-              badge={`${branch} · S${semester}`}
+              label="Search"
+              shortcut={isMac ? "⌘K" : "Ctrl+K"}
               disabled={!isCollapsed}
             >
               {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
                 <button
                   ref={ref as React.RefObject<HTMLButtonElement>}
-                  onClick={() => setScopeOpen((o) => !o)}
+                  onClick={() => setCommandPaletteOpen(true)}
                   onMouseEnter={onMouseEnter}
                   onMouseLeave={onMouseLeave}
                   onFocus={onFocus}
                   onBlur={onBlur}
-                  aria-label={`Workspace ${branch} Semester ${semester}`}
-                  className={`flex items-center rounded-xl bg-surface/50 hover:bg-surface border border-border/70 hover:border-border-strong text-muted hover:text-foreground active:scale-[0.98] transition-all shadow-xs ${
+                  aria-label="Search resources"
+                  className={`flex items-center rounded-xl active:scale-[0.97] transition-all ${
                     isCollapsed
-                      ? "w-10 h-10 mx-auto justify-center px-0 flex-col"
-                      : "w-full h-10 px-3 justify-between"
+                      ? "w-10 h-10 justify-center text-muted hover:text-foreground hover:bg-foreground/[0.06] dark:hover:bg-white/[0.08]"
+                      : "w-full h-10 px-3 justify-between bg-surface/50 hover:bg-surface border border-border/70 hover:border-border-strong text-muted hover:text-foreground shadow-xs"
                   }`}
                 >
-                  {isCollapsed ? (
-                    <div className="flex flex-col items-center justify-center leading-none">
-                      <span className="text-[10px] font-bold tracking-tight text-foreground">
-                        {branch.slice(0, 4)}
-                      </span>
-                      <span className="text-[9px] font-semibold text-muted mt-0.5">
-                        S{semester}
-                      </span>
+                  <div className="w-5 h-5 flex items-center justify-center shrink-0">
+                    <Search className="w-[18px] h-[18px]" />
+                  </div>
+                  {!isCollapsed && (
+                    <div className="flex items-center justify-between flex-1 ml-2 overflow-hidden min-w-0">
+                      <span className="text-xs font-medium truncate">Search…</span>
+                      <kbd
+                        className="kbd hidden sm:inline-flex bg-background/60 border border-border/70 text-[10px] ml-1.5 shrink-0"
+                        suppressHydrationWarning
+                      >
+                        {isMac ? "⌘K" : "Ctrl+K"}
+                      </kbd>
                     </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="inline-flex items-center justify-center h-5 px-1.5 pt-[1px] rounded-md bg-foreground text-background text-[10px] font-extrabold tracking-wide uppercase leading-none shrink-0 shadow-2xs">
-                          {branch.slice(0, 4)}
-                        </span>
-                        <div className="flex items-baseline gap-1.5 overflow-hidden min-w-0">
-                          <span className="text-xs font-bold text-foreground truncate leading-none">
-                            Sem {semester}
-                          </span>
-                          <span className="text-[11px] font-medium text-muted truncate leading-none">
-                            · {academicYear.split("-")[0]}
-                          </span>
-                        </div>
-                      </div>
-                      <ChevronDown
-                        className={`w-3.5 h-3.5 text-muted transition-transform duration-200 shrink-0 ${
-                          scopeOpen ? "rotate-180" : ""
-                        }`}
-                      />
-                    </>
                   )}
                 </button>
               )}
             </DockTooltip>
-
-            {/* Floating Workspace Popover */}
-            <AnimatePresence>
-              {scopeOpen && (
-                <motion.div
-                  initial={{
-                    opacity: 0,
-                    scale: 0.95,
-                    y: isCollapsed ? 0 : 4,
-                    x: isCollapsed ? -6 : 0,
-                  }}
-                  animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-                  exit={{
-                    opacity: 0,
-                    scale: 0.95,
-                    y: isCollapsed ? 0 : 4,
-                    x: isCollapsed ? -6 : 0,
-                  }}
-                  transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
-                  className={`absolute bg-card/95 backdrop-blur-2xl border border-border/80 rounded-2xl shadow-2xl p-3 z-50 ${
-                    isCollapsed
-                      ? "w-72 left-full ml-3 top-0"
-                      : "w-[calc(100%-1rem)] left-2 top-full mt-2"
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2.5">
-                    <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-muted/70">
-                      Workspace Scope
-                    </p>
-                    <span className="text-2xs font-semibold text-muted tabular-nums px-1.5 py-0.5 rounded-md bg-surface border border-border/60">
-                      {branch} · Sem {semester}
-                    </span>
-                  </div>
-                  <ScopeSelector
-                    academicYear={academicYear}
-                    branch={branch}
-                    semester={semester}
-                    variant="sidebar"
-                    onAcademicYearChange={(val) => {
-                      updateUrl(val, branch, semester);
-                    }}
-                    onBranchChange={(val) => {
-                      updateUrl(academicYear, val, semester);
-                    }}
-                    onSemesterChange={(val) => {
-                      updateUrl(academicYear, branch, val);
-                    }}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
           </div>
-        )}
-
-        {/* Search - Fixed h-10 row */}
-        <div
-          className={`pt-2 relative shrink-0 ${
-            isCollapsed ? "px-0" : "px-2.5"
-          }`}
-        >
-          <DockTooltip
-            label="Search"
-            shortcut={isMac ? "⌘K" : "Ctrl+K"}
-            disabled={!isCollapsed}
-          >
-            {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
-              <button
-                ref={ref as React.RefObject<HTMLButtonElement>}
-                onClick={() => setCommandPaletteOpen(true)}
-                onMouseEnter={onMouseEnter}
-                onMouseLeave={onMouseLeave}
-                onFocus={onFocus}
-                onBlur={onBlur}
-                aria-label="Search resources"
-                className={`flex items-center rounded-xl bg-surface/50 hover:bg-surface border border-border/70 hover:border-border-strong text-muted hover:text-foreground active:scale-[0.98] transition-all shadow-xs ${
-                  isCollapsed
-                    ? "w-10 h-10 mx-auto justify-center px-0"
-                    : "w-full h-10 px-3 justify-between"
-                }`}
-              >
-                <div className="w-5 h-5 flex items-center justify-center shrink-0">
-                  <Search className="w-4 h-4 text-muted group-hover:text-foreground transition-colors" />
-                </div>
-                {!isCollapsed && (
-                  <div className="flex items-center justify-between flex-1 ml-2 overflow-hidden min-w-0">
-                    <span className="text-xs font-medium truncate">Search…</span>
-                    <kbd
-                      className="kbd hidden sm:inline-flex bg-background/60 border border-border/70 text-[10px] ml-1.5 shrink-0"
-                      suppressHydrationWarning
-                    >
-                      {isMac ? "⌘K" : "Ctrl+K"}
-                    </kbd>
-                  </div>
-                )}
-              </button>
-            )}
-          </DockTooltip>
         </div>
 
         {/* Navigation Links */}
         <div
-          className={`flex-1 overflow-y-auto space-y-3 custom-scrollbar overflow-x-hidden ${
-            isCollapsed ? "px-0 py-2.5" : "px-2.5 py-2.5"
+          className={`flex-1 overflow-y-auto custom-scrollbar overflow-x-hidden ${
+            isCollapsed ? "px-0 py-1.5 space-y-1" : "px-2.5 py-2.5 space-y-3"
           }`}
         >
-          <NavSection title="Academic" collapsed={isCollapsed}>
+          <NavSection title="Academic" collapsed={isCollapsed} hideCollapsedDivider>
             {ACADEMIC_LINKS.map(link)}
           </NavSection>
 
@@ -662,7 +690,7 @@ function NavigationInner() {
                     onFocus={onFocus}
                     onBlur={onBlur}
                     aria-label="Admin Dashboard"
-                    className={`relative flex items-center my-0.5 rounded-xl group transition-all active:scale-[0.98] ${
+                    className={`relative flex items-center my-0.5 rounded-xl group transition-all active:scale-[0.97] ${
                       isCollapsed
                         ? "w-10 h-10 mx-auto justify-center px-0"
                         : "w-full h-10 px-2.5 justify-start"
@@ -694,7 +722,11 @@ function NavigationInner() {
         </div>
 
         {/* Dock Footer Deck */}
-        <div className="p-2.5 border-t border-border/50 space-y-2 bg-surface/30 dark:bg-card/40 rounded-b-[24px] shrink-0 overflow-hidden">
+        <div
+          className={`border-t border-border/50 space-y-2 bg-surface/30 dark:bg-card/40 rounded-b-[24px] shrink-0 overflow-hidden ${
+            isCollapsed ? "p-2" : "p-2.5"
+          }`}
+        >
           {/* Theme toggle */}
           {isCollapsed ? (
             <div className="flex justify-center">
@@ -707,7 +739,7 @@ function NavigationInner() {
                     onMouseLeave={onMouseLeave}
                     onFocus={onFocus}
                     onBlur={onBlur}
-                    className="w-10 h-10 flex items-center justify-center bg-surface/60 hover:bg-surface border border-border/70 rounded-xl text-muted hover:text-foreground active:scale-95 transition-all shadow-xs"
+                    className="w-10 h-10 flex items-center justify-center rounded-xl text-muted hover:text-foreground hover:bg-foreground/[0.06] dark:hover:bg-white/[0.08] active:scale-[0.97] transition-all"
                     aria-label="Cycle color theme"
                   >
                     {theme === "light" ? (
@@ -751,7 +783,7 @@ function NavigationInner() {
                     onMouseLeave={onMouseLeave}
                     onFocus={onFocus}
                     onBlur={onBlur}
-                    className="text-[10px] font-black text-muted/60 hover:text-foreground transition-colors py-0.5"
+                    className="w-7 h-7 rounded-lg flex items-center justify-center text-[9px] font-black tracking-wider text-muted/55 hover:text-foreground hover:bg-surface/80 transition-colors"
                     aria-label="Crafted by Aryan Dani"
                   >
                     AD
@@ -797,7 +829,7 @@ function NavigationInner() {
         key="desktop-dock"
         aria-label="Primary Navigation"
         data-app-chrome=""
-        className={`hidden lg:flex fixed top-3.5 left-3.5 bottom-3.5 z-40 flex-col rounded-[26px] bg-card/85 dark:bg-card/75 backdrop-blur-2xl border border-border/80 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_24px_64px_-16px_rgba(0,0,0,0.7)] ring-1 ring-black/[0.04] dark:ring-white/[0.05] transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] select-none ${
+        className={`hidden lg:flex fixed top-3.5 left-3.5 bottom-3.5 z-40 flex-col shell-island transition-[width] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] select-none ${
           collapsed ? "w-[4.75rem]" : "w-[17.5rem]"
         }`}
         style={{ willChange: "width" }}
@@ -813,7 +845,7 @@ function NavigationInner() {
             key="tablet-dock"
             aria-label="Tablet Navigation"
             data-app-chrome=""
-            className="hidden md:flex lg:hidden fixed top-3.5 left-3.5 bottom-3.5 z-40 flex-col w-[4.75rem] rounded-[26px] bg-card/85 dark:bg-card/75 backdrop-blur-2xl border border-border/80 dark:border-white/[0.08] shadow-[0_12px_40px_rgba(0,0,0,0.06)] dark:shadow-[0_24px_64px_-16px_rgba(0,0,0,0.7)] ring-1 ring-black/[0.04] dark:ring-white/[0.05] select-none"
+            className="hidden md:flex lg:hidden fixed top-3.5 left-3.5 bottom-3.5 z-40 flex-col w-[4.75rem] shell-island select-none"
           >
             {renderSidebarContent({ collapsed: true })}
           </aside>

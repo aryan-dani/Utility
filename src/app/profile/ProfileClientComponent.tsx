@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import { clearDriveFileCache } from "@/lib/driveFileCache";
 import { ScopeSelector } from "@/components/academic/ScopeSelector";
-import { Button, Input, Modal, PageHeader } from "@/components/ui";
+import { Button, Input, Modal, PageHeader, PageShell } from "@/components/ui";
 
 // Helper to generate self-contained SVG base64 Data URLs for monochrome avatars
 function generateAvatarDataUrl(emoji: string, gradientStart: string, gradientEnd: string): string {
@@ -576,7 +576,7 @@ export default function ProfileClientComponent() {
   ] as const;
 
   return (
-    <div className="min-h-screen bg-background relative page-gutter py-6 md:py-12 overflow-x-hidden">
+    <PageShell className="bg-background relative overflow-x-hidden">
       {/* Ambient background glow */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none -z-10">
         <div className="absolute top-[10%] left-[20%] w-[40vw] h-[40vw] rounded-full bg-primary/3 blur-[90px]" />
@@ -740,7 +740,7 @@ export default function ProfileClientComponent() {
                       key={idx}
                       type="button"
                       onClick={() => selectPresetAvatar(preset)}
-                      className="aspect-square rounded-xl hover:scale-105 active:scale-95 transition-all flex items-center justify-center text-2xl relative shadow-xs group border border-border/50 hover:border-foreground/30 overflow-hidden"
+                      className="aspect-square rounded-xl active:scale-[0.97] transition-all flex items-center justify-center text-2xl relative shadow-xs group border border-border/50 hover:border-foreground/30 overflow-hidden"
                       style={{
                         background: `linear-gradient(135deg, ${preset.start} 0%, ${preset.end} 100%)`,
                       }}
@@ -953,7 +953,7 @@ export default function ProfileClientComponent() {
               <button
                 type="submit"
                 disabled={saving}
-                className="flex items-center justify-center gap-2 bg-foreground text-background font-bold text-sm px-6 py-3 rounded-xl hover:opacity-90 disabled:opacity-50 transition-all hover:scale-[1.01] active:scale-95 duration-150 shadow-md sm:ml-auto"
+                className="flex items-center justify-center gap-2 bg-foreground text-background font-bold text-sm px-6 py-3 rounded-xl hover:opacity-90 disabled:opacity-50 transition-all active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] shadow-md sm:ml-auto disabled:active:scale-100"
               >
                 {saving ? (
                   <>
@@ -1064,6 +1064,6 @@ export default function ProfileClientComponent() {
           </Button>
         </div>
       </Modal>
-    </div>
+    </PageShell>
   );
 }

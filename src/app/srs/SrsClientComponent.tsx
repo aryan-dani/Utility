@@ -23,11 +23,12 @@ import {
   Upload
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { MOTION } from '@/lib/motion';
 import { auth } from '@/lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { notify } from '@/lib/toast';
 import { localDateKey } from '@/lib/dateLocal';
-import { PageHeader } from '@/components/ui';
+import { PageHeader, PageShell } from '@/components/ui';
 
 function getTodayString() {
   return localDateKey();
@@ -285,7 +286,7 @@ export default function SrsClient() {
   }
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+    <PageShell>
       {syncing && (
         <div className="mb-4 flex items-center gap-1.5 text-xs text-muted" aria-live="polite">
           <div className="w-3 h-3 border border-muted border-t-foreground rounded-full animate-spin" />
@@ -551,7 +552,7 @@ export default function SrsClient() {
           >
             <motion.div
               animate={{ rotateY: isFlipped ? 180 : 0 }}
-              transition={{ duration: 0.35, ease: 'easeInOut' }}
+              transition={{ duration: MOTION.duration.slow, ease: MOTION.ease }}
               className="relative w-full h-full [transform-style:preserve-3d] transition-shadow duration-300"
             >
               
@@ -934,6 +935,6 @@ export default function SrsClient() {
         </div>
       )}
 
-    </div>
+    </PageShell>
   );
 }

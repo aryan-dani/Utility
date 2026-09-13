@@ -8,6 +8,7 @@ import { X, Brain, Copy, Check, Info, Layers } from 'lucide-react';
 import { auth } from '@/lib/firebase';
 import { NotesDisclaimer } from './NotesDisclaimer';
 import { authFetch } from '@/lib/authFetch';
+import { useMotionSafe } from '@/lib/motion';
 
 interface SummaryModalProps {
   resourceId: string;
@@ -21,6 +22,7 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const motionSafe = useMotionSafe();
 
   useEffect(() => {
     const abortController = new AbortController();
@@ -85,18 +87,16 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
         {/* Backdrop */}
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
+          {...motionSafe.fade}
+          transition={{ duration: motionSafe.duration }}
           onClick={onClose}
           className="absolute inset-0 bg-background/95"
         />
 
         {/* Modal */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.9, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          {...motionSafe.pop}
+          transition={{ duration: motionSafe.duration, ease: motionSafe.ease }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="summary-title"

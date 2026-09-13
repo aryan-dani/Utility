@@ -20,6 +20,7 @@ import { OptimizationState } from "@/lib/visualize/optimization";
 import { AlgorithmStep } from "@/lib/visualize/types";
 import { motion } from "framer-motion";
 import { easeOut } from "@/components/visualize/motion";
+import { MOTION } from "@/lib/motion";
 
 const HILL_PSEUDOCODE = [
   { line: 1, code: "1. Stand at the current x" },
@@ -244,7 +245,7 @@ export function OptimizationWorkspace({
                 cx: mapXToSvg(currentMathX),
                 cy: mapYToSvg(currentMathY),
               }}
-              transition={{ duration: 0.28, ease: easeOut }}
+              transition={{ duration: MOTION.duration.enter, ease: easeOut }}
               r="6"
               fill="currentColor"
               className="text-foreground"
@@ -255,7 +256,7 @@ export function OptimizationWorkspace({
                 cx: mapXToSvg(currentMathX),
                 cy: mapYToSvg(currentMathY),
               }}
-              transition={{ duration: 0.28, ease: easeOut }}
+              transition={{ duration: MOTION.duration.enter, ease: easeOut }}
               r="8"
               fill="none"
               stroke="currentColor"
@@ -268,7 +269,7 @@ export function OptimizationWorkspace({
               x: mapXToSvg(currentMathX),
               y: mapYToSvg(currentMathY) - 12,
             }}
-            transition={{ duration: 0.28, ease: easeOut }}
+            transition={{ duration: MOTION.duration.enter, ease: easeOut }}
             textAnchor="middle"
             className="fill-foreground text-[11px] font-mono"
           >

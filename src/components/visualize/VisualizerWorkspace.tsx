@@ -15,7 +15,7 @@ import { fetchSavedGrid } from "@/lib/visualize/client";
 import { SavedGridData } from "@/lib/visualize/grid";
 import { auth } from "@/lib/firebase";
 import { onAuthStateChanged } from "firebase/auth";
-import { ErrorState, PageHeader } from "@/components/ui";
+import { ErrorState, PageHeader, PageShell } from "@/components/ui";
 
 const GridWorkspace = dynamic(
   () =>
@@ -124,7 +124,7 @@ function VisualizerWorkspaceInner({ algorithm }: VisualizerWorkspaceProps) {
   const useTree = isPathAlgorithm && structure === "tree";
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+    <PageShell>
       <motion.div
         variants={stagger}
         initial="hidden"
@@ -193,7 +193,7 @@ function VisualizerWorkspaceInner({ algorithm }: VisualizerWorkspaceProps) {
       {!useTree && algorithm.visualizerType === "csp" && (
         <CspWorkspace algorithmId={algorithm.id} />
       )}
-    </div>
+    </PageShell>
   );
 }
 
@@ -201,9 +201,9 @@ export function VisualizerWorkspace(props: VisualizerWorkspaceProps) {
   return (
     <Suspense
       fallback={
-        <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+        <PageShell>
           <p className="text-sm text-muted">Loading visualizer…</p>
-        </div>
+        </PageShell>
       }
     >
       <VisualizerWorkspaceInner {...props} />

@@ -1,11 +1,12 @@
+import { PageShell } from "@/components/ui";
+
 export default function PageSkeleton({
   variant = "list",
 }: {
   variant?: "list" | "split" | "simple";
 }) {
   return (
-    <div
-      className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[60vh]"
+    <PageShell
       role="status"
       aria-live="polite"
       aria-busy="true"
@@ -64,6 +65,6 @@ export default function PageSkeleton({
         <span className="loading-orb" aria-hidden />
         <p className="text-xs font-medium tracking-wide">Loading…</p>
       </div>
-    </div>
+    </PageShell>
   );
 }

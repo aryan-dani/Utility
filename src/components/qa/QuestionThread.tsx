@@ -408,11 +408,11 @@ export default function QuestionThread({
       ) : (
         <div className="space-y-6">
           {/* 2. Main Question Post Card (Reddit Style) */}
-          <article className="bg-card rounded-2xl sm:rounded-3xl border border-border/80 p-6 sm:p-8 shadow-xs space-y-6">
+          <article className="bg-card rounded-2xl border border-border/80 p-6 sm:p-8 shadow-xs space-y-6">
             {/* Header: Author + Scope + Status Badge */}
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-primary/80 to-primary text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ring-2 ring-border/50">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-primary/80 to-primary text-primary-foreground flex items-center justify-center font-bold text-sm shrink-0 shadow-xs ring-2 ring-border/50">
                   {data.author_name?.[0]?.toUpperCase() || "S"}
                 </div>
                 <div>
@@ -504,7 +504,7 @@ export default function QuestionThread({
                     <div
                       key={i}
                       onClick={() => setPreviewImageIndex(i)}
-                      className="relative group rounded-2xl overflow-hidden border border-border/80 bg-surface/50 cursor-pointer shadow-xs aspect-4/3 flex items-center justify-center hover:border-primary/40 transition-all"
+                      className="relative group rounded-xl overflow-hidden border border-border/80 bg-surface/50 cursor-pointer shadow-xs aspect-4/3 flex items-center justify-center hover:border-primary/40 transition-all"
                     >
                       {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img
@@ -566,7 +566,7 @@ export default function QuestionThread({
           </article>
 
           {/* 3. Contribute an Answer (Reddit Comment Box) */}
-          <div className="bg-card rounded-2xl sm:rounded-3xl border border-border/80 p-6 sm:p-8 shadow-xs space-y-3">
+          <div className="bg-card rounded-2xl border border-border/80 p-6 sm:p-8 shadow-xs space-y-3">
             <h3 className="text-sm sm:text-base font-bold text-foreground flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-primary" />
               <span>Contribute an Answer or Solution</span>

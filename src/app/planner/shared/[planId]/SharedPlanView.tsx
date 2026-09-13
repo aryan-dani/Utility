@@ -3,6 +3,7 @@
 import { useMemo } from 'react';
 import { Check, User, MoreHorizontal, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import { PageShell } from '@/components/ui';
 
 type SubTask = { id: string; text: string; done: boolean };
 type Task = { id: string; text: string; done: boolean; subtasks: SubTask[] };
@@ -72,7 +73,7 @@ export default function SharedPlanView({ plan }: { plan: Plan }) {
   const progressPct = totalTasks > 0 ? (doneTasks / totalTasks) * 100 : 0;
 
   return (
-    <div className="flex-1 w-full min-w-0 page-gutter py-8 max-w-7xl mx-auto min-h-[80vh]">
+    <PageShell className="min-w-0">
       {/* Header */}
       <div className="flex flex-col gap-4 mb-6 pb-5 border-b border-border">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -224,6 +225,6 @@ export default function SharedPlanView({ plan }: { plan: Plan }) {
           });
         })()}
       </div>
-    </div>
+    </PageShell>
   );
 }

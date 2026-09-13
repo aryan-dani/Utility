@@ -10,6 +10,7 @@ import { signOut, onIdTokenChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import type { AcademicYear, Branch, Semester } from "@/store/academicStore";
 import { isAcademicYear } from "@/lib/academic/scope";
+import { useMotionSafe } from "@/lib/motion";
 
 type NavUser = {
   email: string | undefined;
@@ -46,6 +47,7 @@ export default function NavUserMenu({
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef({ academicYear, branch, semester });
+  const motionSafe = useMotionSafe();
 
   useEffect(() => {
     workspaceRef.current = { academicYear, branch, semester };
@@ -239,10 +241,31 @@ export default function NavUserMenu({
       <AnimatePresence>
         {userMenuOpen && (
           <motion.div
-            initial={{ opacity: 0, y: collapsed ? 0 : 4, x: collapsed ? -6 : 0, scale: 0.95 }}
+            initial={
+              motionSafe.reduce
+                ? false
+                : {
+                    opacity: 0,
+                    y: collapsed ? 0 : 4,
+                    x: collapsed ? -6 : 0,
+                    scale: 0.96,
+                  }
+            }
             animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
-            exit={{ opacity: 0, y: collapsed ? 0 : 4, x: collapsed ? -6 : 0, scale: 0.95 }}
-            transition={{ duration: 0.14, ease: [0.16, 1, 0.3, 1] }}
+            exit={
+              motionSafe.reduce
+                ? undefined
+                : {
+                    opacity: 0,
+                    y: collapsed ? 0 : 4,
+                    x: collapsed ? -6 : 0,
+                    scale: 0.96,
+                  }
+            }
+            transition={{
+              duration: motionSafe.durations.fast,
+              ease: motionSafe.ease,
+            }}
             className={`absolute bg-card/95 backdrop-blur-xl border border-border/80 rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5 flex flex-col gap-0.5 ${
               collapsed
                 ? "w-44 left-full ml-3 bottom-0"

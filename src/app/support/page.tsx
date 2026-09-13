@@ -9,8 +9,8 @@ export const metadata: Metadata = {
 
 export default function SupportPage() {
   return (
-    <div className="flex-1 w-full page-fade-in">
-      <div className="max-w-3xl mx-auto page-gutter pt-16 pb-20 md:pt-24">
+    <div className="flex-1 w-full">
+      <div className="page-shell max-w-3xl">
         <PageHeader
           className="mb-14"
           size="hero"

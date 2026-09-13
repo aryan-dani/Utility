@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import type { HTMLAttributes, ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export function Field({
@@ -76,6 +76,37 @@ export function ListRow({
         ) : null}
       </div>
       {trailing ? <div className="shrink-0">{trailing}</div> : null}
+    </div>
+  );
+}
+
+const widthClasses = {
+  narrow: "max-w-5xl",
+  wide: "max-w-7xl",
+  full: "max-w-[1800px] 2xl:max-w-[2040px]",
+} as const;
+
+export type PageShellWidth = keyof typeof widthClasses;
+
+export interface PageShellProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  /** Content max-width. Default: wide (7xl). */
+  width?: PageShellWidth;
+}
+
+/** Shared page container — gutters + vertical rhythm + max-width. */
+export function PageShell({
+  width = "wide",
+  className,
+  children,
+  ...props
+}: PageShellProps) {
+  return (
+    <div
+      className={cn("page-shell", widthClasses[width], className)}
+      {...props}
+    >
+      {children}
     </div>
   );
 }

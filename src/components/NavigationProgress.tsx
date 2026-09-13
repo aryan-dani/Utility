@@ -103,7 +103,7 @@ function NavigationProgressInner() {
       aria-hidden
     >
       <div
-        className="h-full bg-foreground origin-left transition-[width] duration-200 ease-out shadow-[0_0_8px_rgb(var(--foreground)/0.35)]"
+        className="h-full bg-foreground origin-left transition-[width,opacity] duration-[var(--dur-base)] ease-[var(--ease-out-premium)] shadow-[0_0_8px_rgb(var(--foreground)/0.35)]"
         style={{
           width: `${width}%`,
           opacity: active || width > 0 ? 1 : 0,

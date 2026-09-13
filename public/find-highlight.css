@@ -1,0 +1,7 @@
+/* Served as a static file so Lightning CSS / Turbopack never parse these.
+   Chromium CSS Highlight API — find-in-page / custom HighlightRegistry names. */
+::highlight(find),
+::highlight(search-text) {
+  background-color: rgb(var(--foreground) / 0.2);
+  color: inherit;
+}

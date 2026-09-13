@@ -3,16 +3,11 @@
 import { usePathname } from "next/navigation";
 import Footer from "./Footer";
 
-/** App shells that own the full viewport - hide the site footer. */
+/** Chrome-less surfaces — hide the site footer. */
 const HIDE_FOOTER_PREFIXES = [
-  "/planner",
-  "/ask",
-  "/qa",
-  "/visualize",
   "/login",
   "/signup",
   "/admin",
-  "/profile",
   "/~offline",
 ];
 

@@ -29,6 +29,7 @@ import {
   SectionHeader,
   Segmented,
   Select,
+  PageShell,
 } from '@/components/ui';
 
 interface Subject {
@@ -508,7 +509,7 @@ export default function GPAClient() {
 
   if (showCoursePicker) {
     return (
-      <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+      <PageShell>
         <FadeIn>
           <div className="text-center mb-12">
             <PageHeader
@@ -564,12 +565,12 @@ export default function GPAClient() {
             ))}
           </div>
         </FadeIn>
-      </div>
+      </PageShell>
     );
   }
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-5 sm:py-8 min-h-[80vh]">
+    <PageShell>
       {/* CSS Injection for beautiful printing */}
       <style dangerouslySetInnerHTML={{ __html: `
         @media print {
@@ -1301,6 +1302,6 @@ export default function GPAClient() {
           </table>
         </div>
       </div>
-    </div>
+    </PageShell>
   );
 }

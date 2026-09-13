@@ -39,7 +39,7 @@ import { parseUnitKey, unitFolderId } from '@/lib/resourceGroups';
 import { buildResourcesHref } from '@/lib/resourceUrl';
 import AcademicBreadcrumb from '@/components/AcademicBreadcrumb';
 import AppLink from '@/components/ui/AppLink';
-import { Button, Card, Badge, Input, Select, Segmented, Modal, PageHeader, ErrorState } from '@/components/ui';
+import { Button, Card, Badge, Input, Select, Segmented, Modal, PageHeader, ErrorState, PageShell } from '@/components/ui';
 import { useWorkspaceResources } from '@/lib/useWorkspaceResources';
 import { generateId } from '@/lib/id';
 import PageSkeleton from '@/components/PageSkeleton';
@@ -495,7 +495,7 @@ export default function SyllabusClient() {
   }
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[90vh] relative">
+    <PageShell className="relative">
       <div className="mb-8 border-b border-border pb-6 relative z-10 space-y-3">
         <PageHeader
           title="Syllabus"
@@ -989,6 +989,6 @@ export default function SyllabusClient() {
           </div>
         </div>
       </Modal>
-    </div>
+    </PageShell>
   );
 }

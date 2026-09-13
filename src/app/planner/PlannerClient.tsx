@@ -13,8 +13,9 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { logActivity } from '@/lib/activity';
 import { parsePrompt, mergeEntries } from '@/lib/promptParser';
 import { plannerStorageKey } from '@/lib/plannerStorage';
+import { MOTION } from '@/lib/motion';
 import { notify } from '@/lib/toast';
-import { Button, Modal, PageHeader, Card, Segmented, Switch } from '@/components/ui';
+import { Button, Modal, PageHeader, Card, Segmented, Switch, PageShell } from '@/components/ui';
 import AppLink from '@/components/ui/AppLink';
 import { authFetch } from '@/lib/authFetch';
 import { getSoonestUpcomingExam } from '@/lib/examCountdown';
@@ -202,7 +203,7 @@ function TaskItem({
       initial={{ opacity: 0, y: -4 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, scale: 0.96 }}
-      transition={{ duration: 0.12 }}
+      transition={{ duration: MOTION.duration.fast, ease: MOTION.ease }}
       className={`group/task bg-background border rounded-xl p-3 transition-all ${
         task.done ? 'border-border opacity-60' : 'border-border shadow-card'
       }`}
@@ -1449,7 +1450,7 @@ export default function PlannerClient() {
   if (!mounted) return null;
 
   return (
-    <div className="flex-1 w-full min-w-0 page-gutter py-5 sm:py-6 max-w-5xl mx-auto flex flex-col gap-3 sm:gap-4 pb-12">
+    <PageShell width="narrow" className="min-w-0 flex flex-col gap-3 sm:gap-4">
       {/* ── Header toolkit ── */}
       <Card className="rounded-2xl" padding="md">
         <PageHeader
@@ -2170,6 +2171,6 @@ export default function PlannerClient() {
         onAddCollaborator={addCollaborator}
         onRemoveCollaborator={removeCollaborator}
       />
-    </div>
+    </PageShell>
   );
 }

@@ -7,6 +7,7 @@ import { ResourceItem } from "@/lib/dataFetcher";
 import { useAcademicStore } from "@/store/academicStore";
 import { isSubjectMatch } from "@/lib/subjectMatcher";
 import { motion } from "framer-motion";
+import { MOTION } from "@/lib/motion";
 import {
   HardDrive,
   BookOpenCheck,
@@ -70,7 +71,7 @@ import { getReadingProgress } from "@/lib/readingProgress";
 import { logResourceOpen } from "@/lib/activity";
 import { authFetch } from "@/lib/authFetch";
 import { useWorkspaceResources } from "@/lib/useWorkspaceResources";
-import { Button, Card, Badge, PageHeader, Input, IconButton, EmptyState, ErrorState } from "@/components/ui";
+import { Button, Card, Badge, PageHeader, Input, IconButton, EmptyState, ErrorState, PageShell } from "@/components/ui";
 import PageSkeleton from "@/components/PageSkeleton";
 import type { RAGSearchResult } from "@/lib/ragSearch";
 
@@ -817,7 +818,7 @@ export default function ResourcesClient() {
   }
 
   return (
-    <div className="flex-1 w-full max-w-7xl mx-auto page-gutter py-8 min-h-[80vh]">
+    <PageShell>
       <PageHeader
         className="mb-3"
         eyebrow="Vault"
@@ -931,11 +932,7 @@ export default function ResourcesClient() {
                       <motion.div
                         layoutId="activeSubject"
                         className="absolute inset-0 bg-foreground rounded-lg -z-10"
-                        transition={{
-                          type: "spring",
-                          stiffness: 380,
-                          damping: 30,
-                        }}
+                        transition={MOTION.spring}
                       />
                     )}
                     <Folder
@@ -980,7 +977,7 @@ export default function ResourcesClient() {
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: isSubjectPending ? 0.55 : 1, y: 0 }}
                 exit={{ opacity: 0, y: -8 }}
-                transition={{ duration: 0.18 }}
+                transition={{ duration: MOTION.duration.base, ease: MOTION.ease }}
                 className="space-y-8"
               >
                 {favoriteResources.length > 0 && (
@@ -1160,11 +1157,7 @@ export default function ResourcesClient() {
                             <motion.div
                               layoutId="activeFilter"
                               className="absolute inset-0 bg-foreground rounded-lg -z-10"
-                              transition={{
-                                type: "spring",
-                                stiffness: 380,
-                                damping: 30,
-                              }}
+                              transition={MOTION.spring}
                             />
                           )}
                           <Icon
@@ -1446,6 +1439,6 @@ export default function ResourcesClient() {
           onClose={() => setSummarizingResource(null)}
         />
       )}
-    </div>
+    </PageShell>
   );
 }

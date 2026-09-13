@@ -35,16 +35,35 @@
   --accent: 82 82 82;
   --accent-hover: 64 64 64;
 
+  /*
+   * Radius ladder:
+   *   shell (26) — floating islands (nav, footer, Ask window)
+   *   2xl   (20) — cards, panels, modals, sheets, .os-window
+   *   xl    (16) — inputs, selects, list rows, chat bubbles, tiles
+   *   lg    (12) — buttons, segmented, toolbar, kbd chips
+   *   md     (8) — badges
+   *   DEFAULT(6) — micro chips
+   */
   --radius: 6px;
   --radius-md: 8px;
   --radius-lg: 12px;
   --radius-xl: 16px;
   --radius-2xl: 20px;
   --radius-3xl: 24px;
+  --radius-shell: 26px;
+  --space-page-y: 1.5rem;
 
   --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.03), 0 1px 3px -1px rgba(0, 0, 0, 0.04);
   --elev-2: 0 8px 20px -8px rgba(0, 0, 0, 0.1), 0 2px 6px -2px rgba(0, 0, 0, 0.05);
   --elev-3: 0 18px 40px -16px rgba(0, 0, 0, 0.18), 0 6px 14px -6px rgba(0, 0, 0, 0.08);
+
+  /* Motion — keep in sync with src/lib/motion.ts */
+  --ease-out-premium: cubic-bezier(0.16, 1, 0.3, 1);
+  --dur-instant: 80ms;
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-enter: 280ms;
+  --dur-slow: 320ms;
 
   /* Resource type accents - Now strictly grayscale */
   --accent-notes: #09090b;
@@ -96,6 +115,8 @@
   --radius-xl: 16px;
   --radius-2xl: 20px;
   --radius-3xl: 24px;
+  --radius-shell: 26px;
+  --space-page-y: 1.5rem;
 
   --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 1px 3px -1px rgba(0, 0, 0, 0.25);
   --elev-2: 0 10px 24px -10px rgba(0, 0, 0, 0.45), 0 4px 10px -4px rgba(0, 0, 0, 0.3);
@@ -238,7 +259,8 @@ summary:focus-visible {
   color: rgb(var(--background));
 }
 
-/* Kill browser-default yellow/green find + <mark> chrome; use product tone */
+/* Kill browser-default yellow/green find + <mark> chrome; use product tone.
+   Chromium ::highlight() lives in /public/find-highlight.css (Lightning CSS cannot parse it). */
 mark,
 .search-hit {
   background: rgb(var(--foreground) / 0.14);
@@ -249,13 +271,6 @@ mark,
   -webkit-box-decoration-break: clone;
 }
 
-/* Chromium find-in-page / scroll-to-text (when CSS Highlight API applies) */
-::highlight(find),
-::highlight(search-text) {
-  background-color: rgb(var(--foreground) / 0.2);
-  color: inherit;
-}
-
 ::target-text {
   background-color: rgb(var(--foreground) / 0.2);
   color: inherit;
@@ -264,9 +279,13 @@ mark,
 /* ── Transitions ──────────────────────────────────────────────────────────── */
 
 a, button {
-  transition: color 0.15s ease, background-color 0.15s ease,
-              border-color 0.15s ease, box-shadow 0.15s ease,
-              opacity 0.15s ease;
+  transition:
+    color var(--dur-fast) var(--ease-out-premium),
+    background-color var(--dur-fast) var(--ease-out-premium),
+    border-color var(--dur-fast) var(--ease-out-premium),
+    box-shadow var(--dur-fast) var(--ease-out-premium),
+    opacity var(--dur-fast) var(--ease-out-premium),
+    transform var(--dur-instant) var(--ease-out-premium);
 }
 
 /* ── Typography ───────────────────────────────────────────────────────────── */
@@ -303,6 +322,28 @@ h1, h2, h3, h4, h5, h6 {
   .page-gutter {
     padding-left: 1.5rem;
     padding-right: 1.5rem;
+  }
+}
+
+/* Shared vertical rhythm for every content page */
+.page-shell {
+  flex: 1 1 auto;
+  width: 100%;
+  margin-left: auto;
+  margin-right: auto;
+  padding-top: var(--space-page-y);
+  padding-bottom: var(--space-page-y);
+  padding-left: max(1rem, env(safe-area-inset-left));
+  padding-right: max(1rem, env(safe-area-inset-right));
+}
+@media (min-width: 640px) {
+  .page-shell {
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+  :root,
+  .dark {
+    --space-page-y: 2rem;
   }
 }
 
@@ -424,10 +465,11 @@ body.focus-mode-active [data-app-tabbar] {
 .card-premium-hover {
   border: 1px solid rgb(var(--border)) !important;
   box-shadow: var(--elev-1);
-  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    border-color 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1),
-    background-color 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  transition:
+    transform var(--dur-enter) var(--ease-out-premium),
+    border-color var(--dur-enter) var(--ease-out-premium),
+    box-shadow var(--dur-enter) var(--ease-out-premium),
+    background-color var(--dur-enter) var(--ease-out-premium);
 }
 
 .resource-card-hover:hover,
@@ -627,9 +669,20 @@ body.focus-mode-active [data-app-tabbar] {
   background-clip: text;
 }
 
-/* Entrance transition helper — keep short so route/query changes don't flinch */
+/* Route enter — defined once; applied via src/app/template.tsx only */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .page-fade-in {
-  animation: fadeIn 0.18s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  animation: fadeIn var(--dur-base) var(--ease-out-premium) forwards;
 }
 
 /* Static focus treatment (no looping pulse — that felt broken) */
@@ -738,11 +791,21 @@ input[type="range"].accent-slider::-moz-range-thumb:hover {
   margin: 0 !important;
   width: 100% !important;
   outline: none !important;
-  transform: none !important;
 }
 
-[data-sonner-toast]:hover {
-  transform: none !important;
+[data-sonner-toast][data-mounted='true'] {
+  animation: toast-enter var(--dur-base) var(--ease-out-premium) both;
+}
+
+@keyframes toast-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* Kill Sonner’s default close / icon / action chrome only — keep custom content */
@@ -754,6 +817,26 @@ input[type="range"].accent-slider::-moz-range-thumb:hover {
 }
 
 /* ── OS chrome helpers ─────────────────────────────────────────────────────────── */
+
+/* Floating glass island — nav dock, footer, Ask window */
+.shell-island {
+  border-radius: var(--radius-shell);
+  background: rgb(var(--card) / 0.85);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
+  border: 1px solid rgb(var(--border) / 0.8);
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+.dark .shell-island {
+  background: rgb(var(--card) / 0.75);
+  border-color: rgb(255 255 255 / 0.08);
+  box-shadow:
+    0 24px 64px -16px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgb(255 255 255 / 0.05);
+}
 
 .os-window {
   border-radius: var(--radius-2xl);
