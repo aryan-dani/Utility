@@ -31,7 +31,12 @@ export function describeError(err: unknown, fallback = FALLBACK): string {
     case "auth/popup-closed-by-user":
       return "Sign-in was cancelled. Please try again.";
     case "auth/popup-blocked":
+    case "auth/operation-not-supported-in-this-environment":
       return "The sign-in popup was blocked. Continue in this tab when prompted.";
+    case "auth/too-many-requests":
+      return "Too many attempts. Wait a minute and try again.";
+    case "auth/operation-not-allowed":
+      return "This sign-up method is disabled. Try another option or email.";
     case "auth/account-exists-with-different-credential":
       return "This email is already used with Google. Sign in with Google, then you can link GitHub from your profile.";
     case "auth/credential-already-in-use":

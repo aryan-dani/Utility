@@ -78,6 +78,25 @@ Identity values live in [`store/microsoft/product-identity.md`](microsoft/produc
 3. At [pwabuilder.com](https://www.pwabuilder.com) package `https://utilityos.tech`. Paste the values from `product-identity.md` when PWABuilder asks.
 4. Submit in Partner Center: IARC rating, same privacy URL, screenshots `microsoft-01-home-1920.jpg` plus desktop timer/visualize, logos `microsoft-logo-300.png` and `microsoft-logo-1080.png`.
 
+### Certification: account creation (10.1.2.10)
+
+Reviewers often fail OAuth **popups** inside the Store PWA. The app prefers **redirect OAuth** when installed, and email/password signup is always available.
+
+**Before every submission**, from the **installed Store/MSIX build** (not only Chrome):
+
+1. Open **Sign up**.
+2. Create an account with **email + password** (6+ chars) → must land signed in.
+3. Sign out → **Sign up with Google** → complete the full-tab redirect → must land signed in.
+4. Optional: GitHub signup the same way.
+5. Confirm Firebase Console → Authentication → Sign-in method has **Email/Password** and **Google** enabled.
+6. Confirm Authorized domains includes `utilityos.tech`.
+
+**Notes to certification** (paste in Partner Center when resubmitting):
+
+> Account creation works in the packaged app via (1) email/password on Sign up, and (2) Google or GitHub OAuth using a full-page redirect (popups are not used in the installed PWA). Path: open Utility OS → Sign in / Sign up → Create account.
+
+After a production deploy of auth fixes, rebuild the PWABuilder package from `https://utilityos.tech` so the Store binary picks up the new site, then upload the new packages and resubmit.
+
 ## After Play is live
 
 Add to `src/app/manifest.ts`:

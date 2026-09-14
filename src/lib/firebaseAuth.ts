@@ -95,6 +95,11 @@ export async function reauthenticateCurrentUser(
   const ids = providerIds(user);
 
   if (ids.includes("google.com")) {
+    if (preferRedirectAuth()) {
+      setIntent("reauth-session-google");
+      await reauthenticateWithRedirect(user, googleAuthProvider());
+      return { status: "redirecting" };
+    }
     try {
       await reauthenticateWithPopup(user, googleAuthProvider());
       return { status: "ok" };
@@ -107,6 +112,11 @@ export async function reauthenticateCurrentUser(
   }
 
   if (ids.includes("github.com")) {
+    if (preferRedirectAuth()) {
+      setIntent("reauth-session-github");
+      await reauthenticateWithRedirect(user, githubAuthProvider());
+      return { status: "redirecting" };
+    }
     try {
       await reauthenticateWithPopup(user, githubAuthProvider());
       return { status: "ok" };
@@ -135,8 +145,38 @@ function providerIds(user: User) {
 function isPopupBlocked(code: string | undefined) {
   return (
     code === "auth/popup-blocked" ||
-    code === "auth/operation-not-supported-in-this-environment"
+    code === "auth/operation-not-supported-in-this-environment" ||
+    code === "auth/internal-error"
   );
+}
+
+/**
+ * Store / installed PWA / WebView2 often cannot complete OAuth popups.
+ * Prefer full-page redirect there so account creation stays functional.
+ */
+export function preferRedirectAuth(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (window.matchMedia("(display-mode: standalone)").matches) return true;
+    if (window.matchMedia("(display-mode: window-controls-overlay)").matches) {
+      return true;
+    }
+  } catch {
+    // ignore
+  }
+  const nav = navigator as Navigator & { standalone?: boolean };
+  if (nav.standalone === true) return true;
+
+  const ua = navigator.userAgent || "";
+  if (/\bMSAppHost\b/i.test(ua) || /\bWebView2?\b/i.test(ua)) return true;
+  // Packaged Edge WebView used by PWABuilder MSIX
+  if (
+    typeof (window as unknown as { chrome?: { webview?: unknown } }).chrome
+      ?.webview !== "undefined"
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function oauthParts(cred: AuthCredential | null) {
@@ -234,11 +274,25 @@ export function getPendingMergeStep(): "github" | "google" | null {
 
 export async function signInWithPopupOrRedirect(auth: Auth, kind: "google" | "github") {
   const provider = kind === "github" ? githubAuthProvider() : googleAuthProvider();
+  const intent: AuthIntent = kind === "github" ? "signin-github" : "signin-google";
+
+  // Installed Store / PWA: skip popup entirely (certification failure mode).
+  if (preferRedirectAuth()) {
+    setIntent(intent);
+    await signInWithRedirect(auth, provider);
+    return null;
+  }
+
   try {
     return await signInWithPopup(auth, provider);
   } catch (err: unknown) {
-    if (!isPopupBlocked(firebaseErrorCode(err))) throw err;
-    setIntent(kind === "github" ? "signin-github" : "signin-google");
+    const code = firebaseErrorCode(err);
+    // User dismissed the popup — don't force a redirect.
+    if (code === "auth/popup-closed-by-user" || code === "auth/cancelled-popup-request") {
+      throw err;
+    }
+    if (!isPopupBlocked(code)) throw err;
+    setIntent(intent);
     await signInWithRedirect(auth, provider);
     return null;
   }
@@ -258,10 +312,13 @@ export async function linkGithubOverGoogleAccount(auth: Auth, err: unknown) {
     clearMerge();
     return true;
   } catch (e: unknown) {
-    if (!isPopupBlocked(firebaseErrorCode(e))) throw e;
-    setIntent("signin-google");
-    await signInWithRedirect(auth, googleAuthProvider());
-    return true;
+    const code = firebaseErrorCode(e);
+    if (preferRedirectAuth() || isPopupBlocked(code)) {
+      setIntent("signin-google");
+      await signInWithRedirect(auth, googleAuthProvider());
+      return true;
+    }
+    throw e;
   }
 }
 
@@ -270,6 +327,12 @@ export async function startProviderLink(auth: Auth, kind: "google" | "github"): 
   if (!user) throw new Error("Not signed in");
   const provider = kind === "github" ? githubAuthProvider() : googleAuthProvider();
   const intent: AuthIntent = kind === "github" ? "link-github" : "link-google";
+
+  if (preferRedirectAuth()) {
+    setIntent(intent);
+    await linkWithRedirect(user, provider);
+    return { status: "redirecting" };
+  }
 
   try {
     const result = await linkWithPopup(user, provider);
