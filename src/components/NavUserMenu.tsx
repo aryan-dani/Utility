@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
+import { createPortal } from "react-dom";
 import Image from "next/image";
 import AppLink from "@/components/ui/AppLink";
 import { ChevronDown, LogOut, User } from "lucide-react";
@@ -17,6 +18,21 @@ type NavUser = {
   displayName: string | undefined;
   photoURL: string | undefined;
 };
+
+type MenuCoords = {
+  top?: number;
+  bottom?: number;
+  left: number;
+  width: number;
+};
+
+function useIsClient() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => true,
+    () => false,
+  );
+}
 
 export default function NavUserMenu({
   collapsed,
@@ -45,7 +61,11 @@ export default function NavUserMenu({
 }) {
   const [user, setUser] = useState<NavUser | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const [menuCoords, setMenuCoords] = useState<MenuCoords | null>(null);
+  const isClient = useIsClient();
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuPanelRef = useRef<HTMLDivElement>(null);
   const workspaceRef = useRef({ academicYear, branch, semester });
   const motionSafe = useMotionSafe();
 
@@ -166,14 +186,45 @@ export default function NavUserMenu({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync prefs once per auth session
   }, []);
 
+  const updateMenuCoords = () => {
+    const el = triggerRef.current;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    const gap = 8;
+    if (collapsed) {
+      setMenuCoords({
+        left: rect.right + 12,
+        top: Math.max(8, rect.bottom - 96),
+        width: 176,
+      });
+      return;
+    }
+    setMenuCoords({
+      left: rect.left,
+      width: rect.width,
+      bottom: window.innerHeight - rect.top + gap,
+    });
+  };
+
+  useLayoutEffect(() => {
+    if (!userMenuOpen) return;
+    updateMenuCoords();
+    const onReposition = () => updateMenuCoords();
+    window.addEventListener("resize", onReposition);
+    window.addEventListener("scroll", onReposition, true);
+    return () => {
+      window.removeEventListener("resize", onReposition);
+      window.removeEventListener("scroll", onReposition, true);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- collapsed + open gate reposition
+  }, [userMenuOpen, collapsed]);
+
   useEffect(() => {
     function handler(e: MouseEvent) {
-      if (
-        userMenuRef.current &&
-        !userMenuRef.current.contains(e.target as Node)
-      ) {
-        setUserMenuOpen(false);
-      }
+      const target = e.target as Node;
+      if (userMenuRef.current?.contains(target)) return;
+      if (menuPanelRef.current?.contains(target)) return;
+      setUserMenuOpen(false);
     }
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
@@ -198,11 +249,73 @@ export default function NavUserMenu({
     );
   }
 
+  const menu = (
+    <AnimatePresence>
+      {userMenuOpen && menuCoords && (
+        <motion.div
+          ref={menuPanelRef}
+          initial={
+            motionSafe.reduce
+              ? false
+              : {
+                  opacity: 0,
+                  y: collapsed ? 0 : 4,
+                  x: collapsed ? -6 : 0,
+                  scale: 0.96,
+                }
+          }
+          animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
+          exit={
+            motionSafe.reduce
+              ? undefined
+              : {
+                  opacity: 0,
+                  y: collapsed ? 0 : 4,
+                  x: collapsed ? -6 : 0,
+                  scale: 0.96,
+                }
+          }
+          transition={{
+            duration: motionSafe.durations.fast,
+            ease: motionSafe.ease,
+          }}
+          style={{
+            position: "fixed",
+            left: menuCoords.left,
+            width: menuCoords.width,
+            top: menuCoords.top,
+            bottom: menuCoords.bottom,
+            zIndex: 150,
+          }}
+          className="bg-card/95 backdrop-blur-xl border border-border/80 rounded-2xl shadow-2xl overflow-hidden p-1.5 flex flex-col gap-0.5"
+        >
+          <AppLink
+            href="/profile"
+            onClick={() => setUserMenuOpen(false)}
+            className="flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-surface rounded-xl transition-colors text-left"
+          >
+            <User className="w-3.5 h-3.5 shrink-0 text-muted" />
+            <span>Profile Settings</span>
+          </AppLink>
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 rounded-xl transition-colors text-left"
+          >
+            <LogOut className="w-3.5 h-3.5 shrink-0" />
+            <span>Sign out</span>
+          </button>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  );
+
   return (
     <div ref={userMenuRef} className="relative w-full flex justify-center">
       <button
+        ref={triggerRef}
         onClick={() => setUserMenuOpen((o) => !o)}
         aria-label="User Menu"
+        aria-expanded={userMenuOpen}
         className={`flex items-center ${collapsed ? "justify-center w-10 h-10" : "justify-between w-full p-2"} rounded-xl border border-transparent hover:border-border/80 hover:bg-surface/60 transition-all group active:scale-95`}
         title={collapsed ? user.email : undefined}
       >
@@ -238,58 +351,7 @@ export default function NavUserMenu({
         )}
       </button>
 
-      <AnimatePresence>
-        {userMenuOpen && (
-          <motion.div
-            initial={
-              motionSafe.reduce
-                ? false
-                : {
-                    opacity: 0,
-                    y: collapsed ? 0 : 4,
-                    x: collapsed ? -6 : 0,
-                    scale: 0.96,
-                  }
-            }
-            animate={{ opacity: 1, y: 0, x: 0, scale: 1 }}
-            exit={
-              motionSafe.reduce
-                ? undefined
-                : {
-                    opacity: 0,
-                    y: collapsed ? 0 : 4,
-                    x: collapsed ? -6 : 0,
-                    scale: 0.96,
-                  }
-            }
-            transition={{
-              duration: motionSafe.durations.fast,
-              ease: motionSafe.ease,
-            }}
-            className={`absolute bg-card/95 backdrop-blur-xl border border-border/80 rounded-2xl shadow-2xl overflow-hidden z-50 p-1.5 flex flex-col gap-0.5 ${
-              collapsed
-                ? "w-44 left-full ml-3 bottom-0"
-                : "bottom-full mb-2 left-0 right-0"
-            }`}
-          >
-            <AppLink
-              href="/profile"
-              onClick={() => setUserMenuOpen(false)}
-              className="flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-semibold text-foreground hover:bg-surface rounded-xl transition-colors text-left"
-            >
-              <User className="w-3.5 h-3.5 shrink-0 text-muted" />
-              <span>Profile Settings</span>
-            </AppLink>
-            <button
-              onClick={handleLogout}
-              className="flex items-center gap-2.5 w-full px-2.5 py-2 text-xs font-semibold text-destructive hover:bg-destructive/10 rounded-xl transition-colors text-left"
-            >
-              <LogOut className="w-3.5 h-3.5 shrink-0" />
-              <span>Sign out</span>
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {isClient ? createPortal(menu, document.body) : null}
     </div>
   );
 }

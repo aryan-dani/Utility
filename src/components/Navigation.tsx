@@ -723,7 +723,7 @@ function NavigationInner() {
 
         {/* Dock Footer Deck */}
         <div
-          className={`border-t border-border/50 space-y-2 bg-surface/30 dark:bg-card/40 rounded-b-[24px] shrink-0 overflow-hidden ${
+          className={`border-t border-border/50 space-y-2 bg-surface/30 dark:bg-card/40 rounded-b-[24px] shrink-0 overflow-visible ${
             isCollapsed ? "p-2" : "p-2.5"
           }`}
         >
