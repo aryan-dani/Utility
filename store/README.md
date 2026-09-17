@@ -80,20 +80,24 @@ Identity values live in [`store/microsoft/product-identity.md`](microsoft/produc
 
 ### Certification: account creation (10.1.2.10)
 
-Reviewers often fail OAuth **popups** inside the Store PWA. The app prefers **redirect OAuth** when installed, and email/password signup is always available.
+Reviewers often fail OAuth **popups** (and Google may block OAuth inside Store WebViews). The app:
+
+- Puts **Create account** in the sidebar and as the primary CTA on Sign in
+- Uses **email/password** as the certifiable path
+- Hides Google/GitHub inside installed Store/PWA shells
+- Prefers **redirect OAuth** when OAuth is shown outside those shells
 
 **Before every submission**, from the **installed Store/MSIX build** (not only Chrome):
 
-1. Open **Sign up**.
-2. Create an account with **email + password** (6+ chars) → must land signed in.
-3. Sign out → **Sign up with Google** → complete the full-tab redirect → must land signed in.
-4. Optional: GitHub signup the same way.
-5. Confirm Firebase Console → Authentication → Sign-in method has **Email/Password** and **Google** enabled.
-6. Confirm Authorized domains includes `utilityos.tech`.
+1. Sidebar → **Create account** (or Sign in → Create account).
+2. Enter email + password (6+ chars) → **Create account** → must land signed in.
+3. Sign out → Sign in with the same email/password → must work.
+4. Confirm Firebase Console → Authentication → Sign-in method has **Email/Password** enabled.
+5. Confirm Authorized domains includes `utilityos.tech` and `www.utilityos.tech`.
 
 **Notes to certification** (paste in Partner Center when resubmitting):
 
-> Account creation: open Utility OS → Sign in → tap **Create account** (primary button) → enter email + password (6+ characters) → Create account. Google/GitHub also work via full-page redirect in the packaged app. Generative AI (Ask AI) is declared under Product declarations.
+> Account creation: open Utility OS → tap **Create account** in the sidebar (or Sign in → Create account) → enter email + password (6+ characters) → Create account. Email/password is the supported path in the Windows app. Generative AI (Ask AI) is declared under Product declarations.
 
 Also in the same submission → **Properties** → **Product declarations**: check  
 **“This product incorporates generative AI features…”** (required for policy 11.16).

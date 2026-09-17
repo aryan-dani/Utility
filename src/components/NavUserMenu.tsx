@@ -4,7 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } fr
 import { createPortal } from "react-dom";
 import Image from "next/image";
 import AppLink from "@/components/ui/AppLink";
-import { ChevronDown, LogOut, User } from "lucide-react";
+import { ChevronDown, LogOut, User, UserPlus } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 import { auth, db } from "@/lib/firebase";
 import { signOut, onIdTokenChanged } from "firebase/auth";
@@ -237,15 +237,35 @@ export default function NavUserMenu({
   };
 
   if (!user) {
+    if (collapsed) {
+      return (
+        <AppLink
+          href="/signup"
+          aria-label="Create account"
+          className="flex items-center justify-center w-10 h-10 rounded-xl bg-foreground text-background font-semibold text-xs hover:opacity-90 transition-all shadow-xs active:scale-95"
+          title="Create account"
+        >
+          <UserPlus className="w-4 h-4" />
+        </AppLink>
+      );
+    }
     return (
-      <AppLink
-        href="/login"
-        aria-label="Sign In"
-        className={`flex items-center justify-center ${collapsed ? "w-10 h-10 rounded-xl" : "w-full py-2.5 rounded-xl"} bg-foreground text-background font-semibold text-xs hover:opacity-90 transition-all shadow-xs active:scale-95`}
-        title={collapsed ? "Sign In" : undefined}
-      >
-        {collapsed ? <LogOut className="w-4 h-4 rotate-180" /> : "Sign in"}
-      </AppLink>
+      <div className="flex w-full flex-col gap-2">
+        <AppLink
+          href="/signup"
+          aria-label="Create account"
+          className="flex w-full items-center justify-center py-2.5 rounded-xl bg-foreground text-background font-semibold text-xs hover:opacity-90 transition-all shadow-xs active:scale-95"
+        >
+          Create account
+        </AppLink>
+        <AppLink
+          href="/login"
+          aria-label="Sign in"
+          className="flex w-full items-center justify-center py-2 rounded-xl border border-border text-foreground font-semibold text-xs hover:bg-surface transition-all active:scale-95"
+        >
+          Sign in
+        </AppLink>
+      </div>
     );
   }
 

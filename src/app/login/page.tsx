@@ -18,6 +18,7 @@ import {
   takeRememberedRedirectTo,
   linkGithubOverGoogleAccount,
 } from "@/lib/firebaseAuth";
+import { usePreferRedirectAuth } from "@/lib/usePreferRedirectAuth";
 import { describeError } from "@/lib/errors";
 import { PageHeader } from "@/components/ui";
 
@@ -29,6 +30,7 @@ function LoginContent() {
   const [loading, setLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
+  const emailOnlyAuth = usePreferRedirectAuth();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -196,7 +198,7 @@ function LoginContent() {
           <PageHeader
             className="mb-6"
             title="Sign in"
-            description="Sign in to your account, or create a new one to get started."
+            description="New here? Create an account first. Returning users can sign in below."
           />
 
           {error && (
@@ -212,57 +214,66 @@ function LoginContent() {
             Create account
           </Link>
 
-          <div className="relative mb-5">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-border" />
-            </div>
-            <div className="relative flex justify-center">
-              <span className="bg-card px-2 text-xs text-muted">
-                or sign in
-              </span>
-            </div>
-          </div>
+          {emailOnlyAuth ? (
+            <p className="mb-5 text-xs text-muted text-center leading-relaxed">
+              In the Windows app, use email and password. Google and GitHub are
+              hidden here because they often fail inside the packaged browser.
+            </p>
+          ) : (
+            <>
+              <div className="relative mb-5">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-border" />
+                </div>
+                <div className="relative flex justify-center">
+                  <span className="bg-card px-2 text-xs text-muted">
+                    or sign in
+                  </span>
+                </div>
+              </div>
 
-          <div className="grid grid-cols-2 gap-3 mb-5">
-            <button
-              type="button"
-              onClick={handleGoogleSignIn}
-              disabled={googleLoading || githubLoading || loading}
-              className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
-            >
-              {googleLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              ) : (
-                <span className="flex h-4.5 w-4.5 items-center justify-center text-sm font-black leading-none text-foreground">
-                  G
-                </span>
-              )}
-              Google
-            </button>
-            <button
-              type="button"
-              onClick={handleGithubSignIn}
-              disabled={googleLoading || githubLoading || loading}
-              className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
-            >
-              {githubLoading ? (
-                <Loader2 className="w-4 h-4 animate-spin text-primary" />
-              ) : (
-                <svg
-                  className="w-4 h-4 text-foreground"
-                  viewBox="0 0 24 24"
-                  fill="currentColor"
+              <div className="grid grid-cols-2 gap-3 mb-5">
+                <button
+                  type="button"
+                  onClick={handleGoogleSignIn}
+                  disabled={googleLoading || githubLoading || loading}
+                  className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
                 >
-                  <path
-                    fillRule="evenodd"
-                    clipRule="evenodd"
-                    d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"
-                  />
-                </svg>
-              )}
-              GitHub
-            </button>
-          </div>
+                  {googleLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  ) : (
+                    <span className="flex h-4.5 w-4.5 items-center justify-center text-sm font-black leading-none text-foreground">
+                      G
+                    </span>
+                  )}
+                  Google
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGithubSignIn}
+                  disabled={googleLoading || githubLoading || loading}
+                  className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
+                >
+                  {githubLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                  ) : (
+                    <svg
+                      className="w-4 h-4 text-foreground"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        clipRule="evenodd"
+                        d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.167 6.839 9.49.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.34-3.369-1.34-.454-1.156-1.11-1.464-1.11-1.464-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.831.092-.646.35-1.086.636-1.336-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.577.688.479C19.138 20.164 22 16.418 22 12c0-5.523-4.477-10-10-10z"
+                      />
+                    </svg>
+                  )}
+                  GitHub
+                </button>
+              </div>
+            </>
+          )}
 
           <div className="relative mb-5">
             <div className="absolute inset-0 flex items-center">
@@ -340,7 +351,13 @@ function LoginContent() {
         </motion.div>
 
         <p className="text-center text-xs text-muted mt-6">
-          Already have an account? Use Google, GitHub, or email above.
+          Need an account?{" "}
+          <Link
+            href={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
+            className="font-medium text-foreground hover:underline"
+          >
+            Create account
+          </Link>
         </p>
         <p className="text-center text-xs text-muted/80 mt-3 leading-relaxed">
           By continuing you agree to Utility&apos;s{" "}
@@ -359,7 +376,7 @@ export default function LoginPage() {
     <Suspense fallback={
       <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-3" role="status">
         <span className="loading-orb" aria-hidden />
-        <p className="text-xs font-medium text-muted tracking-wide">Loadingâ€¦</p>
+        <p className="text-xs font-medium text-muted tracking-wide">Loading…</p>
       </div>
     }>
       <LoginContent />

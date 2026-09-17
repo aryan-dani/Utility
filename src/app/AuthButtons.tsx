@@ -49,7 +49,7 @@ export default function AuthButtons() {
       </AppLink>
     </div>
   ) : (
-    <AppLink href="/login" className={primary}>
+    <AppLink href="/signup" className={primary}>
       Get Started <ArrowRight className="w-4 h-4" />
     </AppLink>
   );

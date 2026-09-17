@@ -7,7 +7,7 @@ describe("describeError", () => {
       "The email address is not formatted correctly.",
     );
     expect(describeError({ code: "auth/wrong-password" })).toBe(
-      "Incorrect email or password. Please try again.",
+      "Incorrect email or password. If you are new, tap Create account first.",
     );
     expect(describeError({ code: "auth/email-already-in-use" })).toBe(
       "An account with this email address already exists.",

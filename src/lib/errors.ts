@@ -23,7 +23,7 @@ export function describeError(err: unknown, fallback = FALLBACK): string {
     case "auth/user-not-found":
     case "auth/wrong-password":
     case "auth/invalid-credential":
-      return "Incorrect email or password. Please try again.";
+      return "Incorrect email or password. If you are new, tap Create account first.";
     case "auth/email-already-in-use":
       return "An account with this email address already exists.";
     case "auth/weak-password":

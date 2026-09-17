@@ -151,16 +151,19 @@ function isPopupBlocked(code: string | undefined) {
 }
 
 /**
- * Store / installed PWA / WebView2 often cannot complete OAuth popups.
- * Prefer full-page redirect there so account creation stays functional.
+ * Store / installed PWA / WebView2 often cannot complete OAuth popups
+ * (and Google may block OAuth inside embedded WebViews entirely).
+ * Prefer full-page redirect there; callers should also offer email signup.
  */
 export function preferRedirectAuth(): boolean {
   if (typeof window === "undefined") return false;
   try {
     if (window.matchMedia("(display-mode: standalone)").matches) return true;
+    if (window.matchMedia("(display-mode: fullscreen)").matches) return true;
     if (window.matchMedia("(display-mode: window-controls-overlay)").matches) {
       return true;
     }
+    if (window.matchMedia("(display-mode: minimal-ui)").matches) return true;
   } catch {
     // ignore
   }
@@ -176,7 +179,18 @@ export function preferRedirectAuth(): boolean {
   ) {
     return true;
   }
+  // Some Store shells expose a Windows Runtime bridge
+  if (
+    typeof (window as unknown as { Windows?: unknown }).Windows !== "undefined"
+  ) {
+    return true;
+  }
   return false;
+}
+
+/** True in installed Store/PWA shells where OAuth is unreliable. */
+export function shouldPreferEmailAuth(): boolean {
+  return preferRedirectAuth();
 }
 
 function oauthParts(cred: AuthCredential | null) {
