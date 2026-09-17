@@ -36,7 +36,7 @@ export function describeError(err: unknown, fallback = FALLBACK): string {
     case "auth/too-many-requests":
       return "Too many attempts. Wait a minute and try again.";
     case "auth/operation-not-allowed":
-      return "This sign-up method is disabled. Try another option or email.";
+      return "Account creation is temporarily unavailable. Please try again later or contact support.";
     case "auth/account-exists-with-different-credential":
       return "This email is already used with Google. Sign in with Google, then you can link GitHub from your profile.";
     case "auth/credential-already-in-use":

@@ -185,6 +185,18 @@ export function preferRedirectAuth(): boolean {
   ) {
     return true;
   }
+  // PWABuilder Edge standalone may not expose chrome.webview on all Win builds,
+  // but the Sec-CH-UA brands list includes "Microsoft Edge WebView2".
+  try {
+    const uad = (
+      navigator as Navigator & {
+        userAgentData?: { brands?: { brand: string }[] };
+      }
+    ).userAgentData;
+    if (uad?.brands?.some((b) => /WebView2/i.test(b.brand))) return true;
+  } catch {
+    // ignore
+  }
   return false;
 }
 

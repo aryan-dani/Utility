@@ -123,6 +123,19 @@ const config = isDev
         clientsClaim: true,
         exclude: [/\.map$/, /^manifest.*\.js$/],
         runtimeCaching: [
+          // Auth pages must always be fresh for Store certification —
+          // a stale cached login/signup page may lack the Create account CTA.
+          {
+            urlPattern: ({ request, url, sameOrigin }) =>
+              sameOrigin &&
+              request.mode === "navigate" &&
+              /^\/(login|signup)(\/.*)?$/.test(url.pathname),
+            handler: "NetworkFirst",
+            options: {
+              cacheName: "auth-pages",
+              networkTimeoutSeconds: 5,
+            },
+          },
           {
             urlPattern: ({ url, sameOrigin }) =>
               sameOrigin && url.pathname.startsWith("/_next/static/"),

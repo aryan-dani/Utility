@@ -15,6 +15,8 @@ import {
   ShieldCheck,
   Layers,
   MoreHorizontal,
+  UserPlus,
+  LogIn,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
@@ -964,6 +966,30 @@ function NavigationInner() {
               </AppLink>
             )}
           </nav>
+
+          {/* Auth CTAs for logged-out users (certification: reviewer must find Create account everywhere) */}
+          {!userEmail && (
+            <div className="flex flex-col gap-2 mt-4 pt-3 border-t border-border/50">
+              <AppLink
+                href="/signup"
+                id="mobile-more-create-account"
+                onClick={() => setMoreOpen(false)}
+                className="flex w-full items-center justify-center gap-2 py-2.5 rounded-xl bg-foreground text-background font-semibold text-sm hover:opacity-90 transition-all active:scale-95"
+              >
+                <UserPlus className="w-4 h-4" />
+                Create account
+              </AppLink>
+              <AppLink
+                href="/login"
+                onClick={() => setMoreOpen(false)}
+                className="flex w-full items-center justify-center gap-2 py-2 rounded-xl border border-border text-foreground font-semibold text-sm hover:bg-surface transition-all active:scale-95"
+              >
+                <LogIn className="w-4 h-4" />
+                Sign in
+              </AppLink>
+            </div>
+          )}
+
           <div className="mt-4">
             <SegmentedThemeToggle theme={theme} setTheme={setTheme} />
           </div>

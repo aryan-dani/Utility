@@ -97,7 +97,7 @@ Reviewers often fail OAuth **popups** (and Google may block OAuth inside Store W
 
 **Notes to certification** (paste in Partner Center when resubmitting):
 
-> Account creation: open Utility OS → tap **Create account** in the sidebar (or Sign in → Create account) → enter email + password (6+ characters) → Create account. Email/password is the supported path in the Windows app. Generative AI (Ask AI) is declared under Product declarations.
+> Account creation: open Utility OS → tap "Create account" in the sidebar (or, on the Sign in page, tap the prominent "Create account" button at the top of the card) → enter any email address and a password of 6 or more characters → tap "Create account." The email/password method is the supported sign-in path in the Windows app; Google and GitHub OAuth are intentionally hidden in the packaged shell because they do not reliably complete in embedded WebView environments. To verify: after creating an account, you will be redirected to the home screen and your email/avatar will appear in the sidebar footer. You can sign out from the sidebar user menu and sign back in with the same credentials. Generative AI: The "Ask AI" feature uses a large language model to answer academic questions. This is declared under Product Declarations.
 
 Also in the same submission → **Properties** → **Product declarations**: check  
 **“This product incorporates generative AI features…”** (required for policy 11.16).

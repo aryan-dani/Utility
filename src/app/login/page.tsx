@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -209,6 +209,7 @@ function LoginContent() {
 
           <Link
             href={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
+            id="login-create-account-cta"
             className="mb-5 w-full inline-flex items-center justify-center bg-foreground text-background py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
           >
             Create account

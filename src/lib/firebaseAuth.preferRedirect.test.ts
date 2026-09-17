@@ -28,6 +28,25 @@ describe("preferRedirectAuth", () => {
     expect(preferRedirectAuth()).toBe(true);
   });
 
+  it("is true for Microsoft Edge WebView2 userAgentData brands", () => {
+    vi.stubGlobal("window", {
+      matchMedia: () => ({ matches: false }),
+      chrome: undefined,
+      Windows: undefined,
+    });
+    vi.stubGlobal("navigator", {
+      userAgent: "Mozilla/5.0",
+      standalone: false,
+      userAgentData: {
+        brands: [
+          { brand: "Chromium", version: "120" },
+          { brand: "Microsoft Edge WebView2", version: "120" },
+        ],
+      },
+    });
+    expect(preferRedirectAuth()).toBe(true);
+  });
+
   it("is false in a normal browser tab", () => {
     vi.stubGlobal("window", {
       matchMedia: () => ({ matches: false }),

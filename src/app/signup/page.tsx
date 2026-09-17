@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
@@ -267,6 +267,7 @@ function SignupContent() {
 
             <button
               type="submit"
+              id="signup-create-account-btn"
               disabled={loading || googleLoading || githubLoading}
               className="w-full bg-foreground text-background py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] disabled:active:scale-100"
             >
