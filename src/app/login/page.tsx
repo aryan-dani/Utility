@@ -196,7 +196,7 @@ function LoginContent() {
           <PageHeader
             className="mb-6"
             title="Sign in"
-            description="Sign in to access your planner and resources."
+            description="Sign in to your account, or create a new one to get started."
           />
 
           {error && (
@@ -204,6 +204,24 @@ function LoginContent() {
               {error}
             </div>
           )}
+
+          <Link
+            href={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
+            className="mb-5 w-full inline-flex items-center justify-center bg-foreground text-background py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 transition-all active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
+          >
+            Create account
+          </Link>
+
+          <div className="relative mb-5">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-border" />
+            </div>
+            <div className="relative flex justify-center">
+              <span className="bg-card px-2 text-xs text-muted">
+                or sign in
+              </span>
+            </div>
+          </div>
 
           <div className="grid grid-cols-2 gap-3 mb-5">
             <button
@@ -286,7 +304,7 @@ function LoginContent() {
                   autoComplete="current-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                  placeholder="••••••••"
                   className="w-full bg-background border border-border rounded-xl px-3 py-2.5 pr-10 text-sm outline-none focus:ring-0 focus-visible:ring-0 focus:border-foreground/40 text-foreground placeholder:text-muted transition-[border-color,box-shadow] duration-150 input-premium-focus"
                 />
                 <button
@@ -312,7 +330,7 @@ function LoginContent() {
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Signing inâ€¦
+                  Signing in…
                 </>
               ) : (
                 "Sign in"
@@ -322,13 +340,7 @@ function LoginContent() {
         </motion.div>
 
         <p className="text-center text-xs text-muted mt-6">
-          New to Utility?{" "}
-          <Link
-            href={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
-            className="font-medium text-foreground hover:underline"
-          >
-            Create an account
-          </Link>
+          Already have an account? Use Google, GitHub, or email above.
         </p>
         <p className="text-center text-xs text-muted/80 mt-3 leading-relaxed">
           By continuing you agree to Utility&apos;s{" "}

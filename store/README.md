@@ -93,7 +93,10 @@ Reviewers often fail OAuth **popups** inside the Store PWA. The app prefers **re
 
 **Notes to certification** (paste in Partner Center when resubmitting):
 
-> Account creation works in the packaged app via (1) email/password on Sign up, and (2) Google or GitHub OAuth using a full-page redirect (popups are not used in the installed PWA). Path: open Utility OS → Sign in / Sign up → Create account.
+> Account creation: open Utility OS → Sign in → tap **Create account** (primary button) → enter email + password (6+ characters) → Create account. Google/GitHub also work via full-page redirect in the packaged app. Generative AI (Ask AI) is declared under Product declarations.
+
+Also in the same submission → **Properties** → **Product declarations**: check  
+**“This product incorporates generative AI features…”** (required for policy 11.16).
 
 After a production deploy of auth fixes, rebuild the PWABuilder package from `https://utilityos.tech` so the Store binary picks up the new site, then upload the new packages and resubmit.
 
