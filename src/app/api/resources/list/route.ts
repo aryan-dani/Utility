@@ -2,6 +2,14 @@ import { NextResponse } from 'next/server';
 import { getResourcesFromDB, getSyllabusFile } from '@/lib/dataFetcher';
 import { resolveWorkspace } from '@/lib/workspace';
 
+function isQuotaExhausted(error: unknown): boolean {
+  if (!error || typeof error !== 'object') return false;
+  const err = error as { code?: number | string; details?: string; message?: string };
+  const code = err.code;
+  if (code === 8 || code === '8' || code === 'resource-exhausted') return true;
+  const text = `${err.details ?? ''} ${err.message ?? ''}`;
+  return /RESOURCE_EXHAUSTED|Quota exceeded/i.test(text);
+}
 
 export async function GET(request: Request) {
   try {
@@ -27,6 +35,21 @@ export async function GET(request: Request) {
     );
   } catch (error: unknown) {
     console.error('Error fetching resources:', error);
+    if (isQuotaExhausted(error)) {
+      // Cache briefly so retries don't keep burning Firestore free-tier quota.
+      return NextResponse.json(
+        {
+          error: 'Resources are temporarily unavailable (database quota). Try again later.',
+        },
+        {
+          status: 503,
+          headers: {
+            'Retry-After': '300',
+            'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+          },
+        }
+      );
+    }
     return NextResponse.json(
       { error: 'Failed to fetch resources' },
       { status: 500 }
