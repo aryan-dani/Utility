@@ -19,7 +19,12 @@ type CacheEntry = {
   resources: ResourceItem[];
   subjects: string[];
   syllabusUrl: string | null;
+  savedAt?: number;
 };
+
+const MEMORY_TTL_MS = 1000 * 60 * 60; // 1h in-tab
+const STORAGE_TTL_MS = 1000 * 60 * 60 * 12; // 12h across reloads
+const STORAGE_PREFIX = "utility.workspace.v2:";
 
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<CacheEntry>>();
@@ -27,6 +32,41 @@ const inflight = new Map<string, Promise<CacheEntry>>();
 function cacheKey(year: string, branch: string, semester: number): string {
   // v2: list API returns dedicated syllabusUrl (Syllabus subject is excluded from vault files)
   return `v2:${year}:${branch}:${semester}`;
+}
+
+function storageKey(key: string): string {
+  return `${STORAGE_PREFIX}${key}`;
+}
+
+function isFresh(entry: CacheEntry | undefined, ttl: number): entry is CacheEntry {
+  if (!entry?.savedAt) return false;
+  return Date.now() - entry.savedAt < ttl;
+}
+
+function readSession(key: string): CacheEntry | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(storageKey(key));
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as CacheEntry;
+    if (!isFresh(parsed, STORAGE_TTL_MS)) {
+      sessionStorage.removeItem(storageKey(key));
+      return null;
+    }
+    if (!Array.isArray(parsed.resources)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeSession(key: string, entry: CacheEntry) {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(storageKey(key), JSON.stringify(entry));
+  } catch {
+    // quota / private mode — ignore
+  }
 }
 
 function deriveSubjects(resources: ResourceItem[]): string[] {
@@ -53,13 +93,24 @@ function deriveSyllabusUrlFromResources(
   return hit?.file_url ?? null;
 }
 
+function getCachedEntry(key: string): CacheEntry | null {
+  const mem = cache.get(key);
+  if (isFresh(mem, MEMORY_TTL_MS)) return mem;
+  const session = readSession(key);
+  if (session) {
+    cache.set(key, session);
+    return session;
+  }
+  return null;
+}
+
 async function loadWorkspace(
   academicYear: string,
   branch: string,
   semester: number,
 ): Promise<CacheEntry> {
   const key = cacheKey(academicYear, branch, semester);
-  const hit = cache.get(key);
+  const hit = getCachedEntry(key);
   if (hit) return hit;
 
   const existing = inflight.get(key);
@@ -82,8 +133,10 @@ async function loadWorkspace(
       resources,
       subjects: deriveSubjects(resources),
       syllabusUrl,
+      savedAt: Date.now(),
     };
     cache.set(key, entry);
+    writeSession(key, entry);
     return entry;
   })().finally(() => {
     inflight.delete(key);
@@ -107,7 +160,15 @@ export function clearWorkspaceResourcesCache(
   branch: string,
   semester: number,
 ): void {
-  cache.delete(cacheKey(academicYear, branch, semester));
+  const key = cacheKey(academicYear, branch, semester);
+  cache.delete(key);
+  if (typeof window !== "undefined") {
+    try {
+      sessionStorage.removeItem(storageKey(key));
+    } catch {
+      // ignore
+    }
+  }
 }
 
 export function useWorkspaceResources(): WorkspaceResourcesState & {
@@ -117,22 +178,22 @@ export function useWorkspaceResources(): WorkspaceResourcesState & {
   const key = cacheKey(academicYear, branch, semester);
 
   const [resources, setResources] = useState<ResourceItem[]>(
-    () => cache.get(key)?.resources ?? [],
+    () => getCachedEntry(key)?.resources ?? [],
   );
   const [subjects, setSubjects] = useState<string[]>(
-    () => cache.get(key)?.subjects ?? [],
+    () => getCachedEntry(key)?.subjects ?? [],
   );
   const [syllabusUrl, setSyllabusUrl] = useState<string | null>(
-    () => cache.get(key)?.syllabusUrl ?? null,
+    () => getCachedEntry(key)?.syllabusUrl ?? null,
   );
-  const [loading, setLoading] = useState(() => !cache.has(key));
+  const [loading, setLoading] = useState(() => !getCachedEntry(key));
   const [error, setError] = useState<string | null>(null);
   const [retryNonce, setRetryNonce] = useState(0);
 
   const [prevKey, setPrevKey] = useState(key);
   if (prevKey !== key) {
     setPrevKey(key);
-    const hit = cache.get(key);
+    const hit = getCachedEntry(key);
     if (hit) {
       setResources(hit.resources);
       setSubjects(hit.subjects);
@@ -151,7 +212,7 @@ export function useWorkspaceResources(): WorkspaceResourcesState & {
   useEffect(() => {
     // Cache hits are applied during render via the prevKey pattern above.
     // retry() deletes the cache entry before bumping retryNonce.
-    if (cache.has(key)) return;
+    if (getCachedEntry(key)) return;
 
     let cancelled = false;
     loadWorkspace(academicYear, branch, semester)
@@ -175,7 +236,7 @@ export function useWorkspaceResources(): WorkspaceResourcesState & {
   }, [key, academicYear, branch, semester, retryNonce]);
 
   const retry = () => {
-    cache.delete(key);
+    clearWorkspaceResourcesCache(academicYear, branch, semester);
     setError(null);
     setLoading(true);
     setRetryNonce((n) => n + 1);

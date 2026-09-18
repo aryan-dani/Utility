@@ -1,6 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getResourcesFromDB, getSyllabusFile } from '@/lib/dataFetcher';
+import { getWorkspaceList } from '@/lib/dataFetcher';
 import { resolveWorkspace } from '@/lib/workspace';
+
+export const revalidate = 86400;
 
 function isQuotaExhausted(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
@@ -20,10 +22,11 @@ export async function GET(request: Request) {
       semester: searchParams.get('semester'),
     });
 
-    const [resources, syllabusUrl] = await Promise.all([
-      getResourcesFromDB(academicYear, branch, semester),
-      getSyllabusFile(academicYear, branch, semester),
-    ]);
+    const { resources, syllabusUrl } = await getWorkspaceList(
+      academicYear,
+      branch,
+      semester,
+    );
 
     return NextResponse.json(
       { resources, syllabusUrl },

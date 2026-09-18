@@ -2,8 +2,20 @@ name: Scheduled Storage Sync
 
 on:
   schedule:
-    - cron: '0 0 * * *' # Runs at 00:00 UTC daily
-  workflow_dispatch: # Allows manual triggering from the GitHub UI
+    # Daily: incremental Drive changes only (Spark-friendly).
+    - cron: "0 0 * * *"
+    # Weekly Sunday 03:00 UTC: full reconcile + prune.
+    - cron: "0 3 * * 0"
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: "Sync mode"
+        required: true
+        default: incremental
+        type: choice
+        options:
+          - incremental
+          - full
 
 jobs:
   sync:
@@ -16,22 +28,47 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '24'
-          cache: 'npm'
+          node-version: "24"
+          cache: npm
 
       - name: Install dependencies
         run: npm ci
 
+      - name: Resolve sync mode
+        id: mode
+        run: |
+          MODE="${{ github.event.inputs.mode }}"
+          if [ -z "$MODE" ]; then
+            # schedule cron_0_3 = weekly full; otherwise incremental
+            if [ "${{ github.event.schedule }}" = "0 3 * * 0" ]; then
+              MODE=full
+            else
+              MODE=incremental
+            fi
+          fi
+          echo "mode=$MODE" >> "$GITHUB_OUTPUT"
+          echo "Using sync mode: $MODE"
+
       - name: Sync Google Drive → Firestore
-        run: npm run sync-drive
+        run: |
+          if [ "${{ steps.mode.outputs.mode }}" = "full" ]; then
+            npm run sync-drive:full
+          else
+            npm run sync-drive
+          fi
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
           FIREBASE_PRIVATE_KEY: ${{ secrets.FIREBASE_PRIVATE_KEY }}
           GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
 
-      - name: Index resource content for search/RAG
-        run: npm run index-content
+      - name: Index changed resources for search/RAG
+        run: |
+          if [ "${{ steps.mode.outputs.mode }}" = "full" ]; then
+            npm run index-content:all
+          else
+            npm run index-content
+          fi
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}

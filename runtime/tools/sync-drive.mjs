@@ -40,9 +40,11 @@ function parseFlag(argv, name) {
 function parseSyncOptions(options = {}, argv = process.argv.slice(2)) {
   const dryRun = options.dryRun === true || argv.includes("--dry-run");
   const verbose = options.verbose === true || argv.includes("--verbose");
-  const incremental =
-    options.incremental === true || argv.includes("--incremental");
+  // Default: incremental (changed files only). Pass --full for a full walk+prune.
   const fullFlag = options.full === true || argv.includes("--full");
+  const incrementalFlag =
+    options.incremental === true || argv.includes("--incremental");
+  const incremental = incrementalFlag || !fullFlag;
 
   const pathArg = options.path || parseFlag(argv, "path");
   const year = options.year || parseFlag(argv, "year");
@@ -71,13 +73,13 @@ function parseSyncOptions(options = {}, argv = process.argv.slice(2)) {
     !pathArg && !hasFolderHints && subject ? subject : null;
 
   const isScoped = Boolean(scopePath);
-  const isFull =
-    fullFlag || (!isScoped && !subjectFilterOnly && !incremental);
+  // Explicit --full wins; otherwise scoped path is a walk, incremental is changes API.
+  const isFull = fullFlag && !isScoped && !subjectFilterOnly;
 
   return {
     dryRun,
     verbose,
-    incremental,
+    incremental: incremental && !isFull && !isScoped && !subjectFilterOnly,
     full: isFull,
     scopePath,
     subjectFilter: subjectFilterOnly,
@@ -206,7 +208,11 @@ async function syncIncremental(opts) {
     }
   } while (true);
 
-  console.log(`📦 ${changedFiles.length} changed file(s) under catalog paths.\n`);
+  if (changedFiles.length === 0) {
+    console.log(`📦 No Drive changes since last sync.\n`);
+  } else {
+    console.log(`📦 ${changedFiles.length} changed file(s) under catalog paths.\n`);
+  }
 
   const result = await upsertResources(changedFiles, {
     dryRun: opts.dryRun,

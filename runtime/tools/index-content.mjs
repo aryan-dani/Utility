@@ -187,12 +187,17 @@ export default async function indexContent(options = {}) {
   )
     .trim()
     .replace(/\\/g, "/");
+  const changedOnly =
+    options.changedOnly === true ||
+    process.argv.includes("--changed-only");
 
   const targeted =
     idFilters.size > 0 || titleFilter || subjectFilter || pathFilter;
 
   console.log(
-    `\n🔍 Starting Hybrid Content Indexing${targeted ? " (targeted)" : ""}…\n`,
+    `\n🔍 Starting Hybrid Content Indexing${
+      targeted ? " (targeted)" : changedOnly ? " (changed-only)" : ""
+    }…\n`,
   );
 
   const hasGemini = Boolean(process.env.GEMINI_API_KEY);
@@ -213,6 +218,17 @@ export default async function indexContent(options = {}) {
         if (snap.exists) resources.push({ id: snap.id, ...snap.data() });
         else console.warn(`  ⚠️  Resource not found: ${id}`);
       }
+    } else if (changedOnly && !targeted) {
+      // Spark-friendly: only resources flagged for reindex (content_hash cleared by sync).
+      const snap = await db
+        .collection("resources")
+        .where("content_hash", "==", null)
+        .limit(500)
+        .get();
+      resources = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      console.log(
+        `📌 Changed-only mode: ${resources.length} resource(s) with content_hash=null.\n`,
+      );
     } else {
       resources = await fetchAll("resources");
     }
@@ -230,13 +246,17 @@ export default async function indexContent(options = {}) {
       );
     }
 
-    const subjects = await fetchAll("subjects");
-    const subjectsMap = new Map(subjects.map((s) => [s.id, s]));
+    // Prefer subject names from resource payloads; only load subjects map if needed.
+    let subjectsMap = new Map();
+    if (subjectFilter || resources.some((r) => !r.subject_name)) {
+      const subjects = await fetchAll("subjects");
+      subjectsMap = new Map(subjects.map((s) => [s.id, s]));
+    }
 
     if (subjectFilter) {
       resources = resources.filter((r) => {
         const sub = subjectsMap.get(r.subject_id);
-        return String(sub?.name || "")
+        return String(sub?.name || r.subject_name || "")
           .toLowerCase()
           .includes(subjectFilter);
       });
@@ -249,34 +269,22 @@ export default async function indexContent(options = {}) {
 
     console.log(`📦 ${indexable.length} indexable resources.\n`);
 
-    const indexedContent = await fetchAll(
-      "resource_content",
-      "resource_id, last_indexed, search_tokens, content_hash",
-    );
-    const indexedMap = new Map(indexedContent.map((i) => [i.resource_id, i]));
-
-    const existingChunks = targeted
-      ? []
-      : await fetchAll("resource_chunks", "resource_id, content_hash, chunk_index");
-    const chunkHashMap = new Map();
-    for (const c of existingChunks) {
-      if (!chunkHashMap.has(c.resource_id))
-        chunkHashMap.set(c.resource_id, new Set());
-      chunkHashMap.get(c.resource_id).add(c.content_hash);
-    }
-
-    // For targeted runs, load chunk hashes only for those resources
-    if (targeted) {
+    // Avoid loading every resource_content / chunk row (was multi‑k reads/day).
+    const indexedMap = new Map();
+    if (!changedOnly || targeted) {
+      const indexedContent = await fetchAll(
+        "resource_content",
+        "resource_id, last_indexed, search_tokens, content_hash",
+      );
+      for (const i of indexedContent) indexedMap.set(i.resource_id, i);
+    } else {
       for (const res of indexable) {
-        const { data } = await select("resource_chunks", {
-          columns: "resource_id, content_hash",
-          where: [{ column: "resource_id", op: "eq", value: res.id }],
-          limit: 5000,
-        });
-        const set = new Set(data.map((d) => d.content_hash));
-        chunkHashMap.set(res.id, set);
+        const snap = await db.collection("resource_content").doc(res.id).get();
+        if (snap.exists) indexedMap.set(res.id, { resource_id: res.id, ...snap.data() });
       }
     }
+
+    const chunkHashMap = new Map();
 
     const toIndex = [];
     const queued = new Set();
@@ -287,8 +295,7 @@ export default async function indexContent(options = {}) {
     };
 
     for (const res of indexable) {
-      // Targeted: always (re)index selected resources
-      if (targeted) {
+      if (targeted || changedOnly) {
         queue(res);
         continue;
       }
@@ -324,6 +331,16 @@ export default async function indexContent(options = {}) {
 
     console.log(`🚀 ${toIndex.length} resources to (re)index.\n`);
 
+    // Load chunk hashes only for resources we will actually process.
+    for (const res of toIndex) {
+      const { data } = await select("resource_chunks", {
+        columns: "resource_id, content_hash",
+        where: [{ column: "resource_id", op: "eq", value: res.id }],
+        limit: 5000,
+      });
+      chunkHashMap.set(res.id, new Set(data.map((d) => d.content_hash)));
+    }
+
     const allChunkTokens = [];
 
     async function processResource(res, index) {
@@ -341,10 +358,12 @@ export default async function indexContent(options = {}) {
         }
 
         const subject = subjectsMap.get(res.subject_id);
-        const subjectName = subject?.name || "";
-        const branch = subject?.branch || "";
-        const semester = subject?.semester ?? null;
-        const academicYear = subject?.academic_year || "2025-2026";
+        const subjectName = subject?.name || res.subject_name || "";
+        const branch = res.branch || subject?.branch || "";
+        const semester =
+          res.semester != null ? Number(res.semester) : (subject?.semester ?? null);
+        const academicYear =
+          res.academic_year || subject?.academic_year || "2026-2027";
 
         const cleanText = (fullText || units.map((u) => u.text).join("\n\n"))
           .replace(/\u0000/g, "")
@@ -455,7 +474,7 @@ export default async function indexContent(options = {}) {
     }
     await Promise.all(executing);
 
-    if (!targeted) {
+    if (!targeted && !changedOnly) {
       console.log("\n📊 Computing corpus statistics…");
       const allChunksForStats = await fetchAll(
         "resource_chunks",
@@ -481,7 +500,9 @@ export default async function indexContent(options = {}) {
         `\n✨ Indexing complete. ${allChunksForStats.length} total chunks in corpus.`,
       );
     } else {
-      console.log(`\n✨ Targeted indexing complete.`);
+      console.log(
+        `\n✨ ${changedOnly ? "Changed-only" : "Targeted"} indexing complete (corpus stats unchanged).`,
+      );
     }
     console.log(
       `   Resources: ${stats.ok} indexed, ${stats.skipped} skipped (no text), ${stats.failed} failed.`,

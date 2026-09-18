@@ -376,10 +376,28 @@ export async function upsertResources(files, options = {}) {
   // Prune
   if (prune) {
     console.log(`\n🧹 Cleaning up stale database records...`);
-    const allResourcesSnap = await db.collection("resources").get();
+    let candidatesSnap;
+    if (prunePrefix) {
+      // Scoped prune: only docs under this Drive path (not the whole collection).
+      const prefix = prunePrefix.replace(/\/$/, "");
+      candidatesSnap = await db
+        .collection("resources")
+        .where("drive_path", ">=", prefix)
+        .where("drive_path", "<=", `${prefix}\uf8ff`)
+        .select("drive_path", "subject_id")
+        .get();
+      console.log(
+        `  🔎 Scoped prune candidates under ${prefix}: ${candidatesSnap.size}`,
+      );
+    } else {
+      candidatesSnap = await db
+        .collection("resources")
+        .select("drive_path", "subject_id")
+        .get();
+    }
     const staleResourceIds = [];
 
-    allResourcesSnap.forEach((doc) => {
+    candidatesSnap.forEach((doc) => {
       if (liveResourceIds.has(doc.id)) return;
       const data = doc.data() || {};
 
@@ -492,6 +510,32 @@ export async function upsertResources(files, options = {}) {
       console.log(
         `📊 Bumped stats/global (+${stats.newResources} resources, +${stats.newSubjects} subjects).`,
       );
+    }
+  }
+
+  // Invalidate workspace list catalogs for touched scopes (next page load rebuilds 1 doc).
+  if (!dryRun) {
+    const catalogKeys = new Set();
+    for (const write of pendingWrites) {
+      if (write.kind !== "resource") continue;
+      const year = write.payload?.academic_year;
+      const br = write.payload?.branch;
+      const sem = write.payload?.semester;
+      if (year && br && sem != null) {
+        catalogKeys.add(`${year}__${br}__${sem}`);
+      }
+    }
+    if (catalogKeys.size > 0) {
+      console.log(
+        `\n🗂️  Invalidating ${catalogKeys.size} workspace catalog(s)…`,
+      );
+      for (const id of catalogKeys) {
+        try {
+          await db.collection("workspace_catalogs").doc(id).delete();
+        } catch (err) {
+          console.warn(`  ⚠️  catalog delete ${id}: ${err.message}`);
+        }
+      }
     }
   }
 

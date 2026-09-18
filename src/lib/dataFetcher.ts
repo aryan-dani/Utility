@@ -2,6 +2,11 @@ import { adminDb } from "./firebaseAdmin";
 import { unstable_cache } from "next/cache";
 import { matchesAcademicYear } from "@/lib/academic/scope";
 import type { AcademicYear } from "@/lib/academic/scope";
+import {
+  WORKSPACE_CATALOG_COLLECTION,
+  workspaceCatalogId,
+  type WorkspaceCatalogDoc,
+} from "@/lib/workspaceCatalog";
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -30,6 +35,11 @@ export type ResourceCategory =
   | "other"
   | "writeup"
   | "codes";
+
+export type WorkspaceListPayload = {
+  resources: ResourceItem[];
+  syllabusUrl: string | null;
+};
 
 // ─── Filter configuration ────────────────────────────────────────────────────
 
@@ -106,6 +116,34 @@ export function getResourceCategory(
   return "other";
 }
 
+function normalizeResources(resources: ResourceItem[], branch: string): ResourceItem[] {
+  const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
+    s.toUpperCase(),
+  );
+  const seen = new Set<string>();
+  return resources
+    .filter((item) => {
+      const titleLower = item.title.toLowerCase();
+
+      if (!item.title.trim()) return false;
+      if (EXCLUDED_TITLE_PATTERNS.some((re) => re.test(titleLower))) return false;
+      if (EXCLUDED_TITLES.includes(titleLower)) return false;
+      if (excluded.includes(item.subject_name.toUpperCase())) return false;
+
+      const key = `${item.subject_name}-${item.category}-${titleLower}`;
+      if (seen.has(key)) return false;
+      seen.add(key);
+
+      return true;
+    })
+    .sort((a, b) =>
+      a.title.localeCompare(b.title, undefined, {
+        numeric: true,
+        sensitivity: "base",
+      }),
+    );
+}
+
 // ─── Fetchers ─────────────────────────────────────────────────────────────────
 
 async function fetchSubjectsFromDB(
@@ -137,7 +175,6 @@ async function fetchSubjectsFromDB(
         };
       });
 
-    // Sort alphabetically by name
     subjects.sort((a, b) => a.name.localeCompare(b.name));
 
     const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
@@ -153,116 +190,82 @@ async function fetchSubjectsFromDB(
   }
 }
 
-async function fetchResourcesFromDB(
+/** Expensive path: subjects + chunked resource queries (~1 read per resource). */
+async function fetchResourcesFromDBRaw(
   academicYear: AcademicYear,
   branch: string,
   semester: number,
 ): Promise<ResourceItem[]> {
-  try {
-    const db = adminDb();
+  const db = adminDb();
 
-    // 1. Fetch matching subjects to get their IDs and Names
-    const subjectsSnapshot = await db.collection("subjects")
-      .where("branch", "==", branch)
-      .where("semester", "==", semester)
-      .get();
+  const subjectsSnapshot = await db.collection("subjects")
+    .where("branch", "==", branch)
+    .where("semester", "==", semester)
+    .get();
 
-    if (subjectsSnapshot.empty) return [];
+  if (subjectsSnapshot.empty) return [];
 
-    const subjectsMap = new Map<string, string>();
-    const subjectIds: string[] = [];
+  const subjectsMap = new Map<string, string>();
+  const subjectIds: string[] = [];
 
-    subjectsSnapshot.docs.forEach(doc => {
-      const d = doc.data();
-      if (
-        !matchesAcademicYear(d.academic_year as string | undefined, academicYear)
-      ) {
-        return;
-      }
-      if (d.name?.toUpperCase() !== "SYLLABUS") {
-        subjectsMap.set(doc.id, d.name || "");
-        subjectIds.push(doc.id);
-      }
-    });
-
-    if (subjectIds.length === 0) return [];
-
-    // 2. Fetch resources for these subjects (Firestore 'in' supports up to 30 items)
-    const resources: ResourceItem[] = [];
-    const chunkSize = 30;
-    const chunks: string[][] = [];
-    for (let i = 0; i < subjectIds.length; i += chunkSize) {
-      chunks.push(subjectIds.slice(i, i + chunkSize));
+  subjectsSnapshot.docs.forEach((doc) => {
+    const d = doc.data();
+    if (
+      !matchesAcademicYear(d.academic_year as string | undefined, academicYear)
+    ) {
+      return;
     }
-
-    const snapshots = await Promise.all(
-      chunks.map((chunk) =>
-        db.collection("resources").where("subject_id", "in", chunk).get(),
-      ),
-    );
-
-    for (const resourcesSnapshot of snapshots) {
-      resourcesSnapshot.docs.forEach((doc) => {
-        const d = doc.data();
-        const url = d.file_url || "";
-        const subId = d.subject_id || "";
-        const subName = subjectsMap.get(subId) || "Unknown";
-
-        // Parse created_at. If it's a Firestore Timestamp, convert to ISOString.
-        let createdAtStr = new Date().toISOString();
-        if (d.created_at) {
-          if (typeof d.created_at.toDate === "function") {
-            createdAtStr = d.created_at.toDate().toISOString();
-          } else if (d.created_at.seconds) {
-            createdAtStr = new Date(d.created_at.seconds * 1000).toISOString();
-          } else {
-            createdAtStr = new Date(d.created_at).toISOString();
-          }
-        }
-
-        resources.push({
-          id: doc.id,
-          title: d.title || "",
-          file_url: url,
-          created_at: createdAtStr,
-          subject_name: subName,
-          category: d.category || getResourceCategory(d.title || "", url),
-        });
-      });
+    if (d.name?.toUpperCase() !== "SYLLABUS") {
+      subjectsMap.set(doc.id, d.name || "");
+      subjectIds.push(doc.id);
     }
+  });
 
-    const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
-      s.toUpperCase(),
-    );
+  if (subjectIds.length === 0) return [];
 
-    // Deduplicate and filter
-    const seen = new Set<string>();
-    return resources
-      .filter((item) => {
-        const titleLower = item.title.toLowerCase();
-
-        if (!item.title.trim()) return false;
-        if (EXCLUDED_TITLE_PATTERNS.some((re) => re.test(titleLower)))
-          return false;
-        if (EXCLUDED_TITLES.includes(titleLower)) return false;
-        if (excluded.includes(item.subject_name.toUpperCase())) return false;
-
-        const key = `${item.subject_name}-${item.category}-${titleLower}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-
-        return true;
-      })
-      .sort((a, b) =>
-        a.title.localeCompare(b.title, undefined, {
-          numeric: true,
-          sensitivity: "base",
-        }),
-      );
-  } catch (error) {
-    console.error("Error fetching resources from Firestore:", error);
-    throw error;
+  const resources: ResourceItem[] = [];
+  const chunkSize = 30;
+  const chunks: string[][] = [];
+  for (let i = 0; i < subjectIds.length; i += chunkSize) {
+    chunks.push(subjectIds.slice(i, i + chunkSize));
   }
+
+  const snapshots = await Promise.all(
+    chunks.map((chunk) =>
+      db.collection("resources").where("subject_id", "in", chunk).get(),
+    ),
+  );
+
+  for (const resourcesSnapshot of snapshots) {
+    resourcesSnapshot.docs.forEach((doc) => {
+      const d = doc.data();
+      const url = d.file_url || "";
+      const subId = d.subject_id || "";
+      const subName = subjectsMap.get(subId) || "Unknown";
+
+      let createdAtStr = new Date().toISOString();
+      if (d.created_at) {
+        if (typeof d.created_at.toDate === "function") {
+          createdAtStr = d.created_at.toDate().toISOString();
+        } else if (d.created_at.seconds) {
+          createdAtStr = new Date(d.created_at.seconds * 1000).toISOString();
+        } else {
+          createdAtStr = new Date(d.created_at).toISOString();
+        }
+      }
+
+      resources.push({
+        id: doc.id,
+        title: d.title || "",
+        file_url: url,
+        created_at: createdAtStr,
+        subject_name: subName,
+        category: d.category || getResourceCategory(d.title || "", url),
+      });
+    });
+  }
+
+  return normalizeResources(resources, branch);
 }
 
 async function fetchSyllabusFile(
@@ -273,7 +276,6 @@ async function fetchSyllabusFile(
   try {
     const db = adminDb();
 
-    // 1. Find the Syllabus subject
     const subjectsSnapshot = await db.collection("subjects")
       .where("branch", "==", branch)
       .where("semester", "==", semester)
@@ -290,7 +292,6 @@ async function fetchSyllabusFile(
     if (!syllabusDoc) return null;
     const syllabusSubjectId = syllabusDoc.id;
 
-    // 2. Find resource matching this subject
     const resourcesSnapshot = await db.collection("resources")
       .where("subject_id", "==", syllabusSubjectId)
       .limit(1)
@@ -302,6 +303,71 @@ async function fetchSyllabusFile(
     console.error("Error fetching syllabus file from Firestore:", error);
     return null;
   }
+}
+
+async function writeWorkspaceCatalog(
+  academicYear: AcademicYear,
+  branch: string,
+  semester: number,
+  payload: WorkspaceListPayload,
+): Promise<void> {
+  const db = adminDb();
+  const id = workspaceCatalogId(academicYear, branch, semester);
+  const doc: WorkspaceCatalogDoc = {
+    academic_year: academicYear,
+    branch,
+    semester,
+    resources: payload.resources,
+    syllabusUrl: payload.syllabusUrl,
+    resource_count: payload.resources.length,
+    updated_at: new Date().toISOString(),
+  };
+  await db.collection(WORKSPACE_CATALOG_COLLECTION).doc(id).set(doc);
+}
+
+/**
+ * Public vault list: prefer 1-doc workspace catalog (Spark-friendly).
+ * Cold miss rebuilds once and write-through so later hits cost 1 read.
+ */
+async function fetchWorkspaceListRaw(
+  academicYear: AcademicYear,
+  branch: string,
+  semester: number,
+): Promise<WorkspaceListPayload> {
+  const db = adminDb();
+  const id = workspaceCatalogId(academicYear, branch, semester);
+
+  try {
+    const snap = await db.collection(WORKSPACE_CATALOG_COLLECTION).doc(id).get();
+    if (snap.exists) {
+      const d = snap.data() as WorkspaceCatalogDoc;
+      if (Array.isArray(d.resources)) {
+        return {
+          resources: d.resources,
+          syllabusUrl:
+            typeof d.syllabusUrl === "string" || d.syllabusUrl === null
+              ? d.syllabusUrl
+              : null,
+        };
+      }
+    }
+  } catch (error) {
+    console.warn("workspace catalog read failed, rebuilding:", error);
+  }
+
+  const [resources, syllabusUrl] = await Promise.all([
+    fetchResourcesFromDBRaw(academicYear, branch, semester),
+    fetchSyllabusFile(academicYear, branch, semester),
+  ]);
+  const payload = { resources, syllabusUrl };
+
+  try {
+    await writeWorkspaceCatalog(academicYear, branch, semester, payload);
+  } catch (error) {
+    console.warn("workspace catalog write-through failed:", error);
+  }
+
+  return payload;
 }
 
 // ─── Exported Cache-Wrapped API ───────────────────────────────────────────────
@@ -320,21 +386,49 @@ export const getResourcesFromDB = (
   academicYear: AcademicYear,
   branch: string,
   semester: number,
-) => unstable_cache(
-  () => fetchResourcesFromDB(academicYear, branch, semester),
-  ["resources-cache", academicYear, branch, semester.toString()],
-  { revalidate: 86400, tags: ["resources"] }
-)();
+) =>
+  unstable_cache(
+    async () => {
+      const { resources } = await fetchWorkspaceListRaw(
+        academicYear,
+        branch,
+        semester,
+      );
+      return resources;
+    },
+    ["resources-cache", academicYear, branch, semester.toString()],
+    { revalidate: 86400, tags: ["resources"] },
+  )();
 
 export const getSyllabusFile = (
   academicYear: AcademicYear,
   branch: string,
   semester: number,
-) => unstable_cache(
-  () => fetchSyllabusFile(academicYear, branch, semester),
-  ["syllabus-cache", academicYear, branch, semester.toString()],
-  { revalidate: 86400, tags: ["syllabus", "resources"] }
-)();
+) =>
+  unstable_cache(
+    async () => {
+      const { syllabusUrl } = await fetchWorkspaceListRaw(
+        academicYear,
+        branch,
+        semester,
+      );
+      return syllabusUrl;
+    },
+    ["syllabus-cache", academicYear, branch, semester.toString()],
+    { revalidate: 86400, tags: ["syllabus", "resources"] },
+  )();
+
+/** Single cached payload for /api/resources/list (1 Data Cache entry). */
+export const getWorkspaceList = (
+  academicYear: AcademicYear,
+  branch: string,
+  semester: number,
+) =>
+  unstable_cache(
+    () => fetchWorkspaceListRaw(academicYear, branch, semester),
+    ["workspace-list", academicYear, branch, semester.toString()],
+    { revalidate: 86400, tags: ["resources", "syllabus"] },
+  )();
 
 export type HomeStats = {
   subjects: number;

@@ -44,6 +44,7 @@ Drive commands (preferred for notes uploads):
   mv <from-path> <to-folder-or-path> --dry-run|--apply
   sync [--full] [--path=…] [--year=] [--branch=] [--semester=] [--subject=]
        [--incremental] [--dry-run] [--verbose]
+       Default without flags: incremental (Drive Changes API). Use --full weekly.
   index [--id=] [--title=] [--subject=] [--path=] [--shrink-content]
 
 Other commands:

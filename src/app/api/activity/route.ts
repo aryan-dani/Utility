@@ -183,13 +183,13 @@ export async function GET(request: Request) {
 
     const userId = auth.uid;
     const db = adminDb();
-    const since = daysAgoLocal(365);
+    const since = daysAgoLocal(90);
 
     const snapshot = await db
       .collection("activity_logs")
       .where("user_id", "==", userId)
       .where("logged_date", ">=", since)
-      .limit(400)
+      .limit(120)
       .get();
 
     const counts: Record<string, number> = {};
