@@ -8,7 +8,7 @@ import { select, upsert, upsertBatch, remove } from "../lib/db.mjs";
 import { downloadFile } from "../lib/storage.mjs";
 import { extractStructured } from "../lib/extractor.mjs";
 import { getDrive } from "../lib/drive.mjs";
-import { chunkUnits, buildDocFreq, capDocFreq } from "../lib/chunker.mjs";
+import { chunkUnits, capDocFreq } from "../lib/chunker.mjs";
 import { embedChunks } from "../lib/embed.mjs";
 import { MAX_DOC_FREQ_TERMS } from "../lib/rag/config.mjs";
 import { db } from "../lib/firebase.mjs";
@@ -19,6 +19,8 @@ const PAGE_SIZE = 500;
 const RESOURCE_CONCURRENCY = 2;
 const CONTENT_MAX_CHARS = 6000;
 const SEARCH_TOKENS_MAX = 800;
+/** Cap changed-only / default runs so one job cannot blow Spark quota mid-flight. */
+const CHANGED_ONLY_MAX_PER_RUN = 40;
 
 function hashBuffer(buffer) {
   return crypto.createHash("sha256").update(buffer).digest("hex");
@@ -187,18 +189,28 @@ export default async function indexContent(options = {}) {
   )
     .trim()
     .replace(/\\/g, "/");
-  const changedOnly =
-    options.changedOnly === true ||
-    process.argv.includes("--changed-only");
+
+  const argv = options.argv || process.argv;
+  const wantAll =
+    options.all === true ||
+    argv.includes("--all") ||
+    argv.includes("--full");
+  const rebuildStats =
+    options.rebuildStats === true || argv.includes("--rebuild-stats");
 
   const targeted =
     idFilters.size > 0 || titleFilter || subjectFilter || pathFilter;
 
-  console.log(
-    `\n🔍 Starting Hybrid Content Indexing${
-      targeted ? " (targeted)" : changedOnly ? " (changed-only)" : ""
-    }…\n`,
-  );
+  // Default: changed-only. Pass --all/--full to scan every resource for stale hashes.
+  const mode = targeted ? "targeted" : wantAll ? "all" : "changed-only";
+
+  console.log(`\n🔍 Starting Hybrid Content Indexing (${mode})…\n`);
+
+  if (mode === "all") {
+    console.warn(
+      "⚠️  Full resource scan mode. Prefer `npm run index-content` (changed-only) on Spark.\n",
+    );
+  }
 
   const hasGemini = Boolean(process.env.GEMINI_API_KEY);
   if (!hasGemini) {
@@ -218,17 +230,21 @@ export default async function indexContent(options = {}) {
         if (snap.exists) resources.push({ id: snap.id, ...snap.data() });
         else console.warn(`  ⚠️  Resource not found: ${id}`);
       }
-    } else if (changedOnly && !targeted) {
+    } else if (mode === "changed-only") {
       // Spark-friendly: only resources flagged for reindex (content_hash cleared by sync).
       const snap = await db
         .collection("resources")
         .where("content_hash", "==", null)
-        .limit(500)
+        .limit(CHANGED_ONLY_MAX_PER_RUN)
         .get();
       resources = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       console.log(
-        `📌 Changed-only mode: ${resources.length} resource(s) with content_hash=null.\n`,
+        `📌 Changed-only: ${resources.length} resource(s) with content_hash=null (max ${CHANGED_ONLY_MAX_PER_RUN}/run).\n`,
       );
+      if (resources.length === 0) {
+        console.log("✨ Nothing to index. Done.\n");
+        return;
+      }
     } else {
       resources = await fetchAll("resources");
     }
@@ -271,7 +287,7 @@ export default async function indexContent(options = {}) {
 
     // Avoid loading every resource_content / chunk row (was multi‑k reads/day).
     const indexedMap = new Map();
-    if (!changedOnly || targeted) {
+    if (mode === "all") {
       const indexedContent = await fetchAll(
         "resource_content",
         "resource_id, last_indexed, search_tokens, content_hash",
@@ -280,7 +296,9 @@ export default async function indexContent(options = {}) {
     } else {
       for (const res of indexable) {
         const snap = await db.collection("resource_content").doc(res.id).get();
-        if (snap.exists) indexedMap.set(res.id, { resource_id: res.id, ...snap.data() });
+        if (snap.exists) {
+          indexedMap.set(res.id, { resource_id: res.id, ...snap.data() });
+        }
       }
     }
 
@@ -295,7 +313,7 @@ export default async function indexContent(options = {}) {
     };
 
     for (const res of indexable) {
-      if (targeted || changedOnly) {
+      if (mode === "targeted" || mode === "changed-only") {
         queue(res);
         continue;
       }
@@ -327,6 +345,11 @@ export default async function indexContent(options = {}) {
       }
       if (res.content_hash && doc.content_hash === res.content_hash) continue;
       queue(res);
+    }
+
+    if (toIndex.length === 0) {
+      console.log("✨ Nothing to (re)index. Done.\n");
+      return;
     }
 
     console.log(`🚀 ${toIndex.length} resources to (re)index.\n`);
@@ -474,40 +497,64 @@ export default async function indexContent(options = {}) {
     }
     await Promise.all(executing);
 
-    if (!targeted && !changedOnly) {
-      console.log("\n📊 Computing corpus statistics…");
-      const allChunksForStats = await fetchAll(
-        "resource_chunks",
-        "chunk_tokens, token_count",
-      );
-      const df = buildDocFreq(allChunksForStats);
-      const totalTokens = allChunksForStats.reduce(
-        (s, c) => s + (c.token_count || 0),
-        0,
-      );
-      const avgTokenCount = allChunksForStats.length
-        ? totalTokens / allChunksForStats.length
-        : 0;
-
-      await db.collection("rag_stats").doc("global").set({
-        total_chunks: allChunksForStats.length,
-        avg_token_count: avgTokenCount,
-        doc_freq: capDocFreq(df, MAX_DOC_FREQ_TERMS),
-        updated_at: new Date().toISOString(),
-      });
-
+    // NEVER fetchAll(resource_chunks) — that alone can exceed Spark's daily read quota.
+    // Optional light merge from this run's tokens, or skip entirely.
+    if (rebuildStats) {
       console.log(
-        `\n✨ Indexing complete. ${allChunksForStats.length} total chunks in corpus.`,
+        "\n📊 Merging corpus stats from this run only (no full chunk scan)…",
       );
+      try {
+        const prevSnap = await db.collection("rag_stats").doc("global").get();
+        const prev = prevSnap.exists ? prevSnap.data() || {} : {};
+        const df = { ...(prev.doc_freq || {}) };
+        let addedTokens = 0;
+        for (const chunk of allChunkTokens) {
+          addedTokens += chunk.token_count || 0;
+          for (const t of chunk.chunk_tokens || []) {
+            if (!t) continue;
+            df[t] = (Number(df[t]) || 0) + 1;
+          }
+        }
+        const prevChunks = Number(prev.total_chunks) || 0;
+        const prevAvg = Number(prev.avg_token_count) || 0;
+        const newChunkCount = allChunkTokens.length;
+        const newTotal = prevChunks + newChunkCount;
+        const avgTokenCount = newTotal
+          ? (prevAvg * prevChunks + addedTokens) / newTotal
+          : 0;
+
+        await db.collection("rag_stats").doc("global").set(
+          {
+            total_chunks: newTotal,
+            avg_token_count: avgTokenCount,
+            doc_freq: capDocFreq(df, MAX_DOC_FREQ_TERMS),
+            updated_at: new Date().toISOString(),
+          },
+          { merge: true },
+        );
+        console.log(
+          `\n✨ Indexing complete. Stats merged (+${newChunkCount} chunks this run; ~${newTotal} tracked).`,
+        );
+      } catch (err) {
+        console.warn(
+          `⚠️  Stats merge skipped (quota or error): ${err.message}`,
+        );
+        console.log(`\n✨ Indexing complete (stats unchanged).`);
+      }
     } else {
       console.log(
-        `\n✨ ${changedOnly ? "Changed-only" : "Targeted"} indexing complete (corpus stats unchanged).`,
+        `\n✨ ${mode} indexing complete (corpus stats unchanged — pass --rebuild-stats to merge lightly).`,
       );
     }
     console.log(
       `   Resources: ${stats.ok} indexed, ${stats.skipped} skipped (no text), ${stats.failed} failed.`,
     );
     console.log(`   Wrote ${stats.chunksWritten} chunk documents this run.\n`);
+    if (mode === "changed-only" && stats.ok >= CHANGED_ONLY_MAX_PER_RUN) {
+      console.log(
+        `   More pending? Re-run \`npm run index-content\` until it prints "Nothing to index".\n`,
+      );
+    }
   } catch (error) {
     console.error(`\n❌ Indexing error: ${error.message}`);
     throw error;

@@ -46,6 +46,8 @@ Drive commands (preferred for notes uploads):
        [--incremental] [--dry-run] [--verbose]
        Default without flags: incremental (Drive Changes API). Use --full weekly.
   index [--id=] [--title=] [--subject=] [--path=] [--shrink-content]
+       [--all] [--rebuild-stats]
+       Default: changed-only (content_hash=null, max 40/run). Never scans all chunks.
 
 Other commands:
   help              Show this help menu
@@ -154,12 +156,19 @@ async function main() {
       }
 
       case "index": {
+        const wantAll =
+          args.includes("--all") || args.includes("--full");
         await indexContent({
           shrinkContent: args.includes("--shrink-content"),
           ids: args.filter((a) => a.startsWith("--id=")).map((a) => a.slice(5)),
           title: parseFlag(args, "title"),
           subject: parseFlag(args, "subject"),
           path: parseFlag(args, "path"),
+          // Default: only content_hash=null. Pass --all for a full stale scan.
+          changedOnly: !wantAll,
+          all: wantAll,
+          rebuildStats: args.includes("--rebuild-stats"),
+          argv: args,
         });
         break;
       }

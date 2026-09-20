@@ -63,12 +63,7 @@ jobs:
           GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
 
       - name: Index changed resources for search/RAG
-        run: |
-          if [ "${{ steps.mode.outputs.mode }}" = "full" ]; then
-            npm run index-content:all
-          else
-            npm run index-content
-          fi
+        run: npm run index-content
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_CLIENT_EMAIL: ${{ secrets.FIREBASE_CLIENT_EMAIL }}
