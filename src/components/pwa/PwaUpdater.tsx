@@ -35,17 +35,6 @@ function activateWorker(worker: ServiceWorker) {
   worker.postMessage({ type: 'SKIP_WAITING' });
 }
 
-async function hardRecoverAndReload() {
-  try {
-    await clearWorkboxCaches();
-    const regs = await navigator.serviceWorker.getRegistrations();
-    await Promise.all(regs.map((r) => r.unregister()));
-  } catch (e) {
-    console.error('Failed to recover service worker:', e);
-  }
-  window.location.reload();
-}
-
 function sessionFlag(key: string): boolean {
   try {
     return sessionStorage.getItem(key) === '1';
@@ -61,6 +50,24 @@ function setSessionFlag(key: string, value: boolean) {
   } catch {
     /* ignore */
   }
+}
+
+/**
+ * Last-resort recovery: unregister SW, clear Workbox caches, reload.
+ * Always clears the applying lock and marks just-updated so the next paint
+ * is not stuck skipping every update for the rest of the tab session.
+ */
+async function hardRecoverAndReload() {
+  setSessionFlag(SW_UPDATE_SESSION.justUpdated, true);
+  setSessionFlag(SW_UPDATE_SESSION.applying, false);
+  try {
+    await clearWorkboxCaches();
+    const regs = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(regs.map((r) => r.unregister()));
+  } catch (e) {
+    console.error('Failed to recover service worker:', e);
+  }
+  window.location.reload();
 }
 
 function ApplyingOverlay() {
@@ -108,13 +115,18 @@ export default function PwaUpdater() {
         description: 'Utility OS finished updating in this window.',
         duration: 4500,
       });
+    } else if (sessionFlag(SW_UPDATE_SESSION.applying)) {
+      // Stale lock (interrupted apply / recover without justUpdated) — unblock session.
+      setSessionFlag(SW_UPDATE_SESSION.applying, false);
     }
 
     let toastShown = false;
-    let updateInFlight = sessionFlag(SW_UPDATE_SESSION.applying);
+    let updateInFlight = false;
     let fallbackTimer: ReturnType<typeof setTimeout> | null = null;
     let refreshing = false;
     let lastVisibilityUpdateAt = 0;
+    /** True once a controller has owned this page (skips reload on first claim). */
+    let hadController = Boolean(navigator.serviceWorker.controller);
     /** Workers already waiting when this page mounted — silent apply, no toast. */
     const waitingOnLoad = new WeakSet<ServiceWorker>();
 
@@ -127,6 +139,8 @@ export default function PwaUpdater() {
       activateWorker(worker);
       fallbackTimer = setTimeout(() => {
         if (refreshing) return;
+        // Reset in-memory lock; hardRecover clears session applying + sets justUpdated.
+        updateInFlight = false;
         void hardRecoverAndReload();
       }, CONTROLLER_FALLBACK_MS);
     };
@@ -215,10 +229,15 @@ export default function PwaUpdater() {
       });
 
       if (isOfflineShellWhileOnline()) {
-        await reg.update();
-        if (reg.waiting) {
-          beginApply(reg.waiting);
-        } else {
+        try {
+          await reg.update();
+          if (reg.waiting) {
+            beginApply(reg.waiting);
+          } else {
+            await hardRecoverAndReload();
+          }
+        } catch (err) {
+          console.error('Offline-shell recovery update failed:', err);
           await hardRecoverAndReload();
         }
       }
@@ -238,16 +257,25 @@ export default function PwaUpdater() {
     void checkForUpdates({ force: true });
 
     const handleControllerChange = async () => {
+      const applying = sessionFlag(SW_UPDATE_SESSION.applying);
+
+      // First SW claim (no prior controller): browser activates the worker — do not reload.
+      if (!applying && !hadController) {
+        hadController = true;
+        return;
+      }
+      hadController = true;
+
+      // Spurious controllerchange without an update we started — ignore.
+      if (!applying) return;
+
       if (refreshing) return;
       refreshing = true;
       if (fallbackTimer) {
         clearTimeout(fallbackTimer);
         fallbackTimer = null;
       }
-      // Guard against controllerchange loops across reloads.
-      if (sessionFlag(SW_UPDATE_SESSION.applying)) {
-        setSessionFlag(SW_UPDATE_SESSION.justUpdated, true);
-      }
+      setSessionFlag(SW_UPDATE_SESSION.justUpdated, true);
       try {
         await clearWorkboxCaches();
       } catch (e) {

@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { getWorkspaceList } from '@/lib/dataFetcher';
 import { resolveWorkspace } from '@/lib/workspace';
 
-export const revalidate = 86400;
+// Query params force dynamic rendering; CDN still caches via Cache-Control below.
+export const dynamic = 'force-dynamic';
 
 function isQuotaExhausted(error: unknown): boolean {
   if (!error || typeof error !== 'object') return false;
