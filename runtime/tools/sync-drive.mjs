@@ -127,122 +127,179 @@ async function resolveWalkRoot(opts) {
 }
 
 async function syncIncremental(opts) {
-  const drive = getDrive(["https://www.googleapis.com/auth/drive.readonly"]);
-  const rootId = getRootFolderId();
-  let state = await getDriveSyncState();
-  let pageToken = state?.page_token;
-
-  if (!pageToken) {
-    const start = await drive.changes.getStartPageToken({
-      supportsAllDrives: true,
-    });
-    pageToken = start.data.startPageToken;
-    if (!opts.dryRun) {
-      await setDriveSyncState({ page_token: pageToken, mode: "incremental" });
-    }
+  try {
     console.log(
-      "  No saved page token — saved start token. Run --full once, then --incremental.",
+      `\n🔄 Incremental Drive sync…${opts.dryRun ? " (dry-run)" : ""}\n`,
     );
-    return { stats: { resourcesWritten: 0 } };
-  }
+    getEnv("GOOGLE_DRIVE_FOLDER_ID");
+    const drive = getDrive(["https://www.googleapis.com/auth/drive.readonly"]);
+    const rootId = getRootFolderId();
+    let state = await getDriveSyncState();
+    let pageToken = state?.page_token;
 
-  console.log(`\n🔄 Incremental Drive sync from page token…\n`);
-  const changedFiles = [];
-  let newToken = pageToken;
-
-  do {
-    const res = await drive.changes.list({
-      pageToken: newToken,
-      fields:
-        "nextPageToken, newStartPageToken, changes(fileId, removed, file(id, name, mimeType, modifiedTime, parents, trashed))",
-      pageSize: 100,
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
-      spaces: "drive",
-    });
-
-    for (const change of res.data.changes || []) {
-      if (change.removed || change.file?.trashed) {
-        // Path-based delete needs drive_file_id lookup — handled lightly
-        continue;
+    if (!pageToken) {
+      const start = await drive.changes.getStartPageToken({
+        supportsAllDrives: true,
+      });
+      pageToken = start.data.startPageToken;
+      if (!opts.dryRun) {
+        await setDriveSyncState({ page_token: pageToken, mode: "incremental" });
       }
-      const file = change.file;
-      if (!file || file.mimeType === "application/vnd.google-apps.folder") {
-        continue;
-      }
-      // Reconstruct path via parents walk (best-effort)
-      try {
-        const pathParts = [file.name];
-        let parentId = file.parents?.[0];
-        let guard = 0;
-        while (parentId && parentId !== rootId && guard++ < 20) {
-          const parent = await drive.files.get({
-            fileId: parentId,
-            fields: "id, name, parents",
-            supportsAllDrives: true,
-          });
-          pathParts.unshift(parent.data.name);
-          parentId = parent.data.parents?.[0];
-          if (parentId === rootId) break;
-        }
-        if (parentId !== rootId && guard >= 20) continue;
-        const relativePath = pathParts.join("/");
-        const parsed = parseDrivePath(relativePath);
-        if (!parsed?.ok) continue;
-        changedFiles.push({
-          id: file.id,
-          name: file.name,
-          path: relativePath,
-          updatedAt: file.modifiedTime,
+      console.log(
+        "  No saved page token — saved start token.",
+      );
+      console.log(
+        "  Next incremental run will pick up new changes. Run `npm run sync-drive:full` once if the catalog is empty/stale.\n",
+      );
+      printSummary({
+        resourcesWritten: 0,
+        resourcesSkipped: 0,
+        reindexFlagged: 0,
+        pathSkipped: 0,
+        filterSkipped: 0,
+        deletedResources: 0,
+        deletedSubjects: 0,
+        subjects: 0,
+      }, { incremental: true });
+      return { stats: { resourcesWritten: 0 } };
+    }
+
+    console.log(`  Using saved page token.\n`);
+    const changedFiles = [];
+    let newToken = pageToken;
+
+    try {
+      do {
+        const res = await drive.changes.list({
+          pageToken: newToken,
+          fields:
+            "nextPageToken, newStartPageToken, changes(fileId, removed, file(id, name, mimeType, modifiedTime, parents, trashed))",
+          pageSize: 100,
+          supportsAllDrives: true,
+          includeItemsFromAllDrives: true,
+          spaces: "drive",
         });
-      } catch {
-        /* skip unresolvable */
+
+        for (const change of res.data.changes || []) {
+          if (change.removed || change.file?.trashed) {
+            continue;
+          }
+          const file = change.file;
+          if (!file || file.mimeType === "application/vnd.google-apps.folder") {
+            continue;
+          }
+          try {
+            const pathParts = [file.name];
+            let parentId = file.parents?.[0];
+            let guard = 0;
+            while (parentId && parentId !== rootId && guard++ < 20) {
+              const parent = await drive.files.get({
+                fileId: parentId,
+                fields: "id, name, parents",
+                supportsAllDrives: true,
+              });
+              pathParts.unshift(parent.data.name);
+              parentId = parent.data.parents?.[0];
+              if (parentId === rootId) break;
+            }
+            if (parentId !== rootId && guard >= 20) continue;
+            const relativePath = pathParts.join("/");
+            const parsed = parseDrivePath(relativePath);
+            if (!parsed?.ok) continue;
+            changedFiles.push({
+              id: file.id,
+              name: file.name,
+              path: relativePath,
+              updatedAt: file.modifiedTime,
+            });
+          } catch {
+            /* skip unresolvable */
+          }
+        }
+
+        if (res.data.nextPageToken) {
+          newToken = res.data.nextPageToken;
+        } else {
+          newToken = res.data.newStartPageToken || newToken;
+          break;
+        }
+      } while (true);
+    } catch (err) {
+      const msg = err?.message || String(err);
+      const invalidToken =
+        /pageToken|invalid|expired|Invalid Value/i.test(msg) ||
+        err?.code === 400 ||
+        err?.response?.status === 400;
+      if (invalidToken) {
+        console.warn(`  ⚠️  Drive page token invalid (${msg}). Resetting…`);
+        const start = await drive.changes.getStartPageToken({
+          supportsAllDrives: true,
+        });
+        if (!opts.dryRun) {
+          await setDriveSyncState({
+            page_token: start.data.startPageToken,
+            mode: "incremental-reset",
+            reset_reason: msg.slice(0, 200),
+          });
+        }
+        console.log(
+          "  Token reset. Run `npm run sync-drive:full` once to reconcile, then incremental will work.\n",
+        );
+        return { stats: { resourcesWritten: 0 }, resetToken: true };
       }
+      throw err;
     }
 
-    if (res.data.nextPageToken) {
-      newToken = res.data.nextPageToken;
+    if (changedFiles.length === 0) {
+      console.log(`📦 No Drive changes since last sync.\n`);
     } else {
-      newToken = res.data.newStartPageToken || newToken;
-      break;
+      console.log(
+        `📦 ${changedFiles.length} changed file(s) under catalog paths.\n`,
+      );
     }
-  } while (true);
 
-  if (changedFiles.length === 0) {
-    console.log(`📦 No Drive changes since last sync.\n`);
-  } else {
-    console.log(`📦 ${changedFiles.length} changed file(s) under catalog paths.\n`);
-  }
-
-  const result = await upsertResources(changedFiles, {
-    dryRun: opts.dryRun,
-    verbose: opts.verbose,
-    prune: false,
-    updateStats: changedFiles.length ? "bump" : "none",
-  });
-
-  if (!opts.dryRun) {
-    await setDriveSyncState({
-      page_token: newToken,
-      mode: "incremental",
-      last_change_count: changedFiles.length,
+    const result = await upsertResources(changedFiles, {
+      dryRun: opts.dryRun,
+      verbose: opts.verbose,
+      prune: false,
+      updateStats: changedFiles.length ? "bump" : "none",
     });
-  }
 
-  printSummary(result.stats, { incremental: true });
-  return result;
+    if (!opts.dryRun) {
+      await setDriveSyncState({
+        page_token: newToken,
+        mode: "incremental",
+        last_change_count: changedFiles.length,
+      });
+    }
+
+    printSummary(result.stats, { incremental: true });
+    return result;
+  } catch (error) {
+    const msg = error?.message || String(error);
+    console.error(`\n❌ Incremental sync failed: ${msg}`);
+    if (error?.stack) console.error(error.stack);
+    // Spark daily quota: don't fail the scheduled job red overnight — next run retries.
+    if (/RESOURCE_EXHAUSTED|Quota exceeded/i.test(msg)) {
+      console.error(
+        "  Firestore Spark quota exhausted. Soft-exiting so CI can continue; retry after reset.\n",
+      );
+      return { stats: { resourcesWritten: 0 }, quotaExhausted: true };
+    }
+    throw error;
+  }
 }
 
-function printSummary(stats, extra = {}) {
+function printSummary(stats = {}, extra = {}) {
   console.log(`\n✨ Sync Complete${extra.incremental ? " (incremental)" : ""}!`);
-  console.log(`   - Resources written: ${stats.resourcesWritten}`);
-  console.log(`   - Resources unchanged (skipped): ${stats.resourcesSkipped}`);
-  console.log(`   - Reindex flagged: ${stats.reindexFlagged}`);
-  console.log(`   - Path skipped: ${stats.pathSkipped}`);
-  console.log(`   - Filter skipped: ${stats.filterSkipped}`);
-  console.log(`   - Resources deleted: ${stats.deletedResources}`);
-  console.log(`   - Subjects deleted: ${stats.deletedSubjects}`);
-  console.log(`   - Subjects touched: ${stats.subjects}\n`);
+  console.log(`   - Resources written: ${stats.resourcesWritten ?? 0}`);
+  console.log(`   - Resources unchanged (skipped): ${stats.resourcesSkipped ?? 0}`);
+  console.log(`   - Reindex flagged: ${stats.reindexFlagged ?? 0}`);
+  console.log(`   - Path skipped: ${stats.pathSkipped ?? 0}`);
+  console.log(`   - Filter skipped: ${stats.filterSkipped ?? 0}`);
+  console.log(`   - Resources deleted: ${stats.deletedResources ?? 0}`);
+  console.log(`   - Subjects deleted: ${stats.deletedSubjects ?? 0}`);
+  console.log(`   - Subjects touched: ${stats.subjects ?? 0}\n`);
 }
 
 async function syncDrive(options = {}) {
@@ -313,7 +370,11 @@ const isDirectRun =
 if (isDirectRun) {
   syncDrive()
     .then(() => process.exit(0))
-    .catch(() => process.exit(1));
+    .catch((err) => {
+      console.error(`\n❌ sync-drive exited with error: ${err?.message || err}`);
+      if (err?.stack) console.error(err.stack);
+      process.exit(1);
+    });
 }
 
 export default syncDrive;

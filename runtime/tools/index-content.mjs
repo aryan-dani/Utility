@@ -556,7 +556,14 @@ export default async function indexContent(options = {}) {
       );
     }
   } catch (error) {
-    console.error(`\n❌ Indexing error: ${error.message}`);
+    const msg = error?.message || String(error);
+    console.error(`\n❌ Indexing error: ${msg}`);
+    if (/RESOURCE_EXHAUSTED|Quota exceeded/i.test(msg)) {
+      console.error(
+        "  Firestore Spark quota exhausted. Soft-exiting; retry after daily reset.\n",
+      );
+      return { stats, quotaExhausted: true };
+    }
     throw error;
   }
 }
