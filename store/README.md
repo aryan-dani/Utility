@@ -1,6 +1,8 @@
-# Store packaging
+﻿# Store packaging
 
 Utility ships to Google Play as a Trusted Web Activity and to the Microsoft Store as a PWABuilder MSIX. The live site at `https://utilityos.tech` is the app. Do not add Capacitor, a second origin, or a Drive file proxy.
+
+**Microsoft Store (live):** [https://apps.microsoft.com/detail/9PPFG0G5R0MG](https://apps.microsoft.com/detail/9PPFG0G5R0MG)
 
 ## Names
 
@@ -69,14 +71,23 @@ After Play App Signing is on, copy **both** SHA-256 fingerprints (upload key + P
 
 `https://digitalassetlinks.googleapis.com/v1/statements:list?source.web.site=https://utilityos.tech&relation=delegate_permission/common.handle_all_urls`
 
-## Microsoft Store (you)
+## Microsoft Store
 
-Identity values live in [`store/microsoft/product-identity.md`](microsoft/product-identity.md) (do not lose this file).
+Identity values live in [`store/microsoft/product-identity.md`](microsoft/product-identity.md).
 
-1. Register for free at [Partner Center](https://partner.microsoft.com/dashboard) (Individual). ID check is slower than Play; start it the same day.
-2. Reserve the name **Utility OS** as **MSIX or PWA app** — done.
-3. At [pwabuilder.com](https://www.pwabuilder.com) package `https://utilityos.tech`. Paste the values from `product-identity.md` when PWABuilder asks.
-4. Submit in Partner Center: IARC rating, same privacy URL, screenshots `microsoft-01-home-1920.jpg` plus desktop timer/visualize, logos `microsoft-logo-300.png` and `microsoft-logo-1080.png`.
+**Live listing:** [https://apps.microsoft.com/detail/9PPFG0G5R0MG](https://apps.microsoft.com/detail/9PPFG0G5R0MG)
+
+### How website updates reach the Store app
+
+The MSIX is a PWABuilder shell of `https://utilityos.tech`. A normal Vercel deploy updates the Store window on the **next open** via the same service worker as the website. Users already sitting in the app may see **Apply update**; otherwise there is no toast.
+
+**Rebuild / re-upload the MSIX only when** package identity, publisher, display name, or other Partner Center package metadata must change — not for ordinary site features.
+
+### Packaging (when you need a new MSIX)
+
+1. Register at [Partner Center](https://partner.microsoft.com/dashboard) if needed.
+2. At [pwabuilder.com](https://www.pwabuilder.com) package `https://utilityos.tech`. Paste values from `product-identity.md`.
+3. Submit in Partner Center: IARC rating, privacy URL, screenshots, logos as documented below.
 
 ### Certification: account creation (10.1.2.10)
 
@@ -100,9 +111,9 @@ Reviewers often fail OAuth **popups** (and Google may block OAuth inside Store W
 > Account creation: open Utility OS → tap "Create account" in the sidebar (or, on the Sign in page, tap the prominent "Create account" button at the top of the card) → enter any email address and a password of 6 or more characters → tap "Create account." The email/password method is the supported sign-in path in the Windows app; Google and GitHub OAuth are intentionally hidden in the packaged shell because they do not reliably complete in embedded WebView environments. To verify: after creating an account, you will be redirected to the home screen and your email/avatar will appear in the sidebar footer. You can sign out from the sidebar user menu and sign back in with the same credentials. Generative AI: The "Ask AI" feature uses a large language model to answer academic questions. This is declared under Product Declarations.
 
 Also in the same submission → **Properties** → **Product declarations**: check  
-**“This product incorporates generative AI features…”** (required for policy 11.16).
+**"This product incorporates generative AI features…"** (required for policy 11.16).
 
-After a production deploy of auth fixes, rebuild the PWABuilder package from `https://utilityos.tech` so the Store binary picks up the new site, then upload the new packages and resubmit.
+After a production deploy of auth fixes that must ship inside a new package binary, rebuild the PWABuilder package from `https://utilityos.tech`, then upload and resubmit.
 
 ## After Play is live
 

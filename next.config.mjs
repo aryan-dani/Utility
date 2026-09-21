@@ -121,18 +121,17 @@ const config = isDev
       workboxOptions: {
         skipWaiting: false,
         clientsClaim: true,
+        cleanupOutdatedCaches: true,
         exclude: [/\.map$/, /^manifest.*\.js$/],
         runtimeCaching: [
-          // Auth pages must always be fresh for Store certification —
-          // a stale cached login/signup page may lack the Create account CTA.
+          // Same-origin navigations: prefer network so the next visit gets new HTML.
+          // Auth pages inherit this; keep a short timeout so offline still falls back.
           {
             urlPattern: ({ request, url, sameOrigin }) =>
-              sameOrigin &&
-              request.mode === "navigate" &&
-              /^\/(login|signup)(\/.*)?$/.test(url.pathname),
+              sameOrigin && request.mode === "navigate",
             handler: "NetworkFirst",
             options: {
-              cacheName: "auth-pages",
+              cacheName: "pages",
               networkTimeoutSeconds: 5,
             },
           },

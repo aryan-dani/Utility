@@ -31,6 +31,10 @@ export interface AppToastProps {
     label: string;
     onClick: () => void;
   };
+  secondaryAction?: {
+    label: string;
+    onClick: () => void;
+  };
   icon?: ReactNode;
   onDismiss?: () => void;
   showClose?: boolean;
@@ -61,18 +65,21 @@ export function AppToast({
   title,
   description,
   action,
+  secondaryAction,
   icon,
   onDismiss,
   showClose = false,
 }: AppToastProps) {
   const isError = kind === "error";
-  const isEmphasis = kind === "star" || kind === "update";
+  const isUpdate = kind === "update";
+  const isEmphasis = kind === "star" || isUpdate;
+  const hasActions = Boolean(action || secondaryAction);
 
   return (
     <div
       className={cn(
         "pointer-events-auto w-[min(100vw-2rem,22rem)] overflow-hidden rounded-[var(--radius-2xl)] border bg-card shadow-window",
-        isError ? "border-destructive/45" : "border-border",
+        isError ? "border-destructive/45" : isUpdate ? "border-foreground/25" : "border-border",
       )}
       role="status"
       style={{ boxShadow: "var(--elev-3)" }}
@@ -83,7 +90,9 @@ export function AppToast({
           "flex items-center gap-2 border-b px-3 py-2",
           isError
             ? "border-destructive/25 bg-destructive/5"
-            : "border-border bg-surface/80",
+            : isUpdate
+              ? "border-border bg-foreground/[0.04]"
+              : "border-border bg-surface/80",
         )}
       >
         <div
@@ -104,7 +113,7 @@ export function AppToast({
             isError ? "text-destructive" : "text-muted",
           )}
         >
-          {kindMeta[kind]}
+          {isUpdate ? "Update" : kindMeta[kind]}
         </p>
         {showClose && onDismiss ? (
           <button
@@ -118,24 +127,55 @@ export function AppToast({
         ) : null}
       </div>
 
-      <div className="px-3.5 py-3">
-        <p className="text-sm font-semibold tracking-tight text-foreground">
+      <div className={cn("px-3.5 py-3", isUpdate && "py-3.5")}>
+        <p
+          className={cn(
+            "font-semibold tracking-tight text-foreground",
+            isUpdate ? "text-base" : "text-sm",
+          )}
+        >
           {title}
         </p>
         {description ? (
-          <p className="mt-1 text-xs leading-relaxed text-muted">{description}</p>
+          <p
+            className={cn(
+              "mt-1 leading-relaxed text-muted",
+              isUpdate ? "text-[13px]" : "text-xs",
+            )}
+          >
+            {description}
+          </p>
         ) : null}
 
-        {action ? (
-          <div className="mt-3 flex justify-end border-t border-border/70 pt-3">
-            <Button
-              size="sm"
-              variant={isError ? "destructive" : "primary"}
-              onClick={action.onClick}
-              className="min-h-8 rounded-lg px-3.5"
-            >
-              {action.label}
-            </Button>
+        {hasActions ? (
+          <div
+            className={cn(
+              "mt-3 flex items-center gap-2 border-t border-border/70 pt-3",
+              secondaryAction ? "justify-between" : "justify-end",
+            )}
+          >
+            {secondaryAction ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                onClick={secondaryAction.onClick}
+                className="min-h-8 rounded-lg px-3"
+              >
+                {secondaryAction.label}
+              </Button>
+            ) : (
+              <span />
+            )}
+            {action ? (
+              <Button
+                size="sm"
+                variant={isError ? "destructive" : "primary"}
+                onClick={action.onClick}
+                className="min-h-8 rounded-lg px-3.5"
+              >
+                {action.label}
+              </Button>
+            ) : null}
           </div>
         ) : null}
       </div>

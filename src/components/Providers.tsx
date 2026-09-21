@@ -6,6 +6,7 @@ import { PWAProvider } from '@/contexts/PWAContext';
 import { Toaster } from 'sonner';
 import NavigationProgress from './NavigationProgress';
 import { ThemeColorSync } from '@/components/shell/ThemeColorSync';
+import { useIsStandalone } from '@/lib/pwa/displayMode';
 
 const CommandPalette = dynamic(() => import('./CommandPalette'), { ssr: false });
 const PwaUpdater = dynamic(() => import('./pwa/PwaUpdater'), { ssr: false });
@@ -13,6 +14,7 @@ const PwaUpdater = dynamic(() => import('./pwa/PwaUpdater'), { ssr: false });
 
 function ToasterProvider() {
   const { theme } = useTheme();
+  const standalone = useIsStandalone();
 
   return (
     <Toaster
@@ -23,7 +25,12 @@ function ToasterProvider() {
       expand={false}
       visibleToasts={4}
       duration={4000}
-      offset="max(1rem, env(safe-area-inset-bottom))"
+      // Installed / Store WebView chrome sits lower — lift toasts above it.
+      offset={
+        standalone
+          ? 'max(2.5rem, calc(env(safe-area-inset-bottom) + 1.25rem))'
+          : 'max(1rem, env(safe-area-inset-bottom))'
+      }
       gap={12}
       toastOptions={{
         unstyled: true,

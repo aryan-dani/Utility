@@ -1,7 +1,9 @@
 # Microsoft Store — Utility OS product identity
 
 Captured from Partner Center → Product management → Product identity.  
-App type: **MSIX or PWA app** · Status: **In draft**
+App type: **MSIX or PWA app** · Status: **Live on Microsoft Store**
+
+**Listing:** [https://apps.microsoft.com/detail/9PPFG0G5R0MG](https://apps.microsoft.com/detail/9PPFG0G5R0MG)
 
 Use the **Package Manifest Values** + **Package Family Name** in PWABuilder when packaging `https://utilityos.tech`.
 

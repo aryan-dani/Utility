@@ -9,6 +9,7 @@ import {
   Layers,
   Building2,
   Waypoints,
+  HelpCircle,
 } from "lucide-react";
 import AuthButtons from "./AuthButtons";
 import HomeHeatmap from "./HomeHeatmap";
@@ -94,6 +95,14 @@ const FEATURES = [
     Icon: Building2,
     description:
       "Faculty seating, staff directory, and lab registry. Live from campus data.",
+  },
+  {
+    href: "/qa",
+    label: "Doubt Board",
+    number: "09",
+    Icon: HelpCircle,
+    description:
+      "Ask paper-format doubts, check syllabus scope, and share handwritten solutions with peers.",
   },
 ];
 

@@ -58,7 +58,7 @@ export const SW_RECOVERY_SCRIPT = `(function(){
     var html=document.documentElement;
     var translated=/translated-(ltr|rtl)/.test(html.className)||!!document.querySelector(".goog-te-banner-frame,#goog-gt-tt,.skiptranslate");
     var h1=document.querySelector("h1");
-    var offlineShell=navigator.onLine&&h1&&(h1.textContent||"").trim()==="You're Offline";
+    var offlineShell=navigator.onLine&&h1&&(h1.textContent||"").trim().toLowerCase()==="you're offline";
     if(offlineShell){clearAndReload();return;}
     fetch(location.href,{cache:"no-store",credentials:"same-origin"}).then(function(r){return r.text();}).then(function(src){
       var doc=new DOMParser().parseFromString(src,"text/html");
@@ -89,7 +89,7 @@ export const SW_RECOVERY_SCRIPT = `(function(){
     try{
       if(localStorage.getItem(KEY)===VER){
         var h1=document.querySelector("h1");
-        if(navigator.onLine && h1 && (h1.textContent||"").trim()==="You're Offline"){
+        if(navigator.onLine && h1 && (h1.textContent||"").trim().toLowerCase()==="you're offline"){
           clearAndReload();
         }
         return;

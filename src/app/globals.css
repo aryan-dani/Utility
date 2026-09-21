@@ -800,7 +800,7 @@ input[type="range"].accent-slider::-moz-range-thumb:hover {
 @keyframes toast-enter {
   from {
     opacity: 0;
-    transform: translateY(8px) scale(0.96);
+    transform: translateY(12px) scale(0.97);
   }
   to {
     opacity: 1;

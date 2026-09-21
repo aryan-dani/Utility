@@ -2,16 +2,30 @@
 
 A premium, monochrome academic workspace for university students. Built with Next.js, Firebase, and Google Drive sync so course materials, planning, and AI study tools live in one place.
 
+**Live:** [utilityos.tech](https://utilityos.tech) · **Microsoft Store:** [Utility OS](https://apps.microsoft.com/detail/9PPFG0G5R0MG)
+
 ## Core Features
 
 - **Document Intelligence (Hybrid RAG)**: Slide-level chunk retrieval with BM25 + vector search, grounded citations (Slide 14 · DBMS.pptx), and scoped answers by branch/semester.
 - **Drive Sync Runtime**: Node scripts that sync a shared Google Drive folder into Firestore and index document text for search.
 - **Resource Vault**: Notes, presentations, question banks, and PYQs organized by branch and semester.
+- **Doubt Board**: Peer Q&A for paper-format doubts and syllabus scope.
 - **Study Planner**: Collaborative weekly/monthly planning with natural-language prompts.
 - **GPA Calculator**: SGPA/CGPA with auto-populated subjects.
 - **SRS Flashcards**: Leitner-style spaced repetition.
 - **Focus Timer**: Pomodoro sessions with activity tracking.
-- **PWA**: Installable offline-capable client.
+- **PWA / Store**: Installable offline-capable client; Windows listing on the Microsoft Store.
+
+## How updates work
+
+Utility is one live site (`https://utilityos.tech`). The Microsoft Store app is a PWABuilder shell of that URL, so **website deploys update the Store window automatically**.
+
+1. Push / Vercel production deploy publishes a new service worker and HTML.
+2. **Next open** (browser, installed PWA, or Store): the waiting worker activates silently — you land on the new version without a toast.
+3. **Already using Utility when a deploy lands**: a **New version ready** toast offers **Apply update** (full-screen refresh) or **Later**. Dismissing only skips the prompt for this session; the next open still applies.
+4. Rebuild / re-upload the MSIX only when package identity or native Store metadata changes — not for normal site features.
+
+Keep PWA precache small (see Hosting budget). Do not proxy Drive file bytes through Vercel Functions.
 
 ## Tech Stack
 
@@ -174,7 +188,7 @@ npm run audit-drive-site
 # Optional: --branch=AIDS --semester=3
 ```
 
-Nightly sync is scheduled **only** in GitHub Actions (`.github/workflows/storage-sync.yml` at 00:00 UTC) and runs **`--full`**. Use `put` for day-to-day notes.
+Nightly sync is scheduled **only** in GitHub Actions (`.github/workflows/storage-sync.yml` at 00:00 UTC) and runs incremental by default (full on weekly cron). Use `put` for day-to-day notes.
 
 Resources are cached ~10 minutes (`unstable_cache` / `revalidate: 600`). After `put --revalidate` (or CI), tags refresh immediately; otherwise wait for revalidate, redeploy, or use **Sync Now**.
 
@@ -220,17 +234,9 @@ npm install
 npm run dev
 ```
 
-## Next priorities (post-audit)
+### 5. Store packaging
 
-Phase 3 / 4 shipped:
-
-1. Resources: recently viewed strip + share-link copy
-2. Ask: Stop generation + clickable `[S#]` chips → PDF viewer (with optional page)
-3. Planner: ICS export + undo for deletes / clear month
-4. Runtime CLI: `sync --subject=` (scoped prune) + `doctor`
-5. Home live subject/resource counts from Firestore
-
-Ops still needed: deploy `firestore.rules`; optional Upstash Redis for distributed rate limits.
+See [`store/README.md`](store/README.md) for Google Play (TWA) and Microsoft Store (PWABuilder MSIX). Live listing: [apps.microsoft.com/detail/9PPFG0G5R0MG](https://apps.microsoft.com/detail/9PPFG0G5R0MG).
 
 ## Hosting budget (Vercel Hobby)
 

@@ -5,8 +5,14 @@ import { AppToast, type AppToastKind } from "@/components/ui/AppToast";
 
 type Options = ExternalToast & {
   id?: string | number;
+  /** Override the default title for helpers like notify.update. */
+  title?: string;
   description?: string;
   action?: {
+    label: string;
+    onClick: () => void;
+  };
+  secondaryAction?: {
     label: string;
     onClick: () => void;
   };
@@ -23,13 +29,16 @@ function show(kind: AppToastKind, title: string, options?: Options) {
   const duration =
     options?.duration ?? (kind === "error" ? ERROR_DURATION_MS : 4000);
   const showClose =
-    options?.showClose ?? (duration === Infinity || Boolean(options?.action));
+    options?.showClose ??
+    (duration === Infinity ||
+      Boolean(options?.action) ||
+      Boolean(options?.secondaryAction));
 
   return toast.custom(
     (id) =>
       createElement(AppToast, {
         kind,
-        title,
+        title: options?.title ?? title,
         description: options?.description,
         showClose,
         onDismiss: () => toast.dismiss(id),
@@ -38,6 +47,15 @@ function show(kind: AppToastKind, title: string, options?: Options) {
               label: options.action.label,
               onClick: () => {
                 options.action?.onClick();
+                toast.dismiss(id);
+              },
+            }
+          : undefined,
+        secondaryAction: options?.secondaryAction
+          ? {
+              label: options.secondaryAction.label,
+              onClick: () => {
+                options.secondaryAction?.onClick();
                 toast.dismiss(id);
               },
             }
@@ -66,8 +84,10 @@ export const notify = {
   },
 
   update(options?: Options) {
-    return show("update", "Update ready", {
-      description: "New app shell, icons, and fixes are waiting.",
+    return show("update", options?.title ?? "New version ready", {
+      description:
+        options?.description ??
+        "This window will refresh to load the latest Utility OS.",
       ...options,
       duration: options?.duration ?? Infinity,
       showClose: options?.showClose ?? true,
