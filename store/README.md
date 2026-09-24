@@ -91,14 +91,27 @@ The MSIX is a PWABuilder shell of `https://utilityos.tech`. A normal Vercel depl
 
 ### Certification: account creation (10.1.2.10)
 
-Reviewers often fail OAuth **popups** (and Google may block OAuth inside Store WebViews). The app:
+Reviewers often fail OAuth **popups** (and Google may still block OAuth inside Store WebViews). The app:
 
-- Puts **Create account** in the sidebar and as the primary CTA on Sign in
-- Uses **email/password** as the certifiable path
-- Hides Google/GitHub inside installed Store/PWA shells
-- Prefers **redirect OAuth** when OAuth is shown outside those shells
+- Puts **Create account** in the sidebar and as the primary CTA on Sign in / Sign up
+- Keeps **email/password** as the certifiable, reliable path
+- Shows Google/GitHub in the Store shell using **full-page redirect** (same-origin `/__/auth` proxy), not popups
+- If OAuth fails in WebView2, the UI tells reviewers to use email instead
 
-**Before every submission**, from the **installed Store/MSIX build** (not only Chrome):
+### Same-origin auth proxy (Store OAuth experiment)
+
+`next.config.mjs` rewrites `/__/auth/*` → `https://<project>.firebaseapp.com/__/auth/*` (transparent proxy). On `utilityos.tech` / `www.utilityos.tech`, the client uses that host as `authDomain`.
+
+**One-time console setup (required for Google/GitHub in Store):**
+
+1. Vercel Production: set `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` to `utilityos.tech` (or `www.utilityos.tech` if that is the canonical host), then redeploy.
+2. Firebase Console → Authentication → Settings → **Authorized domains**: include `utilityos.tech` and `www.utilityos.tech`.
+3. Google Cloud Console → APIs & Services → Credentials → your OAuth 2.0 Web client → **Authorized redirect URIs**: add  
+   `https://utilityos.tech/__/auth/handler` and `https://www.utilityos.tech/__/auth/handler` (keep the existing `*.firebaseapp.com/__/auth/handler` URI).
+4. GitHub OAuth App → **Authorization callback URL**: same `https://utilityos.tech/__/auth/handler` (and www if needed).
+5. Smoke-test in the **installed Store app**: Google, GitHub, and email. Google may still show `disallowed_useragent` in some WebView builds — that is a Google policy limit, not a broken button.
+
+**Before every Store submission**, from the **installed Store/MSIX build** (not only Chrome):
 
 1. Sidebar → **Create account** (or Sign in → Create account).
 2. Enter email + password (6+ chars) → **Create account** → must land signed in.
@@ -108,7 +121,7 @@ Reviewers often fail OAuth **popups** (and Google may block OAuth inside Store W
 
 **Notes to certification** (paste in Partner Center when resubmitting):
 
-> Account creation: open Utility OS → tap "Create account" in the sidebar (or, on the Sign in page, tap the prominent "Create account" button at the top of the card) → enter any email address and a password of 6 or more characters → tap "Create account." The email/password method is the supported sign-in path in the Windows app; Google and GitHub OAuth are intentionally hidden in the packaged shell because they do not reliably complete in embedded WebView environments. To verify: after creating an account, you will be redirected to the home screen and your email/avatar will appear in the sidebar footer. You can sign out from the sidebar user menu and sign back in with the same credentials. Generative AI: The "Ask AI" feature uses a large language model to answer academic questions. This is declared under Product Declarations.
+> Account creation: open Utility OS → tap "Create account" in the sidebar (or, on the Sign in page, tap the prominent "Create account" button) → enter any email address and a password of 6 or more characters → tap "Create account." Email/password is the supported path for certification. Google and GitHub are also available via full-page redirect in the Windows app; if an OAuth provider fails inside the packaged browser, use email/password. To verify: after creating an account, you will be redirected to the home screen and your email/avatar will appear in the sidebar footer. You can sign out from the sidebar user menu and sign back in with the same credentials. Generative AI: The "Ask AI" feature uses a large language model to answer academic questions. This is declared under Product Declarations.
 
 Also in the same submission → **Properties** → **Product declarations**: check  
 **"This product incorporates generative AI features…"** (required for policy 11.16).

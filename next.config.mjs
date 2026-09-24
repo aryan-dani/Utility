@@ -30,6 +30,30 @@ const nextConfig = {
     "pdfjs-dist",
     "officeparser",
   ],
+  /**
+   * Same-origin Firebase Auth handler (Option 2 from Firebase redirect best practices).
+   * Transparent proxy — not a 302 — so WebView2 / Store can complete signInWithRedirect.
+   * Requires NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=utilityos.tech (or www) in production.
+   */
+  async rewrites() {
+    const projectId =
+      process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID ||
+      process.env.FIREBASE_PROJECT_ID;
+    if (!projectId || projectId.includes("placeholder")) {
+      return [];
+    }
+    const authOrigin = `https://${projectId}.firebaseapp.com`;
+    return [
+      {
+        source: "/__/auth",
+        destination: `${authOrigin}/__/auth`,
+      },
+      {
+        source: "/__/auth/:path*",
+        destination: `${authOrigin}/__/auth/:path*`,
+      },
+    ];
+  },
   async headers() {
     const csp = [
       "default-src 'self'",
@@ -124,6 +148,15 @@ const config = isDev
         cleanupOutdatedCaches: true,
         exclude: [/\.map$/, /^manifest.*\.js$/],
         runtimeCaching: [
+          // Never cache Firebase Auth handler (same-origin proxy for Store OAuth).
+          {
+            urlPattern: ({ url, sameOrigin }) =>
+              sameOrigin && url.pathname.startsWith("/__/auth"),
+            handler: "NetworkOnly",
+            options: {
+              cacheName: "firebase-auth",
+            },
+          },
           // Same-origin navigations: prefer network so the next visit gets new HTML.
           // Auth pages inherit this; keep a short timeout so offline still falls back.
           {

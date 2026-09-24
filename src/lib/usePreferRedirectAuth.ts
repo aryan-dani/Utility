@@ -8,7 +8,8 @@ function subscribe() {
 }
 
 /**
- * Client-only: hide OAuth in Store/PWA shells where Google/GitHub often fail.
+ * Client-only: true in Store / installed PWA / WebView shells where OAuth
+ * must use full-page redirect instead of popups.
  * SSR and first paint stay false to avoid hydration mismatch.
  */
 export function usePreferRedirectAuth(): boolean {

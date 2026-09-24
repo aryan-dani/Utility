@@ -151,9 +151,13 @@ function isPopupBlocked(code: string | undefined) {
 }
 
 /**
- * Store / installed PWA / WebView2 often cannot complete OAuth popups
- * (and Google may block OAuth inside embedded WebViews entirely).
- * Prefer full-page redirect there; callers should also offer email signup.
+ * Store / installed PWA / WebView2 often cannot complete OAuth *popups*
+ * (and Google may still block OAuth inside embedded WebViews).
+ * Prefer full-page redirect there; email/password remains the reliable fallback.
+ *
+ * With same-origin /__/auth proxy (next.config rewrites) + authDomain on
+ * utilityos.tech, redirect OAuth can succeed in the Store shell for GitHub
+ * and sometimes Google.
  */
 export function preferRedirectAuth(): boolean {
   if (typeof window === "undefined") return false;
@@ -200,9 +204,9 @@ export function preferRedirectAuth(): boolean {
   return false;
 }
 
-/** True in installed Store/PWA shells where OAuth is unreliable. */
+/** @deprecated Prefer showing OAuth with redirect; email stays primary in UI. */
 export function shouldPreferEmailAuth(): boolean {
-  return preferRedirectAuth();
+  return false;
 }
 
 function oauthParts(cred: AuthCredential | null) {
