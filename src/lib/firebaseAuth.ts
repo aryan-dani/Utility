@@ -292,6 +292,15 @@ export function takeRememberedRedirectTo(): string | null {
   return value;
 }
 
+/** Full navigation after Store OAuth — Next soft replace can stay on /login. */
+export function leaveAuthPage(path: string, softReplace: (url: string) => void) {
+  if (preferRedirectAuth()) {
+    window.location.replace(path);
+    return;
+  }
+  softReplace(path);
+}
+
 export function getPendingMergeStep(): "github" | "google" | null {
   const pending = loadMerge();
   if (!pending) return null;

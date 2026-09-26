@@ -13,12 +13,12 @@ import { sanitizeRedirectTo } from "@/lib/workspace";
 import { MOTION } from "@/lib/motion";
 import {
   signInWithPopupOrRedirect,
-  consumeRedirectResult,
   rememberRedirectTo,
-  takeRememberedRedirectTo,
+  leaveAuthPage,
   linkGithubOverGoogleAccount,
 } from "@/lib/firebaseAuth";
 import { usePreferRedirectAuth } from "@/lib/usePreferRedirectAuth";
+import { useLeaveAuthPage } from "@/lib/useLeaveAuthPage";
 import { describeError } from "@/lib/errors";
 import { PageHeader } from "@/components/ui";
 
@@ -35,43 +35,24 @@ function SignupContent() {
   const router = useRouter();
 
   const redirectTo = sanitizeRedirectTo(searchParams.get("redirectTo"));
+  const [sessionReady, setSessionReady] = useState(false);
+  const [alreadySignedIn, setAlreadySignedIn] = useState(false);
+
+  useLeaveAuthPage(redirectTo);
 
   useEffect(() => {
-    let cancelled = false;
-    let mergeHandled = false;
-
-    (async () => {
-      try {
-        const outcome = await consumeRedirectResult(auth);
-        if (cancelled) return;
-        mergeHandled = true;
-        const next = takeRememberedRedirectTo() || redirectTo;
-        if (outcome.status === "linked") {
-          router.push(next);
-        } else if (
-          outcome.status === "needs-github-confirm" ||
-          outcome.status === "needs-google-confirm"
-        ) {
-          router.push("/profile");
-        } else if (auth.currentUser) {
-          router.push(redirectTo);
-        }
-      } catch {
-        mergeHandled = true;
-        if (auth.currentUser) router.push(redirectTo);
-      }
-    })();
-
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!mergeHandled || !user) return;
-      router.push(redirectTo);
+    return auth.onAuthStateChanged((user) => {
+      setAlreadySignedIn(!!user);
+      setSessionReady(true);
     });
+  }, []);
 
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-  }, [redirectTo, router]);
+  const goAfterAuth = (target?: string | null) => {
+    leaveAuthPage(
+      target != null ? sanitizeRedirectTo(target) : redirectTo,
+      (url) => router.replace(url),
+    );
+  };
 
   const handleEmailSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -92,7 +73,7 @@ function SignupContent() {
 
     try {
       await createUserWithEmailAndPassword(auth, trimmedEmail, password);
-      router.push(redirectTo);
+      goAfterAuth(redirectTo);
     } catch (err: unknown) {
       setError(describeError(err));
       setLoading(false);
@@ -109,7 +90,7 @@ function SignupContent() {
         rememberRedirectTo(redirectTo);
         return;
       }
-      router.push(redirectTo);
+      goAfterAuth(redirectTo);
     } catch (err: unknown) {
       setError(describeError(err));
       setGoogleLoading(false);
@@ -126,12 +107,12 @@ function SignupContent() {
         rememberRedirectTo(redirectTo);
         return;
       }
-      router.push(redirectTo);
+      goAfterAuth(redirectTo);
     } catch (err: unknown) {
       try {
         const linked = await linkGithubOverGoogleAccount(auth, err);
         if (linked) {
-          router.push(redirectTo);
+          goAfterAuth(redirectTo);
           return;
         }
       } catch (linkErr: unknown) {
@@ -143,6 +124,15 @@ function SignupContent() {
       setGithubLoading(false);
     }
   };
+
+  if (sessionReady && alreadySignedIn) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-3" role="status">
+        <span className="loading-orb" aria-hidden />
+        <p className="text-xs font-medium text-muted tracking-wide">Signed in — continuing…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 overflow-hidden">

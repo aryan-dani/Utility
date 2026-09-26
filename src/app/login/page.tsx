@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, Suspense, useRef } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase";
 import {
@@ -13,12 +13,12 @@ import { MOTION } from "@/lib/motion";
 import { sanitizeRedirectTo } from "@/lib/workspace";
 import {
   signInWithPopupOrRedirect,
-  consumeRedirectResult,
   rememberRedirectTo,
-  takeRememberedRedirectTo,
+  leaveAuthPage,
   linkGithubOverGoogleAccount,
 } from "@/lib/firebaseAuth";
 import { usePreferRedirectAuth } from "@/lib/usePreferRedirectAuth";
+import { useLeaveAuthPage } from "@/lib/useLeaveAuthPage";
 import { describeError } from "@/lib/errors";
 import { PageHeader } from "@/components/ui";
 
@@ -35,55 +35,24 @@ function LoginContent() {
   const router = useRouter();
 
   const redirectTo = sanitizeRedirectTo(searchParams.get("redirectTo"));
-  const redirectedRef = useRef(false);
+  const [sessionReady, setSessionReady] = useState(false);
+  const [alreadySignedIn, setAlreadySignedIn] = useState(false);
+
+  useLeaveAuthPage(redirectTo);
+
+  useEffect(() => {
+    return auth.onAuthStateChanged((user) => {
+      setAlreadySignedIn(!!user);
+      setSessionReady(true);
+    });
+  }, []);
 
   const goAfterAuth = (target?: string | null) => {
-    if (redirectedRef.current) return;
-    redirectedRef.current = true;
-    router.push(target != null ? sanitizeRedirectTo(target) : redirectTo);
+    leaveAuthPage(
+      target != null ? sanitizeRedirectTo(target) : redirectTo,
+      (url) => router.replace(url),
+    );
   };
-
-  // If already logged in, redirect after merge handling completes
-  useEffect(() => {
-    let cancelled = false;
-    let mergeHandled = false;
-
-    (async () => {
-      try {
-        const outcome = await consumeRedirectResult(auth);
-        if (cancelled) return;
-        mergeHandled = true;
-        const remembered = takeRememberedRedirectTo();
-        const next = remembered
-          ? sanitizeRedirectTo(remembered)
-          : redirectTo;
-        if (outcome.status === "linked") {
-          goAfterAuth(next);
-        } else if (
-          outcome.status === "needs-github-confirm" ||
-          outcome.status === "needs-google-confirm"
-        ) {
-          goAfterAuth("/profile");
-        } else if (auth.currentUser) {
-          goAfterAuth(redirectTo);
-        }
-      } catch {
-        mergeHandled = true;
-        if (auth.currentUser) goAfterAuth(redirectTo);
-      }
-    })();
-
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      if (!mergeHandled || !user) return;
-      goAfterAuth(redirectTo);
-    });
-
-    return () => {
-      cancelled = true;
-      unsubscribe();
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- redirect once per mount
-  }, [redirectTo, router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -143,6 +112,15 @@ function LoginContent() {
       setGithubLoading(false);
     }
   };
+
+  if (sessionReady && alreadySignedIn) {
+    return (
+      <div className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center gap-3" role="status">
+        <span className="loading-orb" aria-hidden />
+        <p className="text-xs font-medium text-muted tracking-wide">Signed in — continuing…</p>
+      </div>
+    );
+  }
 
   return (
     <div className="relative flex min-h-[calc(100vh-4rem)] items-center justify-center px-4 overflow-hidden">
