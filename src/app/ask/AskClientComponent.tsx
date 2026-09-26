@@ -1397,81 +1397,90 @@ export default function AskClient() {
             </div>
             </div>
 
-            <div className="shrink-0 px-4 sm:px-6 pb-4 md:safe-bottom bg-gradient-to-t from-card via-card/95 to-transparent pt-2">
-              {messages.length > 0 && (
-                <div className="flex items-center gap-4 mb-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => regenerate()}
-                    className="text-[11px] h-auto min-h-0 px-0"
-                  >
-                    <RotateCw className="w-3 h-3" />
-                    Regenerate
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setMessages([])}
-                    className="text-[11px] h-auto min-h-0 px-0 hover:text-destructive"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                    Clear chat
-                  </Button>
-                </div>
-              )}
-
-              <form id="chat-form" onSubmit={handleSubmit} className="relative group max-w-4xl mx-auto w-full">
-                <div className="flex items-end gap-2 bg-card border border-border p-2 rounded-2xl transition-all duration-300 shadow-md focus-within:border-border-strong focus-within:shadow-lg focus-within:ring-4 focus-within:ring-foreground/[0.02]">
+            <div className="shrink-0 px-4 sm:px-6 pb-3 md:pb-4 md:safe-bottom pt-1">
+              <form id="chat-form" onSubmit={handleSubmit} className="mx-auto w-full max-w-2xl">
+                <div className="rounded-xl border border-border bg-card shadow-xs transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] focus-within:border-border-strong focus-within:shadow-sm">
                   <textarea
                     ref={inputRef}
                     value={input || ''}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                     onInput={handleTextareaInput}
-                    placeholder={selectedResourceId !== 'all' ? "Ask about this document..." : "Type your question..."}
+                    placeholder={selectedResourceId !== 'all' ? 'Ask about this document…' : 'Ask a question…'}
                     rows={1}
-                    className="flex-1 bg-transparent border-0 rounded-xl pl-3 pr-2 py-2.5 text-sm outline-none text-foreground placeholder:text-muted/70 resize-none overflow-y-auto font-bold custom-scrollbar"
+                    className="block min-h-11 w-full resize-none overflow-y-auto bg-transparent px-4 pt-3.5 pb-2 text-sm font-normal leading-relaxed text-foreground outline-none placeholder:text-muted custom-scrollbar"
                     disabled={isLoading}
                   />
-                  
-                  <div className="flex items-center gap-2 flex-shrink-0 mb-0.5 mr-0.5">
-                    <span className="hidden sm:inline-flex items-center text-[9px] font-mono text-muted border border-border px-1.5 py-0.5 rounded-md bg-surface select-none">
-                      Enter
-                    </span>
-                    {/* Speech to Text Microphone button */}
-                    <button
-                      type="button"
-                      onClick={toggleListening}
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center transition-all duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] active:scale-[0.97] ${
-                        isListening
-                          ? 'bg-red-500 text-white animate-pulse shadow-md shadow-red-500/25'
-                          : 'bg-surface text-muted hover:text-foreground border border-border hover:bg-surface-hover'
-                      }`}
-                      title={isListening ? "Listening... click to stop" : "Start Voice Query"}
-                    >
-                      <Mic className="w-4 h-4" />
-                    </button>
 
-                    <button
-                      type={isLoading ? "button" : "submit"}
-                      disabled={!isLoading && !(input || '').trim()}
-                      onClick={isLoading ? () => stop?.() : undefined}
-                      className="w-9 h-9 rounded-xl bg-foreground text-background flex items-center justify-center disabled:opacity-30 active:scale-[0.97] transition-all duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] shadow-sm disabled:active:scale-100"
-                      title={isLoading ? "Stop generating" : "Send"}
-                      aria-label={isLoading ? "Stop generating" : "Send"}
-                    >
-                      {isLoading ? (
-                        <Square className="w-3.5 h-3.5 fill-current" />
+                  <div className="flex items-center justify-between gap-2 px-2 pb-2">
+                    <div className="flex min-w-0 items-center gap-0.5">
+                      {messages.length > 0 ? (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => regenerate()}
+                            disabled={isLoading}
+                          >
+                            <RotateCw className="w-3.5 h-3.5" />
+                            Regenerate
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setMessages([])}
+                            className="hover:text-destructive"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            Clear
+                          </Button>
+                        </>
                       ) : (
-                        <Send className="w-4 h-4" />
+                        <p className="hidden truncate px-2 text-[11px] leading-relaxed text-muted sm:block">
+                          {selectedResourceId !== 'all'
+                            ? 'Answers stay grounded in this document'
+                            : 'Grounded in your course materials'}
+                        </p>
                       )}
-                    </button>
+                    </div>
+
+                    <div className="flex shrink-0 items-center gap-1.5">
+                      <IconButton
+                        variant="secondary"
+                        size="sm"
+                        label={isListening ? 'Stop listening' : 'Voice input'}
+                        onClick={toggleListening}
+                        className={
+                          isListening
+                            ? 'border-destructive bg-destructive text-destructive-foreground animate-pulse hover:bg-destructive hover:text-destructive-foreground'
+                            : undefined
+                        }
+                      >
+                        <Mic className="w-4 h-4" />
+                      </IconButton>
+
+                      <button
+                        type={isLoading ? 'button' : 'submit'}
+                        disabled={!isLoading && !(input || '').trim()}
+                        onClick={isLoading ? () => stop?.() : undefined}
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background shadow-xs transition-all duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-30 disabled:active:scale-100"
+                        title={isLoading ? 'Stop generating' : 'Send'}
+                        aria-label={isLoading ? 'Stop generating' : 'Send'}
+                      >
+                        {isLoading ? (
+                          <Square className="w-3.5 h-3.5 fill-current" />
+                        ) : (
+                          <Send className="w-3.5 h-3.5" />
+                        )}
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </form>
 
-              <p className="text-[10px] text-muted mt-2 text-center">Responses may not always be accurate</p>
+                <p className="mt-2 text-center text-[11px] leading-relaxed text-muted">
+                  Enter to send · Shift+Enter for a new line · Answers can be wrong
+                </p>
+              </form>
             </div>
           </div>
         </div>
