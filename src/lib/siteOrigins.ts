@@ -77,8 +77,68 @@ export function campusFallbackUrl(
 }
 
 export const ORIGIN_PROBE_OK_KEY = "uo-origin-ok";
+export const ORIGIN_HOP_REQUESTED_KEY = "uo-origin-hop";
 export const ORIGIN_PROBE_TIMEOUT_MS = 4000;
 
 export function shouldProbeCanonicalOrigin(hostname: string): boolean {
   return isCanonicalHost(hostname);
+}
+
+export function shouldRequestCampusHop(
+  hostname: string,
+  originOk: boolean,
+  hopRequested: boolean,
+): boolean {
+  return shouldProbeCanonicalOrigin(hostname) && !originOk && !hopRequested;
+}
+
+export function isCatalogNetworkFailure(error: unknown): boolean {
+  if (error instanceof TypeError) return true;
+  return (
+    typeof DOMException !== "undefined" &&
+    error instanceof DOMException &&
+    error.name === "AbortError"
+  );
+}
+
+export function markOriginHealthy(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(ORIGIN_PROBE_OK_KEY, "1");
+  } catch {
+    /* private mode */
+  }
+}
+
+/** One replace per tab session. Canonical hosts only; skip if /api/ok already succeeded. */
+export function requestCampusHop(): boolean {
+  if (typeof window === "undefined") return false;
+
+  let originOk = false;
+  let hopRequested = false;
+  try {
+    originOk = sessionStorage.getItem(ORIGIN_PROBE_OK_KEY) === "1";
+    hopRequested = sessionStorage.getItem(ORIGIN_HOP_REQUESTED_KEY) === "1";
+  } catch {
+    /* private mode */
+  }
+
+  if (!shouldRequestCampusHop(window.location.hostname, originOk, hopRequested)) {
+    return false;
+  }
+
+  try {
+    sessionStorage.setItem(ORIGIN_HOP_REQUESTED_KEY, "1");
+  } catch {
+    /* ignore */
+  }
+
+  window.location.replace(
+    campusFallbackUrl(
+      window.location.pathname,
+      window.location.search,
+      window.location.hash,
+    ),
+  );
+  return true;
 }

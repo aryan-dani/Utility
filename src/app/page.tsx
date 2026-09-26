@@ -112,7 +112,7 @@ const FEATURES = [
     number: "10",
     Icon: ClipboardCopy,
     description:
-      "One synced pad on your account. Optional 24-hour link for a lab PC or a friend.",
+      "One synced pad on your account. Optional 24-hour code or link for a lab PC or a friend.",
   },
 ];
 

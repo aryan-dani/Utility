@@ -2,9 +2,10 @@
 
 import { useEffect } from "react";
 import {
-  campusFallbackUrl,
+  markOriginHealthy,
   ORIGIN_PROBE_OK_KEY,
   ORIGIN_PROBE_TIMEOUT_MS,
+  requestCampusHop,
   shouldProbeCanonicalOrigin,
 } from "@/lib/siteOrigins";
 
@@ -35,22 +36,12 @@ export function CampusOriginGuard() {
     fetch("/api/ok", { cache: "no-store", signal: controller.signal })
       .then((res) => {
         if (!res.ok) throw new Error("unreachable");
-        try {
-          sessionStorage.setItem(ORIGIN_PROBE_OK_KEY, "1");
-        } catch {
-          /* ignore */
-        }
+        markOriginHealthy();
       })
       .catch(() => {
         if (cancelled) return;
         if (controller.signal.aborted && !timedOut) return;
-        window.location.replace(
-          campusFallbackUrl(
-            window.location.pathname,
-            window.location.search,
-            window.location.hash,
-          ),
-        );
+        requestCampusHop();
       })
       .finally(() => {
         window.clearTimeout(timer);

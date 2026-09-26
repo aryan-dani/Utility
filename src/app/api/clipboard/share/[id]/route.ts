@@ -4,6 +4,7 @@ import { checkRateLimit } from "@/lib/rateLimit";
 import {
   CLIPBOARD_COLLECTION,
   CLIPBOARD_SHARES_COLLECTION,
+  SHARE_ID_RE,
   isShareExpired,
 } from "@/lib/clipboard";
 
@@ -17,8 +18,6 @@ function clientKey(request: Request): string {
     "anon";
   return ip;
 }
-
-const SHARE_ID_RE = /^[abcdefghjkmnpqrstuvwxyz23456789]{8,16}$/;
 
 export async function GET(
   request: Request,

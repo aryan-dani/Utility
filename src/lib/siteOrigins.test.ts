@@ -11,6 +11,7 @@ import {
   pwaScopeExtensions,
   resolveClientAuthDomain,
   shouldProbeCanonicalOrigin,
+  shouldRequestCampusHop,
   webAppOriginAssociation,
 } from "./siteOrigins";
 
@@ -48,6 +49,10 @@ describe("siteOrigins", () => {
     expect(shouldProbeCanonicalOrigin("utilityos.tech")).toBe(true);
     expect(shouldProbeCanonicalOrigin(CAMPUS_HOST)).toBe(false);
     expect(shouldProbeCanonicalOrigin("localhost")).toBe(false);
+    expect(shouldRequestCampusHop("www.utilityos.tech", false, false)).toBe(true);
+    expect(shouldRequestCampusHop("utilityos.tech", true, false)).toBe(false);
+    expect(shouldRequestCampusHop("utilityos.tech", false, true)).toBe(false);
+    expect(shouldRequestCampusHop(CAMPUS_HOST, false, false)).toBe(false);
   });
 
   it("lists apex, www, and campus as PWA scope extensions", () => {

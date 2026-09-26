@@ -68,7 +68,7 @@ export default function ClipboardShareClient({ shareId }: { shareId: string }) {
       <PageHeader
         eyebrow="Clipboard"
         title="Shared note"
-        description="This link expires after 24 hours and is not editable here."
+        description="This code and link expire after 24 hours and are not editable here."
         divider
       />
 
