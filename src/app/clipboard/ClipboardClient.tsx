@@ -118,6 +118,7 @@ export default function ClipboardClient() {
   const textRef = useRef(text);
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
+  const savePromiseRef = useRef<Promise<boolean> | null>(null);
   const driveIdRef = useRef<string | null>(null);
   const driveNameRef = useRef<string | null>(null);
 
@@ -147,6 +148,11 @@ export default function ClipboardClient() {
       const res = await authFetch("/api/clipboard");
       if (!res.ok) throw new Error("load");
       const data = (await res.json()) as ClipboardPayload;
+      if (dirtyRef.current) {
+        setShareId(data.share_id);
+        setShareExpiresAt(data.share_expires_at);
+        return;
+      }
       applyPayload(data);
     } catch {
       setError("Could not load your clipboard.");
@@ -177,49 +183,62 @@ export default function ClipboardClient() {
     });
   }, [load]);
 
-  const save = useCallback(async () => {
-    if (!dirtyRef.current || savingRef.current) return;
-    const payload = textRef.current;
-    savingRef.current = true;
-    setSaveState("saving");
-    setError(null);
-    try {
-      const res = await authFetch("/api/clipboard", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          text: payload,
-          drive_file_id: driveIdRef.current,
-          drive_file_name: driveNameRef.current,
-        }),
-      });
-      if (res.status === 400) {
-        notify.error("Text is too long.");
-        setSaveState("error");
-        return;
-      }
-      if (!res.ok) throw new Error("save");
-      const data = (await res.json()) as {
-        updated_at: string;
-        share_id: string | null;
-        share_expires_at: string | null;
-      };
-      setUpdatedAt(data.updated_at);
-      setShareId(data.share_id);
-      setShareExpiresAt(data.share_expires_at);
-      if (textRef.current !== payload) {
-        dirtyRef.current = true;
-        setDirty(true);
-      } else {
+  const save = useCallback(async (): Promise<boolean> => {
+    if (savePromiseRef.current) return savePromiseRef.current;
+    if (!dirtyRef.current) return true;
+
+    const work = (async () => {
+      const payload = textRef.current;
+      savingRef.current = true;
+      setSaveState("saving");
+      setError(null);
+      try {
+        const res = await authFetch("/api/clipboard", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            text: payload,
+            drive_file_id: driveIdRef.current,
+            drive_file_name: driveNameRef.current,
+          }),
+        });
+        if (res.status === 400) {
+          notify.error("Text is too long.");
+          setSaveState("error");
+          return false;
+        }
+        if (!res.ok) throw new Error("save");
+        const data = (await res.json()) as {
+          updated_at: string;
+          share_id: string | null;
+          share_expires_at: string | null;
+        };
+        setUpdatedAt(data.updated_at);
+        setShareId(data.share_id);
+        setShareExpiresAt(data.share_expires_at);
+        if (textRef.current !== payload) {
+          dirtyRef.current = true;
+          setDirty(true);
+          return false;
+        }
         dirtyRef.current = false;
         setDirty(false);
         setSaveState("saved");
+        return true;
+      } catch {
+        setSaveState("error");
+        setError("Could not save clipboard.");
+        return false;
+      } finally {
+        savingRef.current = false;
       }
-    } catch {
-      setSaveState("error");
-      setError("Could not save clipboard.");
+    })();
+
+    savePromiseRef.current = work;
+    try {
+      return await work;
     } finally {
-      savingRef.current = false;
+      savePromiseRef.current = null;
     }
   }, []);
 
@@ -258,7 +277,13 @@ export default function ClipboardClient() {
   const createShare = async () => {
     setSharing(true);
     try {
-      if (dirtyRef.current) await save();
+      if (dirtyRef.current || savingRef.current) {
+        const ok = await save();
+        if (!ok || dirtyRef.current) {
+          notify.error("Save the pad before sharing.");
+          return;
+        }
+      }
       const res = await authFetch("/api/clipboard/share", { method: "POST" });
       if (!res.ok) throw new Error("share");
       const data = (await res.json()) as {
@@ -459,8 +484,8 @@ export default function ClipboardClient() {
                 </p>
                 {shareExpiresAt && (
                   <p className="mt-1 text-[11px] text-muted">
-                    Live until {formatSaved(shareExpiresAt)}. Typing updates what
-                    others see.
+                    Live until {formatSaved(shareExpiresAt)}. The share is a
+                    snapshot of the last save.
                   </p>
                 )}
               </div>

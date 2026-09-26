@@ -17,12 +17,8 @@ import AuthButtons from "./AuthButtons";
 import HomeHeatmap from "./HomeHeatmap";
 import HomeStats from "./HomeStats";
 import HomeExamCountdown from "@/components/HomeExamCountdown";
-import { getResourcesFromDB, getSubjectsFromDB, getHomeStats } from "@/lib/dataFetcher";
+import { getHomeStats } from "@/lib/dataFetcher";
 import { BRANCHES, SEMESTERS } from "@/lib/academic/scope";
-import {
-  DEFAULT_ACADEMIC_YEAR,
-  DEFAULT_SEMESTER,
-} from "@/lib/workspace";
 
 export const revalidate = 86400;
 
@@ -128,23 +124,6 @@ export default async function Home() {
       resourceCount = globalStats.resources;
       branchCount = globalStats.branches || BRANCHES.length;
       semesterCount = globalStats.semesters || SEMESTERS.length;
-    } else {
-      const year = DEFAULT_ACADEMIC_YEAR;
-      const semester = DEFAULT_SEMESTER;
-      const results = await Promise.all(
-        BRANCHES.map(async (branch) => {
-          const [subjects, resources] = await Promise.all([
-            getSubjectsFromDB(year, branch, semester),
-            getResourcesFromDB(year, branch, semester),
-          ]);
-          return {
-            subjects: subjects.length,
-            resources: resources.length,
-          };
-        }),
-      );
-      subjectCount = results.reduce((sum, r) => sum + r.subjects, 0);
-      resourceCount = results.reduce((sum, r) => sum + r.resources, 0);
     }
   } catch (err) {
     console.error("HomeStats fetch failed:", err);

@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getWorkspaceList } from '@/lib/dataFetcher';
 import { resolveWorkspace } from '@/lib/workspace';
+import { isAuthFailure, requireUser } from '@/lib/apiAuth';
 
 // Query params force dynamic rendering; CDN still caches via Cache-Control below.
 export const dynamic = 'force-dynamic';
@@ -15,6 +16,9 @@ function isQuotaExhausted(error: unknown): boolean {
 }
 
 export async function GET(request: Request) {
+  const auth = await requireUser(request);
+  if (isAuthFailure(auth)) return auth;
+
   try {
     const { searchParams } = new URL(request.url);
     const { academicYear, branch, semester } = resolveWorkspace({
@@ -33,7 +37,7 @@ export async function GET(request: Request) {
       { resources, syllabusUrl },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=86400, stale-while-revalidate=86400',
+          'Cache-Control': 'private, max-age=60',
         },
       }
     );
@@ -49,7 +53,7 @@ export async function GET(request: Request) {
           status: 503,
           headers: {
             'Retry-After': '300',
-            'Cache-Control': 'public, s-maxage=300, stale-while-revalidate=60',
+            'Cache-Control': 'private, max-age=30',
           },
         }
       );

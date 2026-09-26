@@ -33,7 +33,10 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
   const [questions, setQuestions] = useState<QAQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
-  const [activeThreadId, setActiveThreadId] = useState<string | null>(null);
+  const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
+    if (typeof window === "undefined") return null;
+    return new URLSearchParams(window.location.search).get("thread");
+  });
 
   // Filters
   const [searchQuery, setSearchQuery] = useState("");
@@ -45,6 +48,17 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const { isAdmin } = useAdminStatus();
   const currentUid = auth.currentUser?.uid ?? null;
+
+  const applyViewerState = (next: QAQuestion[]) => {
+    const votes: Record<string, VoteValue | null> = {};
+    const saved = new Set<string>();
+    for (const q of next) {
+      if (q.user_vote === 1 || q.user_vote === -1) votes[q.id] = q.user_vote;
+      if (q.is_saved) saved.add(q.id);
+    }
+    setUserVotes(votes);
+    setSavedIds(saved);
+  };
 
   const fetchQuestions = useCallback(async (showLoading = false) => {
     if (showLoading) setLoading(true);
@@ -60,7 +74,9 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
       const res = await authFetch(`/api/qa/questions?${params}`);
       if (!res.ok) throw new Error();
       const json = await res.json();
-      setQuestions(json.questions || []);
+      const next = (json.questions || []) as QAQuestion[];
+      setQuestions(next);
+      applyViewerState(next);
     } catch {
       notify.error("Could not load questions.");
     } finally {
@@ -82,7 +98,9 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((json) => {
         if (active) {
-          setQuestions(json.questions || []);
+          const next = (json.questions || []) as QAQuestion[];
+          setQuestions(next);
+          applyViewerState(next);
           setLoading(false);
         }
       })
@@ -228,7 +246,14 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
         <QuestionThread
           questionId={activeThreadId}
           open={true}
-          onClose={() => setActiveThreadId(null)}
+          onClose={() => {
+            setActiveThreadId(null);
+            if (typeof window !== "undefined") {
+              const url = new URL(window.location.href);
+              url.searchParams.delete("thread");
+              window.history.pushState({}, "", url.toString());
+            }
+          }}
           onQuestionUpdated={fetchQuestions}
         />
       </div>
@@ -303,7 +328,14 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
               onVote={(v) => handleVote(q.id, v)}
               onSave={() => handleSave(q.id)}
               onDelete={() => void handleDeleteQuestion(q.id)}
-              onClick={() => setActiveThreadId(q.id)}
+              onClick={() => {
+                setActiveThreadId(q.id);
+                if (typeof window !== "undefined") {
+                  const url = new URL(window.location.href);
+                  url.searchParams.set("thread", q.id);
+                  window.history.pushState({ thread: q.id }, "", url.toString());
+                }
+              }}
             />
           ))}
         </div>

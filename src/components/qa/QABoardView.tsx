@@ -32,7 +32,6 @@ import type {
   VoteValue,
 } from "@/lib/qa/types";
 import { rankQuestions } from "@/lib/qa/types";
-import { useWorkspaceResources } from "@/lib/useWorkspaceResources";
 import { useAdminStatus } from "@/lib/adminStatus";
 import QuestionCard from "./QuestionCard";
 import QuestionComposer from "./QuestionComposer";
@@ -46,8 +45,6 @@ export default function QABoardView() {
   const academicYear = useAcademicStore((s) => s.academicYear);
   const branch = useAcademicStore((s) => s.branch);
   const semester = useAcademicStore((s) => s.semester);
-
-  const { subjects: catalogSubjects, resources } = useWorkspaceResources();
 
   const [questions, setQuestions] = useState<QAQuestion[]>([]);
   const [loading, setLoading] = useState(true);
@@ -80,6 +77,17 @@ export default function QABoardView() {
   const [userVotes, setUserVotes] = useState<Record<string, VoteValue | null>>({});
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const { isAdmin } = useAdminStatus();
+
+  const applyViewerState = (next: QAQuestion[]) => {
+    const votes: Record<string, VoteValue | null> = {};
+    const saved = new Set<string>();
+    for (const q of next) {
+      if (q.user_vote === 1 || q.user_vote === -1) votes[q.id] = q.user_vote;
+      if (q.is_saved) saved.add(q.id);
+    }
+    setUserVotes(votes);
+    setSavedIds(saved);
+  };
 
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (user) => {
@@ -131,7 +139,9 @@ export default function QABoardView() {
       const res = await authFetch(`/api/qa/questions?${params}`);
       if (!res.ok) throw new Error();
       const json = await res.json();
-      setQuestions(json.questions || []);
+      const next = (json.questions || []) as QAQuestion[];
+      setQuestions(next);
+      applyViewerState(next);
     } catch {
       notify.error("Could not load questions.");
     } finally {
@@ -152,7 +162,9 @@ export default function QABoardView() {
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((json) => {
         if (active) {
-          setQuestions(json.questions || []);
+          const next = (json.questions || []) as QAQuestion[];
+          setQuestions(next);
+          applyViewerState(next);
           setLoading(false);
         }
       })
@@ -171,9 +183,6 @@ export default function QABoardView() {
   // Combine subjects from catalog, custom added subjects, and existing questions
   const subjects = useMemo(() => {
     const set = new Set<string>();
-    catalogSubjects.forEach((s) => {
-      if (s) set.add(s);
-    });
     questions.forEach((q) => {
       if (q.subject_name) set.add(q.subject_name);
     });
@@ -181,7 +190,7 @@ export default function QABoardView() {
       if (s) set.add(s);
     });
     return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [catalogSubjects, questions, customSubjects]);
+  }, [questions, customSubjects]);
 
   const handleAddCustomSubject = useCallback((name: string) => {
     const trimmed = name.trim();
@@ -480,7 +489,7 @@ export default function QABoardView() {
         onSubmit={handleCreateQuestion}
         initialSubject={subjectFilter !== "all" ? subjectFilter : undefined}
         availableSubjects={subjects}
-        availableResources={resources}
+        availableResources={[]}
       />
 
       {/* Custom Subject Modal */}

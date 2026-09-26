@@ -11,6 +11,8 @@ import { signOut, onIdTokenChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import type { AcademicYear, Branch, Semester } from "@/store/academicStore";
 import { isAcademicYear } from "@/lib/academic/scope";
+import { clearLocalUserData } from "@/lib/localUserData";
+import { useAcademicStore } from "@/store/academicStore";
 import { useMotionSafe } from "@/lib/motion";
 
 type NavUser = {
@@ -36,9 +38,9 @@ function useIsClient() {
 
 export default function NavUserMenu({
   collapsed,
-  academicYear,
-  branch,
-  semester,
+  academicYear: _academicYear,
+  branch: _branch,
+  semester: _semester,
   setAcademicYear,
   setBranch,
   setSemester,
@@ -66,12 +68,7 @@ export default function NavUserMenu({
   const userMenuRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuPanelRef = useRef<HTMLDivElement>(null);
-  const workspaceRef = useRef({ academicYear, branch, semester });
   const motionSafe = useMotionSafe();
-
-  useEffect(() => {
-    workspaceRef.current = { academicYear, branch, semester };
-  }, [academicYear, branch, semester]);
 
   useEffect(() => {
     const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
@@ -129,21 +126,20 @@ export default function NavUserMenu({
               const data = snap.data();
               const rawYear = data.academic_year as string | undefined;
               const prefYear =
-                rawYear && isAcademicYear(rawYear)
-                  ? rawYear
-                  : workspaceRef.current.academicYear;
-              const prefBranch =
-                (data.branch as Branch) || workspaceRef.current.branch;
+                rawYear && isAcademicYear(rawYear) ? rawYear : null;
+              const prefBranch = (data.branch as Branch | undefined) || null;
               const prefSemester =
-                (data.semester as Semester) || workspaceRef.current.semester;
-              if (onWorkspaceFromPrefs) {
-                onWorkspaceFromPrefs(prefYear, prefBranch, prefSemester);
-              } else {
-                if (rawYear && isAcademicYear(rawYear)) {
-                  setAcademicYear(rawYear);
+                typeof data.semester === "number"
+                  ? (data.semester as Semester)
+                  : null;
+              if (prefYear && prefBranch && prefSemester) {
+                if (onWorkspaceFromPrefs) {
+                  onWorkspaceFromPrefs(prefYear, prefBranch, prefSemester);
+                } else {
+                  setAcademicYear(prefYear);
+                  setBranch(prefBranch);
+                  setSemester(prefSemester);
                 }
-                if (data.branch) setBranch(data.branch as Branch);
-                if (data.semester) setSemester(data.semester as Semester);
               }
 
               const existing = data;
@@ -158,9 +154,6 @@ export default function NavUserMenu({
                 await setDoc(userPrefsRef, updateData, { merge: true });
               }
             } else {
-              updateData.academic_year = workspaceRef.current.academicYear;
-              updateData.branch = workspaceRef.current.branch;
-              updateData.semester = workspaceRef.current.semester;
               updateData.lastActive = new Date().toISOString();
               await setDoc(userPrefsRef, updateData, { merge: true });
             }
@@ -232,6 +225,8 @@ export default function NavUserMenu({
 
   const handleLogout = async () => {
     await signOut(auth);
+    clearLocalUserData();
+    useAcademicStore.getState().resetWorkspace();
     setUserMenuOpen(false);
     window.location.href = "/";
   };

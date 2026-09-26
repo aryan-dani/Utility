@@ -37,6 +37,9 @@ export interface QAQuestion {
 
   created_at: string;
   last_activity_at: string;
+
+  user_vote?: VoteValue | null;
+  is_saved?: boolean;
 }
 
 export interface QAAnswer {
@@ -52,6 +55,7 @@ export interface QAAnswer {
   downvotes: number;
   is_accepted: boolean;
   created_at: string;
+  user_vote?: VoteValue | null;
 }
 
 export interface QAVote {

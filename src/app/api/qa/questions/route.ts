@@ -5,6 +5,7 @@ import { enforceUserRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 import type { QAQuestion } from "@/lib/qa/types";
 import { QUESTION_BODY_MAX, ATTACHMENT_MAX } from "@/lib/qa/types";
+import { attachQuestionViewerState } from "@/lib/qa/viewerState";
 
 export const dynamic = "force-dynamic";
 
@@ -22,6 +23,9 @@ const listSchema = z.object({
 });
 
 export async function GET(request: Request) {
+  const auth = await requireUser(request);
+  if (isAuthFailure(auth)) return auth;
+
   const url = new URL(request.url);
   const parsed = listSchema.safeParse(Object.fromEntries(url.searchParams));
   if (!parsed.success) {
@@ -72,7 +76,8 @@ export async function GET(request: Request) {
         new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
     );
 
-    return NextResponse.json({ questions });
+    const withViewer = await attachQuestionViewerState(db, auth.uid, questions);
+    return NextResponse.json({ questions: withViewer });
   } catch (error) {
     console.error("qa/questions GET", error);
     return NextResponse.json({ error: "Failed to fetch questions" }, { status: 500 });

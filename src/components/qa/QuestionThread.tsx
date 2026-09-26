@@ -49,6 +49,18 @@ const CATEGORY_LABEL: Record<string, string> = {
   general: "General",
 };
 
+function answerVoteMap(
+  answers: Array<{ id: string; user_vote?: VoteValue | null }> | undefined,
+): Record<string, VoteValue | null> {
+  const votes: Record<string, VoteValue | null> = {};
+  for (const answer of answers ?? []) {
+    if (answer.user_vote === 1 || answer.user_vote === -1) {
+      votes[answer.id] = answer.user_vote;
+    }
+  }
+  return votes;
+}
+
 function timeAgo(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
   const mins = Math.floor(diff / 60_000);
@@ -86,6 +98,7 @@ export default function QuestionThread({
       if (!res.ok) throw new Error("Failed to load");
       const json = await res.json();
       setData(json.question);
+      setAnswerVotes(answerVoteMap(json.question?.answers));
     } catch {
       notify.error("Could not load question.");
     } finally {
@@ -102,6 +115,7 @@ export default function QuestionThread({
       .then((json) => {
         if (active) {
           setData(json.question);
+          setAnswerVotes(answerVoteMap(json.question?.answers));
           setLoading(false);
         }
       })
@@ -238,7 +252,10 @@ export default function QuestionThread({
   };
 
   const handleShare = async () => {
-    const url = typeof window !== "undefined" ? window.location.href : "";
+    const url =
+      typeof window !== "undefined"
+        ? `${window.location.origin}/qa?thread=${encodeURIComponent(questionId)}`
+        : `/qa?thread=${encodeURIComponent(questionId)}`;
     try {
       await navigator.clipboard.writeText(url);
       setCopiedLink(true);

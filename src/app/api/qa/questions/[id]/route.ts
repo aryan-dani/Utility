@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
-import { isAuthFailure, requireUser, optionalUser, getAdminEmails } from "@/lib/apiAuth";
+import { isAuthFailure, requireUser, getAdminEmails } from "@/lib/apiAuth";
+import { attachAnswerVotes } from "@/lib/qa/viewerState";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 import type { QAQuestion, QAAnswer } from "@/lib/qa/types";
 
@@ -12,7 +13,8 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
-  const user = await optionalUser(request);
+  const auth = await requireUser(request);
+  if (isAuthFailure(auth)) return auth;
 
   const { id } = await params;
   if (!id) {
@@ -50,25 +52,18 @@ export async function GET(
     );
     answers.sort((a, b) => (b.upvotes ?? 0) - (a.upvotes ?? 0));
 
-    // Check if current user voted on or saved this question
-    let userVote: number | null = null;
-    let isSaved = false;
-
-    if (user) {
-      const [voteDoc, savedDoc] = await Promise.all([
-        db.collection("qa_votes").doc(`${user.uid}_question_${id}`).get(),
-        db.collection("qa_saved").doc(`${user.uid}_${id}`).get(),
-      ]);
-      userVote = voteDoc.exists ? (voteDoc.data()?.value as number) : null;
-      isSaved = savedDoc.exists;
-    }
+    const [voteDoc, savedDoc, answersWithVotes] = await Promise.all([
+      db.collection("qa_votes").doc(`${auth.uid}_question_${id}`).get(),
+      db.collection("qa_saved").doc(`${auth.uid}_${id}`).get(),
+      attachAnswerVotes(db, auth.uid, answers),
+    ]);
 
     return NextResponse.json({
       question: {
         ...question,
-        answers,
-        user_vote: userVote,
-        is_saved: isSaved,
+        answers: answersWithVotes,
+        user_vote: voteDoc.exists ? (voteDoc.data()?.value as number) : null,
+        is_saved: savedDoc.exists,
       },
     });
   } catch (error) {

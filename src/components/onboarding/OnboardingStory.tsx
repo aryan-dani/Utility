@@ -109,9 +109,11 @@ export function OnboardingStory() {
         setReady(true);
         return;
       }
-      setUid(user.uid);
+      const capturedUid = user.uid;
+      setUid(capturedUid);
       try {
-        const snap = await getDoc(doc(db, "users", user.uid));
+        const snap = await getDoc(doc(db, "users", capturedUid));
+        if (auth.currentUser?.uid !== capturedUid) return;
         const data = snap.data();
         if (data?.academic_year && isAcademicYear(data.academic_year)) {
           setYear(data.academic_year);
@@ -130,10 +132,10 @@ export function OnboardingStory() {
           setOpen(true);
         }
       } catch {
-        setKind(onboardingKindFromCreatedAt(user.metadata.creationTime));
-        setOpen(true);
+        if (auth.currentUser?.uid !== capturedUid) return;
+        setOpen(false);
       } finally {
-        setReady(true);
+        if (auth.currentUser?.uid === capturedUid) setReady(true);
       }
     });
   }, []);

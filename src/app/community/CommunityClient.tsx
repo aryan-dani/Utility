@@ -80,6 +80,25 @@ export default function CommunityClient({
   }, [initStore]);
 
   useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await authFetch("/api/community-decks");
+        if (!res.ok) throw new Error("decks");
+        const json = (await res.json()) as { decks?: CommunityDeck[] };
+        if (!cancelled && Array.isArray(json.decks)) {
+          setDecks(json.decks);
+        }
+      } catch {
+        if (!cancelled) notify.error("Could not load community decks.");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setCurrentUserUid(user?.uid ?? null);
     });
@@ -176,7 +195,7 @@ export default function CommunityClient({
     if (Array.isArray(deck.flashcards) && deck.flashcards.length > 0) {
       return deck;
     }
-    const res = await fetch(`/api/community-decks/${deck.id}`);
+    const res = await authFetch(`/api/community-decks/${deck.id}`);
     if (!res.ok) {
       throw new Error("Failed to load deck cards");
     }

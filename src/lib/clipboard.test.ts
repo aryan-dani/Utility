@@ -15,11 +15,11 @@ import {
 } from "./clipboard";
 
 describe("clipboard helpers", () => {
-  it("generates distinct 6-char share ids by default", () => {
+  it("generates distinct 10-char share ids by default", () => {
     const ids = new Set<string>();
     for (let i = 0; i < 200; i += 1) {
       const id = generateShareId();
-      expect(id).toMatch(/^[abcdefghjkmnpqrstuvwxyz23456789]{6}$/);
+      expect(id).toMatch(/^[abcdefghjkmnpqrstuvwxyz23456789]{10}$/);
       ids.add(id);
     }
     expect(ids.size).toBe(200);

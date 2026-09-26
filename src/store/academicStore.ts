@@ -24,6 +24,7 @@ interface AcademicState {
     branch: Branch,
     semester: Semester,
   ) => void;
+  resetWorkspace: () => void;
   setSearchQuery: (query: string) => void;
   setAiSearchQuery: (query: string) => void;
   setCommandPaletteOpen: (open: boolean) => void;
@@ -67,6 +68,14 @@ export const useAcademicStore = create<AcademicState>((set) => ({
       return { academicYear, branch, semester, searchQuery: "", aiSearchQuery: "" };
     });
   },
+  resetWorkspace: () =>
+    set({
+      academicYear: DEFAULT_ACADEMIC_YEAR,
+      branch: DEFAULT_BRANCH,
+      semester: DEFAULT_SEMESTER,
+      searchQuery: "",
+      aiSearchQuery: "",
+    }),
   setSearchQuery: (searchQuery) =>
     set((state) => ({
       searchQuery,

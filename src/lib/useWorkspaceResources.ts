@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import type { ResourceItem } from "@/lib/dataFetcher";
-import { isCatalogNetworkFailure, requestCampusHop } from "@/lib/siteOrigins";
+import { authFetch } from "@/lib/authFetch";
 import { useAcademicStore } from "@/store/academicStore";
 
 export type WorkspaceResourcesState = {
@@ -118,15 +118,9 @@ async function loadWorkspace(
   if (existing) return existing;
 
   const promise = (async () => {
-    let res: Response;
-    try {
-      res = await fetch(
-        `/api/resources/list?year=${encodeURIComponent(academicYear)}&branch=${encodeURIComponent(branch)}&semester=${semester}`,
-      );
-    } catch (error) {
-      if (isCatalogNetworkFailure(error)) requestCampusHop();
-      throw error;
-    }
+    const res = await authFetch(
+      `/api/resources/list?year=${encodeURIComponent(academicYear)}&branch=${encodeURIComponent(branch)}&semester=${semester}`,
+    );
     if (!res.ok) throw new Error("Failed to load resources");
     const data = await res.json();
     const resources: ResourceItem[] = Array.isArray(data.resources)

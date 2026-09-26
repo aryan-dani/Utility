@@ -30,7 +30,11 @@ import { cleanResourceTitle, shortCodeLabel } from "@/lib/titleUtils";
 import dynamic from "next/dynamic";
 import type { PdfPreviewHandle } from "@/components/PdfPreview";
 import { folderIdForResource, folderLabelFromId, getResourceFileRole } from "@/lib/resourceGroups";
-import { getDirectDownloadUrl, matchCachedDriveFile } from "@/lib/driveFileCache";
+import {
+  fetchCachedDriveFile,
+  getDirectDownloadUrl,
+  matchCachedDriveFile,
+} from "@/lib/driveFileCache";
 import { useIsClient } from "@/lib/clientHooks";
 import { WindowChrome, IconButton } from "@/components/ui";
 
@@ -68,12 +72,12 @@ interface ResourceViewerProps {
   initialPage?: number | null;
 }
 
-function getViewerUrl(resource: ResourceItem) {
+function getViewerUrl(resource: ResourceItem, page?: number | null) {
   const extension = getFileExtension(resource.title, resource.file_url);
   const driveId = getDriveFileId(resource.file_url);
 
   if (driveId) {
-    return getDriveEmbedUrl(driveId);
+    return getDriveEmbedUrl(driveId, page);
   }
 
   if (extension === "pdf") {
@@ -118,7 +122,10 @@ export default function ResourceViewer({
     !isImage &&
     (isCodeExtension(extension) || resource.category === "codes");
   const isTextFetch = isCode || isCsv || isNotebook;
-  const embedUrl = useMemo(() => getViewerUrl(resource), [resource]);
+  const embedUrl = useMemo(
+    () => getViewerUrl(resource, initialPage),
+    [resource, initialPage],
+  );
   const downloadUrl = useMemo(() => getDirectUrl(resource), [resource]);
   const driveId = useMemo(
     () => getDriveFileId(resource.file_url),
@@ -226,8 +233,13 @@ export default function ResourceViewer({
       try {
         if (driveId) {
           const cached = await matchCachedDriveFile(driveId);
-          if (!cached) throw new Error("not cached");
-          const text = await cached.text();
+          const blob =
+            cached ??
+            (await fetchCachedDriveFile(driveId, {
+              signal: abort.signal,
+              maxBytes: 8 * 1024 * 1024,
+            }));
+          const text = await blob.text();
           if (!cancelled) {
             setCodeContent(text);
             setIsLoading(false);

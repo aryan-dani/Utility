@@ -5,9 +5,12 @@ import { isAuthFailure, requireUser } from "@/lib/apiAuth";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 
 export async function GET(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  const auth = await requireUser(request);
+  if (isAuthFailure(auth)) return auth;
+
   try {
     const { id } = await params;
     if (!id) {
@@ -37,7 +40,7 @@ export async function GET(
       },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=3600, stale-while-revalidate=86400",
+          "Cache-Control": "private, max-age=60",
         },
       },
     );

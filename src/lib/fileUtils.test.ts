@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getDriveFileId, getFileExtension } from "@/lib/fileUtils";
+import { getDriveEmbedUrl, getDriveFileId, getFileExtension } from "@/lib/fileUtils";
 
 describe("getDriveFileId", () => {
   it("extracts id from /file/d/ URLs", () => {
@@ -16,6 +16,15 @@ describe("getDriveFileId", () => {
 
   it("returns null when no id is present", () => {
     expect(getDriveFileId("https://example.com/file.txt")).toBeNull();
+  });
+
+  it("appends a page hash on Drive preview URLs", () => {
+    expect(getDriveEmbedUrl("abc123XYZ")).toBe(
+      "https://drive.google.com/file/d/abc123XYZ/preview",
+    );
+    expect(getDriveEmbedUrl("abc123XYZ", 4)).toBe(
+      "https://drive.google.com/file/d/abc123XYZ/preview#page=4",
+    );
   });
 });
 

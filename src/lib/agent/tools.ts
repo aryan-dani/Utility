@@ -114,9 +114,9 @@ export async function listResources(
   if (ctx.semester != null) subjectRef = subjectRef.where("semester", "==", ctx.semester);
   let subjectSnap;
   try {
-    subjectSnap = await subjectRef.get();
+    subjectSnap = await subjectRef.limit(200).get();
   } catch {
-    subjectSnap = await db.collection("subjects").get();
+    subjectSnap = { docs: [] };
   }
   const subjectMap = new Map<string, string>(
     subjectSnap.docs.map((s) => [

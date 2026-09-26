@@ -133,6 +133,25 @@ export async function deleteUserFirestoreData(
 
   deleted += await deleteQueryInChunks(
     db,
+    db.collection("qa_questions").where("author_uid", "==", uid),
+  );
+  deleted += await deleteQueryInChunks(
+    db,
+    db.collection("qa_answers").where("author_uid", "==", uid),
+  );
+  deleted += await deleteQueryInChunks(
+    db,
+    db.collection("qa_votes").where("user_uid", "==", uid),
+  );
+  deleted += await deleteQueryInChunks(
+    db,
+    db.collection("qa_saved").where("user_uid", "==", uid),
+  );
+  await deleteDocIfExists(db, "qa_reputation", uid);
+  deleted += 1;
+
+  deleted += await deleteQueryInChunks(
+    db,
     db.collection("clipboard_shares").where("owner_id", "==", uid),
   );
   await deleteDocIfExists(db, "clipboards", uid);

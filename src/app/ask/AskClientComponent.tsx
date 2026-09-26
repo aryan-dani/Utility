@@ -813,6 +813,8 @@ export default function AskClient() {
     }
 
     stickToBottomRef.current = true;
+    setAssistantSources([]);
+    setScopeWidened(false);
     sendMessage({ text: input });
     logActivity('ai_prompt', 1);
     setInput('');
@@ -896,6 +898,7 @@ export default function AskClient() {
 
   // Keep the document from growing extra viewports while the transcript streams.
   useEffect(() => {
+    if (activeTab !== 'chat') return;
     const { documentElement, body } = document;
     const prev = {
       htmlOverflow: documentElement.style.overflow,
@@ -913,7 +916,7 @@ export default function AskClient() {
       documentElement.style.overscrollBehavior = prev.htmlOverscroll;
       body.style.overscrollBehavior = prev.bodyOverscroll;
     };
-  }, []);
+  }, [activeTab]);
 
   // Generate Flashcards API Call
   const handleGenerateFlashcards = useCallback(async (e?: React.FormEvent) => {
@@ -1419,7 +1422,11 @@ export default function AskClient() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => regenerate()}
+                            onClick={() => {
+                              setAssistantSources([]);
+                              setScopeWidened(false);
+                              regenerate();
+                            }}
                             disabled={isLoading}
                           >
                             <RotateCw className="w-3.5 h-3.5" />
@@ -1629,12 +1636,13 @@ export default function AskClient() {
                 <div className="flex items-center gap-2">
                   <button
                     onClick={() => {
-                      setKnownCards((prev) => ({ ...prev, [currentCardIndex]: false }));
+                      const id = flashcards[currentCardIndex]?.id ?? String(currentCardIndex);
+                      setKnownCards((prev) => ({ ...prev, [id]: false }));
                       setIsFlipped(false);
                       setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
                     }}
                     className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border transition-colors shadow-xs ${
-                      knownCards[currentCardIndex] === false
+                      knownCards[flashcards[currentCardIndex]?.id ?? String(currentCardIndex)] === false
                         ? 'bg-destructive text-destructive-foreground border-destructive'
                         : 'bg-surface border-border text-muted hover:text-foreground'
                     }`}
@@ -1645,12 +1653,13 @@ export default function AskClient() {
 
                   <button
                     onClick={() => {
-                      setKnownCards((prev) => ({ ...prev, [currentCardIndex]: true }));
+                      const id = flashcards[currentCardIndex]?.id ?? String(currentCardIndex);
+                      setKnownCards((prev) => ({ ...prev, [id]: true }));
                       setIsFlipped(false);
                       setCurrentCardIndex((prev) => (prev + 1) % flashcards.length);
                     }}
                     className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-lg text-xs font-semibold border transition-colors shadow-xs ${
-                      knownCards[currentCardIndex] === true
+                      knownCards[flashcards[currentCardIndex]?.id ?? String(currentCardIndex)] === true
                         ? 'bg-foreground text-background border-foreground font-semibold'
                         : 'bg-surface border-border text-muted hover:text-foreground'
                     }`}

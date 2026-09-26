@@ -9,7 +9,7 @@ export const CLIPBOARD_SHARES_COLLECTION = "clipboard_shares";
 const SHARE_ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
 export const SHARE_ID_RE = /^[abcdefghjkmnpqrstuvwxyz23456789]{6,16}$/;
 
-export function generateShareId(length = 6): string {
+export function generateShareId(length = 10): string {
   const buf = new Uint8Array(length);
   if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
     crypto.getRandomValues(buf);

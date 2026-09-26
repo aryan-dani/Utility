@@ -55,12 +55,13 @@ export function Providers({ children }: { children: React.ReactNode }) {
       <PWAProvider>
         <ThemeColorSync />
         <CampusOriginGuard />
-        <AuthGate />
-        <OnboardingStory />
-        <NavigationProgress />
-        {children}
-        <CommandPalette />
-        <PwaUpdater />
+        <AuthGate>
+          <OnboardingStory />
+          <NavigationProgress />
+          {children}
+          <CommandPalette />
+          <PwaUpdater />
+        </AuthGate>
         <ToasterProvider />
       </PWAProvider>
     </ThemeProvider>

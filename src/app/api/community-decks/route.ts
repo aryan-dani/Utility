@@ -6,6 +6,55 @@ import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
+export async function GET(request: Request) {
+  const auth = await requireUser(request);
+  if (isAuthFailure(auth)) return auth;
+
+  try {
+    const db = adminDb();
+    const snapshot = await db
+      .collection("community_decks")
+      .orderBy("upvotes", "desc")
+      .limit(50)
+      .get();
+
+    const decks = snapshot.docs.map((doc) => {
+      const d = doc.data();
+      let createdAtStr = new Date().toISOString();
+      if (d.created_at) {
+        if (typeof d.created_at.toDate === "function") {
+          createdAtStr = d.created_at.toDate().toISOString();
+        } else if (d.created_at.seconds) {
+          createdAtStr = new Date(d.created_at.seconds * 1000).toISOString();
+        } else {
+          createdAtStr = new Date(d.created_at).toISOString();
+        }
+      }
+      const cards = Array.isArray(d.flashcards) ? d.flashcards : [];
+      return {
+        id: doc.id,
+        title: d.title || "",
+        branch: d.branch || "",
+        semester: Number(d.semester || 0),
+        author_name: d.author_name || "",
+        author_uid: d.author_uid || "",
+        upvotes: Number(d.upvotes || 0),
+        cardCount: cards.length,
+        flashcards: [],
+        created_at: createdAtStr,
+      };
+    });
+
+    return NextResponse.json(
+      { decks },
+      { headers: { "Cache-Control": "private, max-age=60" } },
+    );
+  } catch (error) {
+    console.error("community-decks GET", error);
+    return NextResponse.json({ error: "Failed to load decks" }, { status: 500 });
+  }
+}
+
 const cardSchema = z.object({
   front: z.string().min(1).max(2000),
   back: z.string().min(1).max(4000),

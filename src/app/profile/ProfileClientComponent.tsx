@@ -817,7 +817,7 @@ export default function ProfileClientComponent() {
                 Offline files
               </h3>
               <p className="text-xs text-muted leading-relaxed">
-                PDFs saved with “Save offline” are stored in this browser only. Clearing frees storage and requires re-download.
+                Recently opened Drive files may stay in this browser. Clearing frees storage; they download again the next time you open them.
               </p>
               <button
                 type="button"
