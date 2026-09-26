@@ -7,6 +7,7 @@ import {
   CLIPBOARD_COLLECTION,
   CLIPBOARD_MAX_CHARS,
   clipTextLengthOk,
+  isDriveFileId,
   isShareExpired,
 } from "@/lib/clipboard";
 
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic";
 
 const putSchema = z.object({
   text: z.string().max(CLIPBOARD_MAX_CHARS),
+  drive_file_id: z.string().max(128).nullable().optional(),
+  drive_file_name: z.string().max(200).nullable().optional(),
 });
 
 function rateLimited(retryAfterSec: number) {
@@ -38,6 +41,8 @@ export async function GET(request: Request) {
         updated_at: null,
         share_id: null,
         share_expires_at: null,
+        drive_file_id: null,
+        drive_file_name: null,
       });
     }
 
@@ -51,6 +56,9 @@ export async function GET(request: Request) {
       updated_at: typeof data.updated_at === "string" ? data.updated_at : null,
       share_id: expired ? null : shareId,
       share_expires_at: expired ? null : shareExpires,
+      drive_file_id: isDriveFileId(data.drive_file_id) ? data.drive_file_id : null,
+      drive_file_name:
+        typeof data.drive_file_name === "string" ? data.drive_file_name : null,
     });
   } catch (error) {
     console.error("clipboard GET", error);
@@ -72,6 +80,13 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: "Invalid payload" }, { status: 400 });
     }
 
+    const rawId = parsed.data.drive_file_id ?? null;
+    const driveFileId = rawId && isDriveFileId(rawId) ? rawId : null;
+    const driveFileName =
+      driveFileId && parsed.data.drive_file_name
+        ? parsed.data.drive_file_name.trim().slice(0, 200)
+        : null;
+
     const updatedAt = new Date().toISOString();
     const ref = adminDb().collection(CLIPBOARD_COLLECTION).doc(auth.uid);
     const existing = await ref.get();
@@ -82,6 +97,8 @@ export async function PUT(request: Request) {
         text: parsed.data.text,
         updated_at: updatedAt,
         owner_id: auth.uid,
+        drive_file_id: driveFileId,
+        drive_file_name: driveFileName,
         share_id: typeof prev.share_id === "string" ? prev.share_id : null,
         share_expires_at:
           typeof prev.share_expires_at === "string" ? prev.share_expires_at : null,

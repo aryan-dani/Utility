@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ClipboardCopy } from "lucide-react";
+import { ClipboardCopy, FileText } from "lucide-react";
 import { notify } from "@/lib/toast";
+import { getDriveEmbedUrl } from "@/lib/fileUtils";
 import {
   Button,
   ButtonLink,
@@ -15,6 +16,8 @@ import {
 
 export default function ClipboardShareClient({ shareId }: { shareId: string }) {
   const [text, setText] = useState<string | null>(null);
+  const [driveFileId, setDriveFileId] = useState<string | null>(null);
+  const [driveFileName, setDriveFileName] = useState<string | null>(null);
   const [expiresAt, setExpiresAt] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [gone, setGone] = useState(false);
@@ -39,8 +42,12 @@ export default function ClipboardShareClient({ shareId }: { shareId: string }) {
         const data = (await res.json()) as {
           text: string;
           share_expires_at: string | null;
+          drive_file_id: string | null;
+          drive_file_name: string | null;
         };
         setText(data.text ?? "");
+        setDriveFileId(data.drive_file_id ?? null);
+        setDriveFileName(data.drive_file_name ?? null);
         setExpiresAt(data.share_expires_at);
       } catch {
         if (!cancelled) setError("Could not load this share.");
@@ -93,6 +100,17 @@ export default function ClipboardShareClient({ shareId }: { shareId: string }) {
 
       {!loading && text != null && !gone && (
         <div className="space-y-4">
+          {driveFileId && (
+            <a
+              href={getDriveEmbedUrl(driveFileId)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 rounded-xl border border-border bg-card p-3 text-sm font-medium text-foreground hover:bg-surface/60"
+            >
+              <FileText className="h-4 w-4 shrink-0" />
+              Open {driveFileName || "Drive file"}
+            </a>
+          )}
           <pre className="whitespace-pre-wrap break-words rounded-xl border border-border bg-card p-4 text-sm leading-relaxed font-mono min-h-[10rem]">
             {text || "(empty)"}
           </pre>

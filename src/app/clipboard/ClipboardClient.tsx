@@ -3,10 +3,11 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
-import { GraduationCap, Hash, Link2, Link2Off } from "lucide-react";
+import { FileText, GraduationCap, Hash, Link2, Link2Off, X } from "lucide-react";
 import { auth } from "@/lib/firebase";
 import { authFetch } from "@/lib/authFetch";
 import { notify } from "@/lib/toast";
+import { getDriveEmbedUrl, getDriveFileId } from "@/lib/fileUtils";
 import {
   CLIPBOARD_MAX_CHARS,
   formatShareCode,
@@ -32,6 +33,8 @@ type ClipboardPayload = {
   updated_at: string | null;
   share_id: string | null;
   share_expires_at: string | null;
+  drive_file_id: string | null;
+  drive_file_name: string | null;
 };
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -108,21 +111,30 @@ export default function ClipboardClient() {
   const [shareExpiresAt, setShareExpiresAt] = useState<string | null>(null);
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
+  const [driveFileId, setDriveFileId] = useState<string | null>(null);
+  const [driveFileName, setDriveFileName] = useState<string | null>(null);
+  const [driveUrl, setDriveUrl] = useState("");
 
   const textRef = useRef(text);
   const dirtyRef = useRef(false);
   const savingRef = useRef(false);
+  const driveIdRef = useRef<string | null>(null);
+  const driveNameRef = useRef<string | null>(null);
 
   useEffect(() => {
     textRef.current = text;
     dirtyRef.current = dirty;
-  }, [text, dirty]);
+    driveIdRef.current = driveFileId;
+    driveNameRef.current = driveFileName;
+  }, [text, dirty, driveFileId, driveFileName]);
 
   const applyPayload = (data: ClipboardPayload) => {
     setText(data.text ?? "");
     setUpdatedAt(data.updated_at);
     setShareId(data.share_id);
     setShareExpiresAt(data.share_expires_at);
+    setDriveFileId(data.drive_file_id ?? null);
+    setDriveFileName(data.drive_file_name ?? null);
     setDirty(false);
     dirtyRef.current = false;
     setSaveState(data.updated_at ? "saved" : "idle");
@@ -151,6 +163,9 @@ export default function ClipboardClient() {
         setUpdatedAt(null);
         setShareId(null);
         setShareExpiresAt(null);
+        setDriveFileId(null);
+        setDriveFileName(null);
+        setDriveUrl("");
         setError(null);
         setDirty(false);
         dirtyRef.current = false;
@@ -172,7 +187,11 @@ export default function ClipboardClient() {
       const res = await authFetch("/api/clipboard", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: payload }),
+        body: JSON.stringify({
+          text: payload,
+          drive_file_id: driveIdRef.current,
+          drive_file_name: driveNameRef.current,
+        }),
       });
       if (res.status === 400) {
         notify.error("Text is too long.");
@@ -210,7 +229,7 @@ export default function ClipboardClient() {
       void save();
     }, SAVE_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
-  }, [signedIn, dirty, text, save]);
+  }, [signedIn, dirty, text, driveFileId, driveFileName, save]);
 
   useEffect(() => {
     if (!signedIn) return;
@@ -298,7 +317,7 @@ export default function ClipboardClient() {
       <PageHeader
         eyebrow="Tools"
         title="Clipboard"
-        description="One pad on your account — it saves as you type. Hand someone a 24-hour code or link if they are on a lab PC."
+        description="One pad on your account — it saves as you type. Attach a Google Drive PDF as a link (bytes stay on Drive). Hand someone a 24-hour code if they are on a lab PC."
         divider
       />
 
@@ -353,6 +372,73 @@ export default function ClipboardClient() {
             spellCheck={false}
             aria-label="Clipboard text"
           />
+
+          <div className="rounded-xl border border-border bg-card p-3">
+            <p className="text-xs font-semibold text-foreground">Drive file</p>
+            <p className="mt-1 text-[11px] leading-relaxed text-muted">
+              Paste a Google Drive share link. The PDF stays on Drive — this pad
+              only stores the file id.
+            </p>
+            {driveFileId ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <a
+                  href={getDriveEmbedUrl(driveFileId)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-1.5 text-sm font-medium text-foreground underline underline-offset-4"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  {driveFileName || "Open attached file"}
+                </a>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setDriveFileId(null);
+                    setDriveFileName(null);
+                    driveIdRef.current = null;
+                    driveNameRef.current = null;
+                    dirtyRef.current = true;
+                    setDirty(true);
+                  }}
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Remove
+                </Button>
+              </div>
+            ) : (
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                <Input
+                  inputSize="sm"
+                  value={driveUrl}
+                  onChange={(e) => setDriveUrl(e.target.value)}
+                  placeholder="https://drive.google.com/file/d/…"
+                  aria-label="Google Drive file URL"
+                />
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  className="shrink-0"
+                  onClick={() => {
+                    const id = getDriveFileId(driveUrl.trim());
+                    if (!id) {
+                      notify.error("That does not look like a Drive file link.");
+                      return;
+                    }
+                    setDriveFileId(id);
+                    setDriveFileName("Drive file");
+                    driveIdRef.current = id;
+                    driveNameRef.current = "Drive file";
+                    setDriveUrl("");
+                    dirtyRef.current = true;
+                    setDirty(true);
+                  }}
+                >
+                  Attach
+                </Button>
+              </div>
+            )}
+          </div>
 
           <p className="text-xs text-muted">
             {text.length.toLocaleString()} / {CLIPBOARD_MAX_CHARS.toLocaleString()}

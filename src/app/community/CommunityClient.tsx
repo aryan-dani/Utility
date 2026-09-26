@@ -27,35 +27,14 @@ import { notify } from "@/lib/toast";
 import { Button, Badge, Card, Modal, Segmented, PageHeader, PageShell } from "@/components/ui";
 import { authFetch } from "@/lib/authFetch";
 
-const WHATSAPP_COMMUNITY_URL =
-  "https://chat.whatsapp.com/IptJTcvj4F848iY2riZ3YZ";
+import { WHATSAPP_COMMUNITY_URL, WHATSAPP_GROUPS } from "@/lib/communityLinks";
 
-const WHATSAPP_GROUPS = [
-  {
-    name: "Announcements",
-    blurb: "Official updates, feature launches, and the pinned community guide.",
-    tip: "Start here",
-    Icon: Megaphone,
-  },
-  {
-    name: "General",
-    blurb: "Everyday chat with peers. New here? Check Announcements first.",
-    tip: "Hang out",
-    Icon: MessagesSquare,
-  },
-  {
-    name: "Academic Help",
-    blurb: "Syllabus doubts, resources, labs, and exam-season questions.",
-    tip: "Ask peers",
-    Icon: BookOpen,
-  },
-  {
-    name: "Feedback & Bugs",
-    blurb: "Report broken previews, request features, or flag site issues.",
-    tip: "Improve Utility",
-    Icon: Bug,
-  },
-] as const;
+const WHATSAPP_GROUP_ICONS = {
+  Announcements: Megaphone,
+  General: MessagesSquare,
+  "Academic Help": BookOpen,
+  "Feedback & Bugs": Bug,
+} as const;
 
 export interface CommunityFlashcard {
   question: string;
@@ -315,7 +294,9 @@ export default function CommunityClient({
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {WHATSAPP_GROUPS.map(({ name, blurb, tip, Icon }) => (
+          {WHATSAPP_GROUPS.map(({ name, blurb, tip }) => {
+            const Icon = WHATSAPP_GROUP_ICONS[name];
+            return (
             <a
               key={name}
               href={WHATSAPP_COMMUNITY_URL}
@@ -336,7 +317,8 @@ export default function CommunityClient({
                 <p className="text-xs text-muted leading-relaxed">{blurb}</p>
               </div>
             </a>
-          ))}
+            );
+          })}
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 rounded-xl border border-border bg-surface/40 px-4 py-3.5">

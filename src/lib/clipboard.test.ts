@@ -5,6 +5,7 @@ import {
   clipTextLengthOk,
   formatShareCode,
   generateShareId,
+  isDriveFileId,
   isShareExpired,
   isValidShareCode,
   normalizeShareCode,
@@ -54,6 +55,8 @@ describe("clipboard helpers", () => {
     expect(clipTextLengthOk("ok")).toBe(true);
     expect(clipTextLengthOk("x".repeat(CLIPBOARD_MAX_CHARS))).toBe(true);
     expect(clipTextLengthOk("x".repeat(CLIPBOARD_MAX_CHARS + 1))).toBe(false);
+    expect(isDriveFileId("abc123XYZ0")).toBe(true);
+    expect(isDriveFileId("short")).toBe(false);
     const from = Date.parse("2026-09-26T00:00:00.000Z");
     expect(shareExpiresAt(from)).toBe("2026-09-27T00:00:00.000Z");
   });

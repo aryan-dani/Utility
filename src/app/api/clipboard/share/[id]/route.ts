@@ -5,6 +5,7 @@ import {
   CLIPBOARD_COLLECTION,
   CLIPBOARD_SHARES_COLLECTION,
   SHARE_ID_RE,
+  isDriveFileId,
   isShareExpired,
 } from "@/lib/clipboard";
 
@@ -57,10 +58,14 @@ export async function GET(
     }
 
     const clipSnap = await db.collection(CLIPBOARD_COLLECTION).doc(ownerId).get();
-    const text = typeof clipSnap.data()?.text === "string" ? clipSnap.data()!.text : "";
+    const clip = clipSnap.data() ?? {};
+    const text = typeof clip.text === "string" ? clip.text : "";
+    const drive_file_id = isDriveFileId(clip.drive_file_id) ? clip.drive_file_id : null;
+    const drive_file_name =
+      typeof clip.drive_file_name === "string" ? clip.drive_file_name : null;
 
     return NextResponse.json(
-      { text, share_expires_at: expiresAt },
+      { text, share_expires_at: expiresAt, drive_file_id, drive_file_name },
       { headers: { "Cache-Control": "no-store" } },
     );
   } catch (error) {

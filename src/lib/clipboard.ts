@@ -66,3 +66,9 @@ export function shareExpiresAt(from = Date.now()): string {
 export function clipTextLengthOk(text: string): boolean {
   return text.length <= CLIPBOARD_MAX_CHARS;
 }
+
+const DRIVE_FILE_ID_RE = /^[a-zA-Z0-9_-]{10,128}$/;
+
+export function isDriveFileId(id: string | null | undefined): id is string {
+  return typeof id === "string" && DRIVE_FILE_ID_RE.test(id);
+}
