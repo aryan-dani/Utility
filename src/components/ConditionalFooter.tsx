@@ -8,6 +8,7 @@ const HIDE_FOOTER_PREFIXES = [
   "/login",
   "/signup",
   "/admin",
+  "/ask",
   "/~offline",
 ];
 

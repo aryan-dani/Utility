@@ -11,13 +11,35 @@ const SUBJECT_PATTERNS = [
   /\b(computer networks?|cn)\b/i,
 ];
 
+const CAPABILITY_PATTERNS = [
+  /\bwhat access do you have\b/,
+  /\bwhat can you access\b/,
+  /\bwhat do you have access\b/,
+  /\bdo you have (live )?access\b/,
+  /\bdo you have internet\b/,
+  /\bcan you (browse|search) (the )?(web|internet|online)\b/,
+  /\bwhat can you (search|see|read|look up)\b/,
+  /\bwhat (files|notes|materials) can you\b/,
+  /\bwhat is your (access|capability|source)\b/,
+  /\b(your capabilities|what can you do)\b/,
+];
+
+export const CAPABILITY_ANSWER =
+  "Ask AI searches the indexed notes, slides, and syllabus for your current academic year, branch, and semester. Answers cite those sources with [S1], [S2], and similar markers. It does not browse the live web or invent a training cutoff.";
+
+function isCapabilityQuery(lower: string): boolean {
+  return CAPABILITY_PATTERNS.some((pattern) => pattern.test(lower));
+}
+
 export function routeQuery(rawQuery: string): RoutedQuery {
   const cleanQuery = rawQuery.trim();
   const lower = cleanQuery.toLowerCase();
 
   let intent: QueryIntent = "explain";
 
-  if (/^(what is|what are|define|definition of)\b/.test(lower)) {
+  if (isCapabilityQuery(lower)) {
+    intent = "capability";
+  } else if (/^(what is|what are|define|definition of)\b/.test(lower)) {
     intent = "definition";
   } else if (/\b(compare|difference between|vs\.?|versus)\b/.test(lower)) {
     intent = "compare";
@@ -64,7 +86,12 @@ function parseUnitNumber(raw: string): number | undefined {
 }
 
 export function modelForIntent(intent: QueryIntent): "fast" | "chat" {
-  if (intent === "definition" || intent === "syllabus" || intent === "locate") {
+  if (
+    intent === "definition" ||
+    intent === "syllabus" ||
+    intent === "locate" ||
+    intent === "capability"
+  ) {
     return "fast";
   }
   return "chat";

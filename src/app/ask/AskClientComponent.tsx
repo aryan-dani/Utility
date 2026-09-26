@@ -49,6 +49,7 @@ import { stripInvalidCitations, validMarkerSet } from '@/lib/agent/router';
 import { authFetch, getAuthHeaders } from '@/lib/authFetch';
 import { useWorkspaceResources } from '@/lib/useWorkspaceResources';
 import { generateId } from '@/lib/id';
+import { titleFromFirstMessage } from '@/lib/ask/chatTitle';
 
 type AskTab = 'chat' | 'flashcards' | 'quiz';
 
@@ -60,7 +61,7 @@ const ASK_TAB_OPTIONS: { value: AskTab; label: string }[] = [
 
 /** Shared height so sidebar + chat toolbars share one baseline. */
 const ASK_CHROME_ROW =
-  'h-11 shrink-0 border-b border-border/50 flex items-center px-3 sm:px-4 gap-2';
+  'h-11 shrink-0 border-b border-border flex items-center px-3 sm:px-4 gap-2';
 
 /** Legacy persisted messages may include a plain `content` field. */
 type ChatMessage = UIMessage & { content?: string };
@@ -690,7 +691,7 @@ export default function AskClient() {
         if (firstUserMsg) {
           const content = getMessageContent(firstUserMsg);
           if (content) {
-            title = content.slice(0, 30) + (content.length > 30 ? '...' : '');
+            title = titleFromFirstMessage(content);
           }
         }
       }
@@ -1102,11 +1103,14 @@ export default function AskClient() {
   };
 
   return (
-    <PageShell width="full" className="flex flex-col flex-1 min-h-0">
+    <PageShell
+      width="full"
+      className="flex flex-col flex-1 min-h-0 overflow-hidden !py-0 h-[calc(100dvh-3.5rem-3.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] md:h-dvh"
+    >
       <section className="shell-island flex flex-col overflow-hidden flex-1 min-h-0">
         <div className="grid grid-rows-[auto_minmax(0,1fr)] min-h-0 flex-1">
       {/* Top Navigation Tabs */}
-      <div className="border-b border-border/60 bg-card/60 px-4 sm:px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
+      <div className="border-b border-border bg-card/60 px-4 sm:px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">
         <div className="flex flex-col gap-1.5 min-w-0">
           <AcademicBreadcrumb
             branch={branch}
@@ -1141,7 +1145,7 @@ export default function AskClient() {
 
       {/* Tab 1: Chat Assistant */}
       {activeTab === 'chat' && (
-        <div className="min-h-0 min-w-0 flex overflow-hidden w-full relative">
+        <div className="min-h-0 min-w-0 h-full flex overflow-hidden w-full relative">
           
           {/* Chat Sessions - overlay drawer on mobile, inline rail on md+ */}
           {sidebarOpen && (
@@ -1152,7 +1156,7 @@ export default function AskClient() {
                 onClick={() => setSidebarOpen(false)}
                 className="absolute inset-0 bg-black/50 z-30 lg:hidden"
               />
-              <div className="absolute lg:relative inset-y-0 left-0 z-40 lg:z-auto w-[min(16rem,85vw)] lg:w-64 min-h-0 lg:m-2 lg:mr-0 lg:rounded-xl lg:border lg:border-border/60 lg:bg-surface/40 border-r border-border bg-background-subtle flex flex-col shrink-0 shadow-popover lg:shadow-none rounded-r-2xl lg:rounded-xl overflow-hidden">
+              <div className="absolute lg:relative inset-y-0 left-0 z-40 lg:z-auto w-[min(16rem,85vw)] lg:w-64 min-h-0 lg:m-2 lg:mr-0 lg:rounded-xl lg:border lg:border-border lg:bg-surface/40 border-r border-border bg-background-subtle flex flex-col shrink-0 shadow-popover lg:shadow-none rounded-r-2xl lg:rounded-xl overflow-hidden">
               <div className={`${ASK_CHROME_ROW} justify-between`}>
                 <span className="text-[10px] uppercase font-bold text-muted tracking-wider">
                   Chat History
@@ -1261,6 +1265,7 @@ export default function AskClient() {
               )}
             </div>
 
+            <div className="min-h-0 flex flex-col overflow-hidden">
             {status === 'error' && (
               <div
                 role="alert"
@@ -1270,9 +1275,9 @@ export default function AskClient() {
               </div>
             )}
 
-            <div ref={scrollContainerRef} className="min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-4 sm:px-6 py-6 relative [overflow-anchor:none]">
+            <div ref={scrollContainerRef} className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-4 sm:px-6 py-6 relative [overflow-anchor:none]">
               {messages.length === 0 ? (
-                <div className="h-full flex flex-col items-center justify-center text-center px-4">
+                <div className="min-h-full flex flex-col items-center justify-center text-center px-4">
                   <div className="w-16 h-16 bg-surface border border-border flex items-center justify-center mb-6 rounded-2xl shadow-sm">
                     <Brain className="w-8 h-8 text-foreground" />
                   </div>
@@ -1390,6 +1395,7 @@ export default function AskClient() {
                 </button>
               )}
             </div>
+            </div>
 
             <div className="shrink-0 px-4 sm:px-6 pb-4 md:safe-bottom bg-gradient-to-t from-card via-card/95 to-transparent pt-2">
               {messages.length > 0 && (
@@ -1473,7 +1479,7 @@ export default function AskClient() {
 
       {/* Tab 2: Flashcards */}
       {activeTab === 'flashcards' && (
-        <div className="p-4 sm:p-6 overflow-y-auto min-h-0 flex flex-col items-center">
+        <div className="p-4 sm:p-6 overflow-y-auto min-h-0 h-full flex flex-col items-center">
           <div className="w-full max-w-2xl mb-8">
             <form onSubmit={handleGenerateFlashcards} className="flex gap-2">
               <Input
@@ -1708,7 +1714,7 @@ export default function AskClient() {
 
       {/* Tab 3: Practice Quiz */}
       {activeTab === 'quiz' && (
-        <div className="p-4 sm:p-6 overflow-y-auto min-h-0 flex flex-col items-center">
+        <div className="p-4 sm:p-6 overflow-y-auto min-h-0 h-full flex flex-col items-center">
           <div className="w-full max-w-2xl mb-8">
             <form onSubmit={handleGenerateQuiz} className="flex gap-2">
               <Input

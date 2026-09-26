@@ -36,12 +36,11 @@ import { SegmentedThemeToggle } from "@/components/shell/ThemeToggle";
 import { DockTooltip } from "@/components/shell/DockTooltip";
 import {
   ACADEMIC_LINKS,
-  CAMPUS_LINKS,
+  MORE_GROUP_LINKS,
   MORE_LINKS,
   PHONE_TABS,
-  PRODUCTIVITY_LINKS,
-  SOCIAL_LINKS,
-  SYSTEM_LINKS,
+  PINNED_LINKS,
+  TOOL_LINKS,
   type NavLinkItem,
 } from "@/components/shell/navConfig";
 import { useMotionSafe } from "@/lib/motion";
@@ -92,10 +91,10 @@ function NavSection({
             pointerEvents: collapsed ? "none" : "auto",
           }}
         >
-          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted/50 truncate">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-muted truncate">
             {title}
           </span>
-          <div className="h-px flex-1 bg-border/30" />
+          <div className="h-px flex-1 bg-border" />
         </div>
 
         {/* Collapsed divider */}
@@ -104,11 +103,65 @@ function NavSection({
             className="absolute inset-0 flex items-center justify-center transition-opacity duration-200 pointer-events-none"
             style={{ opacity: collapsed ? 1 : 0 }}
           >
-            <div className="w-3.5 h-px rounded-full bg-border/40" />
+            <div className="w-3.5 h-px rounded-full bg-border" />
           </div>
         )}
       </div>
       {children}
+    </div>
+  );
+}
+
+function CollapsibleNavSection({
+  title,
+  storageKey,
+  defaultOpen = true,
+  collapsed,
+  hideCollapsedDivider = false,
+  children,
+}: {
+  title: string;
+  storageKey: string;
+  defaultOpen?: boolean;
+  collapsed: boolean;
+  hideCollapsedDivider?: boolean;
+  children: React.ReactNode;
+}) {
+  const open = useLocalStorageBoolean(storageKey, defaultOpen);
+
+  if (collapsed) {
+    if (!open) return null;
+    return (
+      <NavSection
+        title={title}
+        collapsed
+        hideCollapsedDivider={hideCollapsedDivider}
+      >
+        {children}
+      </NavSection>
+    );
+  }
+
+  return (
+    <div className="space-y-0.5">
+      <button
+        type="button"
+        onClick={() => writeLocalStorageBoolean(storageKey, !open)}
+        aria-expanded={open}
+        className="flex items-center gap-2 w-full px-2.5 h-6 rounded-md hover:bg-surface/70 text-muted hover:text-foreground transition-colors"
+      >
+        <span className="text-[10px] font-bold uppercase tracking-[0.18em] truncate">
+          {title}
+        </span>
+        <div className="h-px flex-1 bg-border" />
+        <ChevronDown
+          className={`w-3 h-3 shrink-0 transition-transform duration-200 ${
+            open ? "rotate-180" : ""
+          }`}
+          aria-hidden
+        />
+      </button>
+      {open ? children : null}
     </div>
   );
 }
@@ -320,7 +373,7 @@ function NavigationInner() {
     [academicYear, branch, semester],
   );
 
-  const systemLinks = SYSTEM_LINKS.filter(
+  const moreGroupLinks = MORE_GROUP_LINKS.filter(
     (link) => !(standalone && link.href === "/install"),
   );
   const moreLinks = MORE_LINKS.filter(
@@ -659,24 +712,35 @@ function NavigationInner() {
             isCollapsed ? "px-0 py-1.5 space-y-1" : "px-2.5 py-2.5 space-y-3"
           }`}
         >
-          <NavSection title="Academic" collapsed={isCollapsed} hideCollapsedDivider>
+          <NavSection title="Pinned" collapsed={isCollapsed} hideCollapsedDivider>
+            {PINNED_LINKS.map(link)}
+          </NavSection>
+
+          <CollapsibleNavSection
+            title="Academic"
+            storageKey="nav-academic-open"
+            defaultOpen
+            collapsed={isCollapsed}
+          >
             {ACADEMIC_LINKS.map(link)}
-          </NavSection>
+          </CollapsibleNavSection>
 
-          <NavSection title="Campus" collapsed={isCollapsed}>
-            {CAMPUS_LINKS.map(link)}
-          </NavSection>
+          <CollapsibleNavSection
+            title="Tools"
+            storageKey="nav-tools-open"
+            defaultOpen
+            collapsed={isCollapsed}
+          >
+            {TOOL_LINKS.map(link)}
+          </CollapsibleNavSection>
 
-          <NavSection title="Productivity" collapsed={isCollapsed}>
-            {PRODUCTIVITY_LINKS.map(link)}
-          </NavSection>
-
-          <NavSection title="Connect" collapsed={isCollapsed}>
-            {SOCIAL_LINKS.map(link)}
-          </NavSection>
-
-          <NavSection title="System" collapsed={isCollapsed}>
-            {systemLinks.map(link)}
+          <CollapsibleNavSection
+            title="More"
+            storageKey="nav-more-open"
+            defaultOpen={false}
+            collapsed={isCollapsed}
+          >
+            {moreGroupLinks.map(link)}
             {isAdmin && (
               <DockTooltip
                 label="Admin Dashboard"
@@ -720,7 +784,7 @@ function NavigationInner() {
                 )}
               </DockTooltip>
             )}
-          </NavSection>
+          </CollapsibleNavSection>
         </div>
 
         {/* Dock Footer Deck */}

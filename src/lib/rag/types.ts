@@ -70,6 +70,7 @@ export type QueryIntent =
   | "pyq"
   | "syllabus"
   | "locate"
+  | "capability"
   | "out_of_scope";
 
 export interface RoutedQuery {

@@ -32,6 +32,13 @@ describe("routeQuery", () => {
       "out_of_scope",
     );
   });
+
+  it("detects capability intent without stealing definitions", () => {
+    expect(routeQuery("what access do you have in rag").intent).toBe(
+      "capability",
+    );
+    expect(routeQuery("What is a B+ tree?").intent).toBe("definition");
+  });
 });
 
 describe("modelForIntent", () => {
@@ -39,6 +46,7 @@ describe("modelForIntent", () => {
     expect(modelForIntent("definition")).toBe("fast");
     expect(modelForIntent("syllabus")).toBe("fast");
     expect(modelForIntent("locate")).toBe("fast");
+    expect(modelForIntent("capability")).toBe("fast");
     expect(modelForIntent("compare")).toBe("chat");
     expect(modelForIntent("explain")).toBe("chat");
   });

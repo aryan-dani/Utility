@@ -9,7 +9,7 @@ import { isAuthFailure, requireUser } from "@/lib/apiAuth";
 import { enforceAiRateLimit } from "@/lib/rateLimit";
 import { DEFAULT_ACADEMIC_YEAR, DEFAULT_BRANCH, DEFAULT_SEMESTER } from "@/lib/workspace";
 import { z } from "zod";
-import { routeQuery, compactHistory, stripInvalidCitations, validMarkerSet, modelForIntent } from "@/lib/agent/router";
+import { routeQuery, compactHistory, stripInvalidCitations, validMarkerSet, modelForIntent, CAPABILITY_ANSWER } from "@/lib/agent/router";
 import { executeTool, pickTool, getSyllabusUnit } from "@/lib/agent/tools";
 import { searchNotes } from "@/lib/agent/tools";
 import { lookupSemanticCache, storeSemanticCache } from "@/lib/rag/cache";
@@ -74,6 +74,8 @@ function buildSystemPrompt(params: {
     : "";
 
   return `You are the Academic OS AI, a grounded tutor for ${params.branch} semester ${params.semester} students.
+
+You search this student's indexed course notes, slides, and syllabus for the current academic year, branch, and semester. When CONTEXT FROM STUDENT RESOURCES is present, use it and cite every factual claim with [S1], [S2], … matching the labels. Do not invent a training cutoff, claim you are offline, or say you can only use files the student pasted in the chat.
 
 STUDENT SUBJECTS: ${subjectList}
 QUERY TYPE: ${params.routedIntent}
@@ -187,6 +189,10 @@ export async function POST(req: Request) {
   const resourceId = context?.resourceId;
 
   const routed = routeQuery(lastMessage);
+
+  if (routed.intent === "capability") {
+    return cachedStreamResponse(CAPABILITY_ANSWER);
+  }
 
   // Single embed per turn - reuse for cache lookup, retrieve, and cache store
   let queryEmbedding: number[] | undefined;

@@ -14,6 +14,7 @@ import {
   Waypoints,
   Home,
   HelpCircle,
+  ClipboardCopy,
 } from "lucide-react";
 
 export interface NavLinkItem {
@@ -31,11 +32,23 @@ export const HOME_LINK: NavLinkItem = {
   desc: "Workspace home",
 };
 
-export const ACADEMIC_LINKS: NavLinkItem[] = [
+export const CLIPBOARD_LINK: NavLinkItem = {
+  href: "/clipboard",
+  label: "Clipboard",
+  Icon: ClipboardCopy,
+  desc: "Synced notes across devices",
+};
+
+export const PINNED_LINKS: NavLinkItem[] = [
+  HOME_LINK,
   { href: "/resources", label: "Resources", Icon: FileText, featured: true, desc: "Subject files. Notes are reference-only" },
   { href: "/ask", label: "Ask AI", Icon: Brain, desc: "RAG-powered academic assistant" },
-  { href: "/qa", label: "Doubt Board", Icon: HelpCircle, desc: "Paper doubts & syllabus scope" },
+  { href: "/planner", label: "Study Planner", Icon: CalendarCheck, desc: "Collaborative schedule & logs" },
+];
+
+export const ACADEMIC_LINKS: NavLinkItem[] = [
   { href: "/syllabus", label: "Syllabus", Icon: BookOpen, desc: "Course syllabus tracker" },
+  { href: "/qa", label: "Doubt Board", Icon: HelpCircle, desc: "Paper doubts & syllabus scope" },
   { href: "/visualize", label: "Visualize", Icon: Waypoints, desc: "AI algorithm visualizers" },
 ];
 
@@ -43,11 +56,17 @@ export const CAMPUS_LINKS: NavLinkItem[] = [
   { href: "/campus", label: "Campus", Icon: Building2, desc: "Seating, directory, and labs" },
 ];
 
-export const PRODUCTIVITY_LINKS: NavLinkItem[] = [
-  { href: "/planner", label: "Study Planner", Icon: CalendarCheck, desc: "Collaborative schedule & logs" },
+export const TOOL_LINKS: NavLinkItem[] = [
   { href: "/timer", label: "Focus Timer", Icon: Timer, desc: "Pomodoro study sessions" },
   { href: "/gpa", label: "GPA Calculator", Icon: GraduationCap, desc: "Track and project your grades" },
   { href: "/srs", label: "SRS Flashcards", Icon: Layers, desc: "Spaced repetition reviewer" },
+  CLIPBOARD_LINK,
+];
+
+/** @deprecated Prefer PINNED_LINKS + TOOL_LINKS */
+export const PRODUCTIVITY_LINKS: NavLinkItem[] = [
+  PINNED_LINKS[3],
+  ...TOOL_LINKS.filter((l) => l.href !== "/clipboard"),
 ];
 
 export const SOCIAL_LINKS: NavLinkItem[] = [
@@ -59,12 +78,16 @@ export const SYSTEM_LINKS: NavLinkItem[] = [
   { href: "/support", label: "Support", Icon: Heart, desc: "Optional contribution" },
 ];
 
-export const MORE_LINKS: NavLinkItem[] = [
-  ...ACADEMIC_LINKS.filter((l) => l.href !== "/resources" && l.href !== "/ask"),
+export const MORE_GROUP_LINKS: NavLinkItem[] = [
   ...CAMPUS_LINKS,
-  ...PRODUCTIVITY_LINKS.filter((l) => l.href !== "/planner"),
   ...SOCIAL_LINKS,
   ...SYSTEM_LINKS,
+];
+
+export const MORE_LINKS: NavLinkItem[] = [
+  ...ACADEMIC_LINKS,
+  ...TOOL_LINKS,
+  ...MORE_GROUP_LINKS,
 ];
 
 export const PHONE_TABS: Array<Pick<NavLinkItem, "href" | "label" | "Icon">> = [
