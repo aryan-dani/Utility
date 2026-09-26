@@ -131,9 +131,6 @@ export default async function Home() {
 
   return (
     <div className="flex-1 w-full flex flex-col relative overflow-x-clip">
-      {/* Hero grid overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,rgb(var(--foreground)/0.06)_1px,transparent_1px),linear-gradient(to_bottom,rgb(var(--foreground)/0.06)_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] pointer-events-none -z-20" />
-
       {/* Hero */}
       <section className="w-full max-w-7xl mx-auto page-gutter pt-16 pb-12 sm:pt-24 sm:pb-20 md:pt-28 md:pb-24 flex flex-col items-center justify-center text-center relative md:min-h-[70vh]">
         <p className="font-display text-5xl sm:text-7xl md:text-8xl text-foreground tracking-tight mb-4 sm:mb-5">
@@ -203,12 +200,12 @@ export default async function Home() {
               href={href}
               className="group block bg-card hover:bg-surface card-premium-hover transition-all duration-300"
             >
-              <div className="p-6 sm:p-7 h-full flex flex-col gap-6 relative">
-                <div className="absolute left-0 top-3 bottom-3 w-[3px] rounded-r bg-primary scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-center" />
+              <div className="p-4 sm:p-5 h-full flex flex-col gap-3 relative">
+                <div className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r bg-primary scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-center" />
 
                 <div className="flex items-start justify-between">
-                  <div className="w-11 h-11 rounded-xl bg-surface border border-border flex items-center justify-center group-hover:scale-105 group-hover:border-border-strong transition-all duration-300">
-                    <Icon className="w-5 h-5 text-foreground" />
+                  <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center group-hover:scale-105 group-hover:border-border-strong transition-all duration-300">
+                    <Icon className="w-4 h-4 text-foreground" />
                   </div>
                   <span className="text-xs font-mono text-foreground-subtle group-hover:text-foreground/70 transition-colors">
                     {number}
@@ -216,10 +213,10 @@ export default async function Home() {
                 </div>
 
                 <div className="flex-1">
-                  <h2 className="text-base font-semibold text-foreground mb-2">
+                  <h2 className="text-sm font-semibold text-foreground mb-1">
                     {label}
                   </h2>
-                  <p className="text-sm text-foreground-subtle leading-relaxed">
+                  <p className="text-xs text-foreground-subtle leading-relaxed">
                     {description}
                   </p>
                 </div>

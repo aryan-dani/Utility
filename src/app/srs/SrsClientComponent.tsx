@@ -20,7 +20,8 @@ import {
   Star,
   Volume2,
   Download,
-  Upload
+  Upload,
+  Search,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { MOTION } from '@/lib/motion';
@@ -67,6 +68,7 @@ export default function SrsClient() {
   const [reviewSummary, setReviewSummary] = useState<{ gotIt: number; forgot: number } | null>(null);
   const [forgottenCards, setForgottenCards] = useState<Flashcard[]>([]);
   const [isStarredOnlyReview, setIsStarredOnlyReview] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   const srsFileInputRef = useRef<HTMLInputElement>(null);
 
   // Auth Status
@@ -153,6 +155,31 @@ export default function SrsClient() {
   const selectedDeckStats = useMemo(() => {
     return deckStats.find(s => s.id === selectedDeckId);
   }, [deckStats, selectedDeckId]);
+
+  const searchNeedle = searchQuery.trim().toLowerCase();
+
+  const filteredDecks = useMemo(() => {
+    if (!searchNeedle) return decks;
+    return decks.filter((deck) => {
+      if (deck.name.toLowerCase().includes(searchNeedle)) return true;
+      return cards.some(
+        (c) =>
+          c.deckId === deck.id &&
+          (c.question.toLowerCase().includes(searchNeedle) ||
+            c.answer.toLowerCase().includes(searchNeedle)),
+      );
+    });
+  }, [decks, cards, searchNeedle]);
+
+  const filteredDeckCards = useMemo(() => {
+    const inDeck = cards.filter((c) => c.deckId === selectedDeckId);
+    if (!searchNeedle) return inDeck;
+    return inDeck.filter(
+      (c) =>
+        c.question.toLowerCase().includes(searchNeedle) ||
+        c.answer.toLowerCase().includes(searchNeedle),
+    );
+  }, [cards, selectedDeckId, searchNeedle]);
 
   // Start Review Session
   const startReview = (deckId: string, starredOnly = false) => {
@@ -330,6 +357,30 @@ export default function SrsClient() {
             }
           />
 
+          {decks.length > 0 && (
+            <div className="relative max-w-md">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted pointer-events-none" />
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search decks and cards…"
+                aria-label="Search decks and cards"
+                className="w-full h-10 pl-9 pr-8 rounded-xl border border-border bg-card text-sm text-foreground placeholder:text-muted outline-none focus:ring-1 focus:ring-foreground"
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Review Finished Notification Banner */}
           {reviewSummary && (reviewSummary.gotIt > 0 || reviewSummary.forgot > 0) && (
             <motion.div 
@@ -375,9 +426,20 @@ export default function SrsClient() {
             </div>
           )}
 
+          {decks.length > 0 && searchNeedle && filteredDecks.length === 0 && (
+            <div className="text-center py-12 border border-dashed border-border rounded-2xl bg-card">
+              <Search className="w-8 h-8 text-muted/40 mx-auto mb-3" />
+              <h3 className="text-sm font-bold text-foreground">No matches</h3>
+              <p className="text-xs text-muted mt-1">
+                Nothing in your decks matches “{searchQuery.trim()}”.
+              </p>
+            </div>
+          )}
+
           {/* Decks Grid */}
+          {filteredDecks.length > 0 && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border/60 rounded-xl overflow-hidden border border-border/70 shadow-sm">
-            {decks.map(deck => {
+            {filteredDecks.map(deck => {
               const stat = deckStats.find(s => s.id === deck.id);
               const due = stat?.due || 0;
               const total = stat?.total || 0;
@@ -516,6 +578,7 @@ export default function SrsClient() {
               );
             })}
           </div>
+          )}
         </div>
       )}
 
@@ -736,8 +799,31 @@ export default function SrsClient() {
             <div className="lg:col-span-2 space-y-4">
               <div className="bg-card border border-border overflow-hidden rounded-2xl shadow-sm">
                 
-                <div className="px-5 py-4 border-b border-border bg-surface/30">
+                <div className="px-5 py-4 border-b border-border bg-surface/30 space-y-3">
                   <h3 className="text-xs font-bold uppercase tracking-wider text-muted">Cards in Deck</h3>
+                  {cards.some((c) => c.deckId === selectedDeckId) && (
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted pointer-events-none" />
+                      <input
+                        type="search"
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        placeholder="Search this deck…"
+                        aria-label="Search cards in this deck"
+                        className="w-full h-9 pl-8 pr-8 rounded-lg border border-border bg-card text-sm text-foreground placeholder:text-muted outline-none focus:ring-1 focus:ring-foreground"
+                      />
+                      {searchQuery && (
+                        <button
+                          type="button"
+                          onClick={() => setSearchQuery('')}
+                          className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted hover:text-foreground"
+                          aria-label="Clear search"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="divide-y divide-border overflow-x-auto">
@@ -745,8 +831,12 @@ export default function SrsClient() {
                     <div className="p-8 text-center text-xs text-muted">
                       No cards in this deck. Use the panel on the left to add one!
                     </div>
+                  ) : filteredDeckCards.length === 0 ? (
+                    <div className="p-8 text-center text-xs text-muted">
+                      No cards match “{searchQuery.trim()}”.
+                    </div>
                   ) : (
-                    cards.filter(c => c.deckId === selectedDeckId).map(card => (
+                    filteredDeckCards.map(card => (
                       <div key={card.id} className="p-5 flex items-start justify-between gap-4 hover:bg-surface/10 transition-colors">
                         <div className="space-y-2 flex-1 min-w-0">
                           <p className="text-xs font-bold text-foreground leading-relaxed">{card.question}</p>

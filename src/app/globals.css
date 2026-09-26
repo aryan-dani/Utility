@@ -75,6 +75,10 @@
   --accent-codes: #3f3f46;
   --accent-other: #a1a1aa;
 
+  /* Site-wide graph paper */
+  --grid-minor: 0.055;
+  --grid-major: 0.1;
+
   color-scheme: light;
 }
 
@@ -135,6 +139,9 @@
   --accent-codes: #a1a1aa;
   --accent-other: #71717a;
 
+  --grid-minor: 0.08;
+  --grid-major: 0.14;
+
   color-scheme: dark;
 }
 
@@ -152,21 +159,23 @@ html {
 body {
   background-color: rgb(var(--background));
   background-image:
-    linear-gradient(rgb(var(--foreground) / 0.014) 1px, transparent 1px),
-    linear-gradient(90deg, rgb(var(--foreground) / 0.014) 1px, transparent 1px),
-    repeating-linear-gradient(
-      -45deg,
-      rgb(var(--foreground) / 0.022),
-      rgb(var(--foreground) / 0.022) 1px,
-      transparent 1px,
-      transparent 6px
-    );
-  background-size: 40px 40px, 40px 40px, auto;
+    linear-gradient(to right, rgb(var(--foreground) / var(--grid-major)) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--foreground) / var(--grid-major)) 1px, transparent 1px),
+    linear-gradient(to right, rgb(var(--foreground) / var(--grid-minor)) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(var(--foreground) / var(--grid-minor)) 1px, transparent 1px);
+  background-size: 5rem 5rem, 5rem 5rem, 1.25rem 1.25rem, 1.25rem 1.25rem;
+  background-position: center top;
   color: rgb(var(--foreground));
   font-family: var(--font-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.6;
+}
+
+@media print {
+  body {
+    background-image: none;
+  }
 }
 
 /* ── Scrollbar ────────────────────────────────────────────────────────────── */
