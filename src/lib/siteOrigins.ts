@@ -9,7 +9,35 @@ export const CANONICAL_WWW_HOST = "www.utilityos.tech";
 export const CAMPUS_HOST = "planner-flax-six.vercel.app";
 
 export const CANONICAL_ORIGIN = `https://${CANONICAL_HOST}`;
+export const CANONICAL_WWW_ORIGIN = `https://${CANONICAL_WWW_HOST}`;
 export const CAMPUS_ORIGIN = `https://${CAMPUS_HOST}`;
+
+/**
+ * Origins the installed PWA / Store shell should treat as one app.
+ * Apex 308s to www; campus Wi-Fi hops to the Vercel host. Without
+ * scope_extensions, Edge draws an out-of-scope tab + URL bar.
+ */
+export const PWA_SCOPE_ORIGINS = [
+  CANONICAL_ORIGIN,
+  CANONICAL_WWW_ORIGIN,
+  CAMPUS_ORIGIN,
+] as const;
+
+export type PwaScopeExtension = {
+  type: "origin";
+  origin: string;
+};
+
+export function pwaScopeExtensions(): PwaScopeExtension[] {
+  return PWA_SCOPE_ORIGINS.map((origin) => ({ type: "origin", origin }));
+}
+
+/** `/.well-known/web-app-origin-association` — keys are resolved manifest ids. */
+export function webAppOriginAssociation(): Record<string, { scope: string }> {
+  return Object.fromEntries(
+    PWA_SCOPE_ORIGINS.map((origin) => [`${origin}/`, { scope: "/" }]),
+  );
+}
 
 export const SAME_ORIGIN_AUTH_HOSTS = [
   CANONICAL_HOST,

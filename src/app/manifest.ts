@@ -1,6 +1,11 @@
 import { MetadataRoute } from 'next';
+import { pwaScopeExtensions } from '@/lib/siteOrigins';
 
-export default function manifest(): MetadataRoute.Manifest {
+type UtilityManifest = MetadataRoute.Manifest & {
+  scope_extensions: ReturnType<typeof pwaScopeExtensions>;
+};
+
+export default function manifest(): UtilityManifest {
   return {
     name: 'Utility OS',
     short_name: 'Utility OS',
@@ -11,6 +16,9 @@ export default function manifest(): MetadataRoute.Manifest {
     lang: 'en',
     dir: 'ltr',
     display: 'standalone',
+    // Prefer a chrome-less window. Do not list `tabbed` — that is the Store URL strip.
+    display_override: ['standalone'],
+    scope_extensions: pwaScopeExtensions(),
     orientation: 'any',
     background_color: '#09090b',
     theme_color: '#09090b',

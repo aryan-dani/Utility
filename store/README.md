@@ -81,12 +81,14 @@ Identity values live in [`store/microsoft/product-identity.md`](microsoft/produc
 
 The MSIX is a PWABuilder shell of `https://utilityos.tech`. A normal Vercel deploy updates the Store window on the **next open** via the same service worker as the website. Users already sitting in the app may see **Apply update**; otherwise there is no toast.
 
+The live site 308s apex → `www`. Edge treats that as a different origin and draws a **tab + URL bar** unless `scope_extensions` and `/.well-known/web-app-origin-association` are live. After those deploy, fully quit and reopen the Store app. If the bar is still there, it is Edge’s **Open as tabbed window** (app menu / `...`) — the last-tab X cannot hide it.
+
 **Rebuild / re-upload the MSIX only when** package identity, publisher, display name, or other Partner Center package metadata must change — not for ordinary site features.
 
 ### Packaging (when you need a new MSIX)
 
 1. Register at [Partner Center](https://partner.microsoft.com/dashboard) if needed.
-2. At [pwabuilder.com](https://www.pwabuilder.com) package `https://utilityos.tech`. Paste values from `product-identity.md`.
+2. At [pwabuilder.com](https://www.pwabuilder.com) package `https://www.utilityos.tech` (canonical host; apex redirects here). Paste values from `product-identity.md`.
 3. Submit in Partner Center: IARC rating, privacy URL, screenshots, logos as documented below.
 
 ### Certification: account creation (10.1.2.10)

@@ -83,6 +83,16 @@ const nextConfig = {
         ],
       },
       {
+        source: "/.well-known/web-app-origin-association",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public, max-age=300, s-maxage=86400",
+          },
+          { key: "Content-Type", value: "application/json" },
+        ],
+      },
+      {
         source: "/:path*",
         headers: [
           { key: "X-Frame-Options", value: "SAMEORIGIN" },

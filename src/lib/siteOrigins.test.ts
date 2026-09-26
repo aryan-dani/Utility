@@ -2,12 +2,16 @@ import { describe, expect, it } from "vitest";
 import {
   CAMPUS_HOST,
   CAMPUS_ORIGIN,
+  CANONICAL_ORIGIN,
+  CANONICAL_WWW_ORIGIN,
   campusFallbackUrl,
   isCanonicalHost,
   isCampusHost,
   isSameOriginAuthHost,
+  pwaScopeExtensions,
   resolveClientAuthDomain,
   shouldProbeCanonicalOrigin,
+  webAppOriginAssociation,
 } from "./siteOrigins";
 
 describe("siteOrigins", () => {
@@ -44,5 +48,19 @@ describe("siteOrigins", () => {
     expect(shouldProbeCanonicalOrigin("utilityos.tech")).toBe(true);
     expect(shouldProbeCanonicalOrigin(CAMPUS_HOST)).toBe(false);
     expect(shouldProbeCanonicalOrigin("localhost")).toBe(false);
+  });
+
+  it("lists apex, www, and campus as PWA scope extensions", () => {
+    const origins = pwaScopeExtensions().map((entry) => entry.origin);
+    expect(origins).toEqual([
+      CANONICAL_ORIGIN,
+      CANONICAL_WWW_ORIGIN,
+      CAMPUS_ORIGIN,
+    ]);
+    expect(webAppOriginAssociation()).toEqual({
+      [`${CANONICAL_ORIGIN}/`]: { scope: "/" },
+      [`${CANONICAL_WWW_ORIGIN}/`]: { scope: "/" },
+      [`${CAMPUS_ORIGIN}/`]: { scope: "/" },
+    });
   });
 });
