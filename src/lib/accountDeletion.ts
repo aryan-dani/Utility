@@ -131,6 +131,13 @@ export async function deleteUserFirestoreData(
     db.collection("support_messages").where("userId", "==", uid),
   );
 
+  deleted += await deleteQueryInChunks(
+    db,
+    db.collection("clipboard_shares").where("owner_id", "==", uid),
+  );
+  await deleteDocIfExists(db, "clipboards", uid);
+  deleted += 1;
+
   await deleteDocIfExists(db, "srs_data", uid);
   deleted += 1;
   await deleteDocIfExists(db, "users", uid);

@@ -100,15 +100,15 @@ Reviewers often fail OAuth **popups** (and Google may still block OAuth inside S
 
 ### Same-origin auth proxy (Store OAuth experiment)
 
-`next.config.mjs` rewrites `/__/auth/*` → `https://<project>.firebaseapp.com/__/auth/*` (transparent proxy). On `utilityos.tech` / `www.utilityos.tech`, the client uses that host as `authDomain`.
+`next.config.mjs` rewrites `/__/auth/*` → `https://<project>.firebaseapp.com/__/auth/*` (transparent proxy). On `utilityos.tech`, `www.utilityos.tech`, and `planner-flax-six.vercel.app`, the client uses that host as `authDomain`.
 
 **One-time console setup (required for Google/GitHub in Store):**
 
 1. Vercel Production: set `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` to `utilityos.tech` (or `www.utilityos.tech` if that is the canonical host), then redeploy.
-2. Firebase Console → Authentication → Settings → **Authorized domains**: include `utilityos.tech` and `www.utilityos.tech`.
+2. Firebase Console → Authentication → Settings → **Authorized domains**: include `utilityos.tech`, `www.utilityos.tech`, and `planner-flax-six.vercel.app` (campus Wi-Fi fallback).
 3. Google Cloud Console → APIs & Services → Credentials → your OAuth 2.0 Web client → **Authorized redirect URIs**: add  
-   `https://utilityos.tech/__/auth/handler` and `https://www.utilityos.tech/__/auth/handler` (keep the existing `*.firebaseapp.com/__/auth/handler` URI).
-4. GitHub OAuth App → **Authorization callback URL**: same `https://utilityos.tech/__/auth/handler` (and www if needed).
+   `https://utilityos.tech/__/auth/handler`, `https://www.utilityos.tech/__/auth/handler`, and `https://planner-flax-six.vercel.app/__/auth/handler` (keep the existing `*.firebaseapp.com/__/auth/handler` URI).
+4. GitHub OAuth App → **Authorization callback URL**: same `https://utilityos.tech/__/auth/handler` (and www if needed). Campus-host GitHub sign-in can keep using that callback; Google needs the extra `planner-flax-six.vercel.app` redirect URI above.
 5. Smoke-test in the **installed Store app**: Google, GitHub, and email. Google may still show `disallowed_useragent` in some WebView builds — that is a Google policy limit, not a broken button.
 
 **Before every Store submission**, from the **installed Store/MSIX build** (not only Chrome):
@@ -117,7 +117,7 @@ Reviewers often fail OAuth **popups** (and Google may still block OAuth inside S
 2. Enter email + password (6+ chars) → **Create account** → must land signed in.
 3. Sign out → Sign in with the same email/password → must work.
 4. Confirm Firebase Console → Authentication → Sign-in method has **Email/Password** enabled.
-5. Confirm Authorized domains includes `utilityos.tech` and `www.utilityos.tech`.
+5. Confirm Authorized domains includes `utilityos.tech`, `www.utilityos.tech`, and `planner-flax-six.vercel.app`.
 
 **Notes to certification** (paste in Partner Center when resubmitting):
 

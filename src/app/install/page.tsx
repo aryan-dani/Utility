@@ -4,6 +4,7 @@ import { Download, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
 import { useIsStandalone } from "@/lib/pwa/displayMode";
+import { CAMPUS_ORIGIN } from "@/lib/siteOrigins";
 
 const MICROSOFT_STORE_URL = "https://apps.microsoft.com/detail/9PPFG0G5R0MG";
 
@@ -81,6 +82,21 @@ export default function InstallPage() {
           </div>
         </>
       )}
+
+      <div className="w-full mt-6 border border-border bg-card rounded-xl px-6 py-5 text-sm text-muted leading-relaxed text-left">
+        <p className="text-foreground font-semibold mb-1">Campus Wi-Fi</p>
+        <p>
+          If utilityos.tech is blocked on college networks, open{" "}
+          <a
+            href={CAMPUS_ORIGIN}
+            className="text-foreground underline underline-offset-4 font-medium"
+          >
+            {CAMPUS_ORIGIN.replace("https://", "")}
+          </a>{" "}
+          and sign in there. Cached tabs on the custom domain will hop over
+          automatically when the live origin is unreachable.
+        </p>
+      </div>
 
       <Link
         href="/"

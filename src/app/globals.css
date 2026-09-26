@@ -79,22 +79,22 @@
 }
 
 .dark {
-  /* Dark Mode - Soft premium deep zinc dark */
+  /* Dark Mode — ink on near-black (lifted paper, visible hairlines) */
   --background: 9 9 11; /* Zinc-950 */
-  --background-subtle: 18 18 20;
+  --background-subtle: 18 18 21;
   --foreground: 250 250 250; /* Zinc-50 */
-  --foreground-subtle: 161 161 170; /* Zinc-400 */
+  --foreground-subtle: 212 212 216; /* Zinc-300 */
 
-  --card: 18 18 20; /* Darker than background-subtle */
-  --card-hover: 24 24 27; /* Zinc-900 */
+  --card: 24 24 27; /* Zinc-900 — paper above the page */
+  --card-hover: 32 32 36;
 
-  --surface: 24 24 27; /* Zinc-900 */
-  --surface-hover: 39 39 42; /* Zinc-800 */
+  --surface: 39 39 42; /* Zinc-800 */
+  --surface-hover: 50 50 56;
 
-  --border: 39 39 42; /* Zinc-800 */
-  --border-strong: 161 161 170; /* Zinc-400 */
+  --border: 82 82 91; /* Zinc-600 — readable even at /70 */
+  --border-strong: 212 212 216; /* Zinc-300 */
 
-  --muted: 113 113 122;
+  --muted: 161 161 170; /* Zinc-400 */
   --muted-hover: 228 228 231;
 
   --primary: 250 250 250;
@@ -118,9 +118,12 @@
   --radius-shell: 26px;
   --space-page-y: 1.5rem;
 
-  --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 1px 3px -1px rgba(0, 0, 0, 0.25);
-  --elev-2: 0 10px 24px -10px rgba(0, 0, 0, 0.45), 0 4px 10px -4px rgba(0, 0, 0, 0.3);
-  --elev-3: 0 22px 48px -18px rgba(0, 0, 0, 0.55), 0 8px 18px -8px rgba(0, 0, 0, 0.35);
+  --elev-1: 0 1px 2px 0 rgba(0, 0, 0, 0.2), 0 1px 3px -1px rgba(0, 0, 0, 0.25),
+    0 0 0 1px rgb(255 255 255 / 0.08);
+  --elev-2: 0 10px 24px -10px rgba(0, 0, 0, 0.45), 0 4px 10px -4px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgb(255 255 255 / 0.08);
+  --elev-3: 0 22px 48px -18px rgba(0, 0, 0, 0.55), 0 8px 18px -8px rgba(0, 0, 0, 0.35),
+    0 0 0 1px rgb(255 255 255 / 0.08);
 
   /* Resource type accents - Now strictly grayscale */
   --accent-notes: #fafafa;
@@ -831,11 +834,11 @@ input[type="range"].accent-slider::-moz-range-thumb:hover {
   overflow: hidden;
 }
 .dark .shell-island {
-  background: rgb(var(--card) / 0.75);
-  border-color: rgb(255 255 255 / 0.08);
+  background: rgb(var(--card) / 0.92);
+  border-color: rgb(255 255 255 / 0.16);
   box-shadow:
     0 24px 64px -16px rgba(0, 0, 0, 0.7),
-    0 0 0 1px rgb(255 255 255 / 0.05);
+    0 0 0 1px rgb(255 255 255 / 0.08);
 }
 
 .os-window {

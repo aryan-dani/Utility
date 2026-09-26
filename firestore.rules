@@ -143,6 +143,15 @@ service cloud.firestore {
       allow write: if false;
     }
 
+    // Online clipboard — reads/writes via Admin SDK (API routes)
+    match /clipboards/{uid} {
+      allow read, write: if false;
+    }
+
+    match /clipboard_shares/{id} {
+      allow read, write: if false;
+    }
+
     // Deny everything else by default
     match /{document=**} {
       allow read, write: if false;

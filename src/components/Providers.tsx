@@ -6,6 +6,7 @@ import { PWAProvider } from '@/contexts/PWAContext';
 import { Toaster } from 'sonner';
 import NavigationProgress from './NavigationProgress';
 import { ThemeColorSync } from '@/components/shell/ThemeColorSync';
+import { CampusOriginGuard } from '@/components/CampusOriginGuard';
 import { useIsStandalone } from '@/lib/pwa/displayMode';
 
 const CommandPalette = dynamic(() => import('./CommandPalette'), { ssr: false });
@@ -51,6 +52,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
     >
       <PWAProvider>
         <ThemeColorSync />
+        <CampusOriginGuard />
         <NavigationProgress />
         {children}
         <CommandPalette />

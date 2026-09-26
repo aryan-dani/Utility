@@ -1,6 +1,7 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
+import { resolveClientAuthDomain } from "@/lib/siteOrigins";
 
 function cleanEnvValue(val: string | undefined): string | undefined {
   if (!val) return undefined;
@@ -25,11 +26,7 @@ function resolveAuthDomain(): string {
     return fromEnv;
   }
 
-  const host = window.location.hostname;
-  if (host === "utilityos.tech" || host === "www.utilityos.tech") {
-    return host;
-  }
-  return fromEnv;
+  return resolveClientAuthDomain(window.location.hostname, fromEnv);
 }
 
 const firebaseConfig = {

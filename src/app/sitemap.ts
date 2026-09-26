@@ -18,6 +18,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/timer",
     "/gpa",
     "/srs",
+    "/qa",
+    "/clipboard",
     "/community",
     "/install",
     "/support",

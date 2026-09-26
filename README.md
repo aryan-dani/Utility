@@ -2,7 +2,7 @@
 
 A premium, monochrome academic workspace for university students. Built with Next.js, Firebase, and Google Drive sync so course materials, planning, and AI study tools live in one place.
 
-**Live:** [utilityos.tech](https://utilityos.tech) · **Microsoft Store:** [Utility OS](https://apps.microsoft.com/detail/9PPFG0G5R0MG)
+**Live:** [utilityos.tech](https://utilityos.tech) · **Campus Wi-Fi fallback:** [planner-flax-six.vercel.app](https://planner-flax-six.vercel.app) · **Microsoft Store:** [Utility OS](https://apps.microsoft.com/detail/9PPFG0G5R0MG)
 
 ## Core Features
 
@@ -14,11 +14,14 @@ A premium, monochrome academic workspace for university students. Built with Nex
 - **GPA Calculator**: SGPA/CGPA with auto-populated subjects.
 - **SRS Flashcards**: Leitner-style spaced repetition.
 - **Focus Timer**: Pomodoro sessions with activity tracking.
+- **Clipboard**: One synced pad per account, with optional 24-hour share links.
 - **PWA / Store**: Installable offline-capable client; Windows listing on the Microsoft Store.
 
 ## How updates work
 
 Utility is one live site (`https://utilityos.tech`). The Microsoft Store app is a PWABuilder shell of that URL, so **website deploys update the Store window automatically**.
+
+If campus Wi-Fi blocks the custom domain, open `https://planner-flax-six.vercel.app` first (JS cannot run on a blocked host). Cached tabs on utilityos.tech probe `/api/ok` once per session and hop to that Vercel host when the origin is unreachable. Sign-in on the campus host uses same-origin `/__/auth` — add `planner-flax-six.vercel.app` to Firebase Authorized domains.
 
 1. Push / Vercel production deploy publishes a new service worker and HTML.
 2. **Next open** (browser, installed PWA, or Store): the waiting worker activates silently — you land on the new version without a toast.

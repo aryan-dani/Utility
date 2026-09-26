@@ -10,7 +10,9 @@ import {
   Building2,
   Waypoints,
   HelpCircle,
+  ClipboardCopy,
 } from "lucide-react";
+import { CAMPUS_ORIGIN } from "@/lib/siteOrigins";
 import AuthButtons from "./AuthButtons";
 import HomeHeatmap from "./HomeHeatmap";
 import HomeStats from "./HomeStats";
@@ -104,6 +106,14 @@ const FEATURES = [
     description:
       "Ask paper-format doubts, check syllabus scope, and share handwritten solutions with peers.",
   },
+  {
+    href: "/clipboard",
+    label: "Clipboard",
+    number: "10",
+    Icon: ClipboardCopy,
+    description:
+      "One synced pad on your account. Optional 24-hour link for a lab PC or a friend.",
+  },
 ];
 
 export default async function Home() {
@@ -163,6 +173,16 @@ export default async function Home() {
             <AuthButtons />
           </div>
           <HomeExamCountdown />
+          <p className="text-xs text-muted max-w-md leading-relaxed">
+            Campus Wi-Fi blocking this site? Open{" "}
+            <a
+              href={CAMPUS_ORIGIN}
+              className="text-foreground underline underline-offset-4 font-medium"
+            >
+              {CAMPUS_ORIGIN.replace("https://", "")}
+            </a>{" "}
+            instead.
+          </p>
         </div>
       </section>
 

@@ -25,7 +25,7 @@ export default function PrivacyPage() {
         description="This policy describes what Utility collects, who processes it, how long it is kept, and how you can delete it."
       />
 
-      <p className="text-xs text-muted mt-4">Last updated 11 September 2026</p>
+      <p className="text-xs text-muted mt-4">Last updated 26 September 2026</p>
 
       <div className="mt-10 space-y-10 text-sm text-foreground-subtle leading-relaxed">
         <section className="space-y-3">
@@ -82,6 +82,10 @@ export default function PrivacyPage() {
             <li>
               <span className="text-foreground font-medium">Community decks:</span>{" "}
               flashcard decks you publish and upvotes you cast.
+            </li>
+            <li>
+              <span className="text-foreground font-medium">Clipboard:</span>{" "}
+              text you save on your account, and optional 24-hour share links.
             </li>
           </ul>
           <p>

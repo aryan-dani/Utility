@@ -25,6 +25,7 @@ import {
   FlaskConical,
   Waypoints,
   HelpCircle,
+  ClipboardCopy,
   type LucideIcon,
 } from 'lucide-react';
 import { useAcademicStore } from '../store/academicStore';
@@ -442,6 +443,28 @@ export default function CommandPalette() {
         icon: CalendarCheck,
         action: () => {
           navigate(`/planner?${qs}`);
+          setCommandPaletteOpen(false);
+        },
+      },
+      {
+        id: 'nav-clipboard',
+        title: 'Open Online Clipboard',
+        category: 'Navigation',
+        icon: ClipboardCopy,
+        badge: 'Sync',
+        action: () => {
+          navigate('/clipboard');
+          setCommandPaletteOpen(false);
+        },
+      },
+      {
+        id: 'nav-qa',
+        title: 'Open Doubt Board',
+        category: 'Navigation',
+        icon: HelpCircle,
+        badge: 'Q&A',
+        action: () => {
+          navigate(`/qa?${qs}`);
           setCommandPaletteOpen(false);
         },
       },
