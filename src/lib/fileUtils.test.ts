@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { getDriveEmbedUrl, getDriveFileId, getFileExtension } from "@/lib/fileUtils";
+import {
+  getDriveEmbedUrl,
+  getDriveFileId,
+  getFileExtension,
+  isTextPreviewExtension,
+} from "@/lib/fileUtils";
 
 describe("getDriveFileId", () => {
   it("extracts id from /file/d/ URLs", () => {
@@ -25,6 +30,16 @@ describe("getDriveFileId", () => {
     expect(getDriveEmbedUrl("abc123XYZ", 4)).toBe(
       "https://drive.google.com/file/d/abc123XYZ/preview#page=4",
     );
+  });
+});
+
+describe("isTextPreviewExtension", () => {
+  it("covers source, notebooks, and csv", () => {
+    expect(isTextPreviewExtension("c")).toBe(true);
+    expect(isTextPreviewExtension("ipynb")).toBe(true);
+    expect(isTextPreviewExtension("csv")).toBe(true);
+    expect(isTextPreviewExtension("pdf")).toBe(false);
+    expect(isTextPreviewExtension("docx")).toBe(false);
   });
 });
 

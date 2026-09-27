@@ -10,6 +10,7 @@ import indexContent from "./tools/index-content.mjs";
 import purgeCache from "./tools/purge-cache.mjs";
 import doctor from "./tools/doctor.mjs";
 import drivePut from "./tools/drive-put.mjs";
+import storeTextPreviews from "./tools/store-text-previews.mjs";
 import {
   driveLs,
   driveFind,
@@ -45,6 +46,8 @@ Drive commands (preferred for notes uploads):
   sync [--full] [--path=…] [--year=] [--branch=] [--semester=] [--subject=]
        [--incremental] [--dry-run] [--verbose]
        Default without flags: incremental (Drive Changes API). Use --full weekly.
+  previews [--dry-run]
+       Store in-app source/notebook text for cataloged .c/.ipynb/.py/… files.
   index [--id=] [--title=] [--subject=] [--path=] [--shrink-content]
        [--all] [--rebuild-stats]
        Default: changed-only (content_hash=null, max 40/run). Never scans all chunks.
@@ -152,6 +155,11 @@ async function main() {
           incremental: args.includes("--incremental"),
           argv: args,
         });
+        break;
+      }
+
+      case "previews": {
+        await storeTextPreviews({ dryRun: args.includes("--dry-run") });
         break;
       }
 

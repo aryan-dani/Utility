@@ -38,6 +38,15 @@ export function isCsvExtension(extension: string): boolean {
   return extension.toLowerCase() === "csv";
 }
 
+/** Source, notebooks, and CSVs we render in-app instead of a Drive iframe. */
+export function isTextPreviewExtension(extension: string): boolean {
+  return (
+    isCodeExtension(extension) ||
+    isCsvExtension(extension) ||
+    isNotebookExtension(extension)
+  );
+}
+
 export function isImageExtension(extension: string): boolean {
   return ["png", "jpg", "jpeg", "webp", "gif"].includes(
     extension.toLowerCase(),

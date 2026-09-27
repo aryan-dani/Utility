@@ -6,6 +6,11 @@ import crypto from "crypto";
 import { FieldValue } from "firebase-admin/firestore";
 import { db } from "./firebase.mjs";
 import { parseAcademicYearFromPath } from "./academicYear.mjs";
+import {
+  deleteResourcePreview,
+  isPreviewableName,
+  storePreviewFromDrive,
+} from "./resourcePreview.mjs";
 
 export function generateId(input) {
   const hash = crypto.createHash("sha256").update(input).digest("hex");
@@ -202,6 +207,7 @@ export async function upsertResources(files, options = {}) {
   const uniqueBranches = new Set();
   const uniqueSemesters = new Set();
   const pendingWrites = []; // { type: 'resource'|'subject'|'content', ref, payload }
+  const previewJobs = [];
 
   for (const file of files) {
     const parsed = parseDrivePath(file.path);
@@ -360,6 +366,18 @@ export async function upsertResources(files, options = {}) {
     if (!existing) stats.newResources++;
     stats.resourcesWritten++;
 
+    if (
+      contentChanged &&
+      isPreviewableName(write.fileName) &&
+      write.payload.drive_file_id
+    ) {
+      previewJobs.push({
+        resourceId: write.id,
+        driveFileId: write.payload.drive_file_id,
+        fileName: write.fileName,
+      });
+    }
+
     await setDoc(db.collection("resources").doc(write.id), payload);
 
     if (verbose || stats.resourcesWritten <= 20) {
@@ -372,6 +390,26 @@ export async function upsertResources(files, options = {}) {
   }
 
   await flush();
+
+  if (!dryRun && previewJobs.length > 0) {
+    console.log(`\n📝 Storing ${previewJobs.length} in-app text preview(s)…`);
+    for (const job of previewJobs) {
+      try {
+        const result = await storePreviewFromDrive(
+          job.resourceId,
+          job.driveFileId,
+          job.fileName,
+        );
+        if (result.ok) {
+          console.log(`  ✅ ${job.fileName} (${result.bytes} bytes)`);
+        } else {
+          console.log(`  ⏭️  ${job.fileName} (${result.skipped})`);
+        }
+      } catch (err) {
+        console.warn(`  ⚠️  ${job.fileName}: ${err.message}`);
+      }
+    }
+  }
 
   // Prune
   if (prune) {
@@ -557,6 +595,7 @@ export async function deleteResourceById(resourceId, { dryRun = false } = {}) {
   }
   await db.collection("resources").doc(resourceId).delete();
   await db.collection("resource_content").doc(resourceId).delete();
+  await deleteResourcePreview(resourceId);
   const chunkSnap = await db
     .collection("resource_chunks")
     .where("resource_id", "==", resourceId)

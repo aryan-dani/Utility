@@ -34,6 +34,7 @@ import {
   getDirectDownloadUrl,
   matchCachedDriveFile,
 } from "@/lib/driveFileCache";
+import { authFetch } from "@/lib/authFetch";
 import { useIsClient } from "@/lib/clientHooks";
 import { WindowChrome, IconButton } from "@/components/ui";
 
@@ -188,15 +189,13 @@ export default function ResourceViewer({
   const [codeContent, setCodeContent] = useState<string | null>(null);
   const [pdfDirectFailed, setPdfDirectFailed] = useState(false);
   const [hasCachedPdf, setHasCachedPdf] = useState(false);
-  const [hasCachedText, setHasCachedText] = useState(false);
+  const [useTextIframe, setUseTextIframe] = useState(false);
   const usePdfJs = isPdf && !!driveId && hasCachedPdf && !pdfDirectFailed;
-  const useInAppText =
-    isTextFetch && (!driveId || hasCachedText || codeContent !== null);
   const usesIframePreview =
     !!embedUrl &&
     !usePdfJs &&
     !isImage &&
-    (!isTextFetch || !useInAppText);
+    (!isTextFetch || useTextIframe);
   const activeIframeSrc = embedUrl;
 
   const resourcePreviewKey = `${resource.id}:${embedUrl}:${resource.file_url}`;
@@ -209,7 +208,7 @@ export default function ResourceViewer({
     setCodeContent(null);
     setPdfDirectFailed(false);
     setHasCachedPdf(false);
-    setHasCachedText(false);
+    setUseTextIframe(false);
   }
 
   useEffect(() => {
@@ -239,19 +238,32 @@ export default function ResourceViewer({
       try {
         if (driveId) {
           const cached = await matchCachedDriveFile(driveId);
-          if (!cached) {
+          if (cached) {
+            const text = await cached.text();
             if (!cancelled) {
-              setHasCachedText(false);
-              setCodeContent(null);
-              setLoadError(false);
+              setCodeContent(text);
+              setIsLoading(false);
             }
             return;
           }
-          const text = await cached.text();
+          const previewRes = await authFetch(
+            `/api/resources/text?id=${encodeURIComponent(resource.id)}`,
+            { signal: abort.signal },
+          );
+          if (previewRes.ok) {
+            const payload = (await previewRes.json()) as { text?: string };
+            if (typeof payload.text === "string" && payload.text.length > 0) {
+              if (!cancelled) {
+                setCodeContent(payload.text);
+                setUseTextIframe(false);
+                setIsLoading(false);
+              }
+              return;
+            }
+          }
           if (!cancelled) {
-            setHasCachedText(true);
-            setCodeContent(text);
-            setIsLoading(false);
+            setUseTextIframe(true);
+            setLoadError(false);
           }
           return;
         }
@@ -297,7 +309,7 @@ export default function ResourceViewer({
       cancelled = true;
       abort.abort();
     };
-  }, [isTextFetch, resource.file_url, driveId]);
+  }, [isTextFetch, resource.file_url, resource.id, driveId]);
 
   useEffect(() => {
     if (!usesIframePreview || !isLoading) return;
@@ -575,7 +587,7 @@ export default function ResourceViewer({
             </div>
           )}
 
-          {isNotebook && useInAppText ? (
+          {isNotebook && !useTextIframe ? (
             <div className="h-full w-full">
               {codeContent !== null && <NotebookViewer content={codeContent} />}
               {!isLoading && loadError && codeContent === null && (
@@ -617,7 +629,7 @@ export default function ResourceViewer({
                 </div>
               )}
             </div>
-          ) : isCsv && useInAppText ? (
+          ) : isCsv && !useTextIframe ? (
             <div className="h-full w-full">
               {codeContent !== null && <CsvPreview content={codeContent} />}
               {!isLoading && loadError && codeContent === null && (
@@ -632,7 +644,7 @@ export default function ResourceViewer({
                 </div>
               )}
             </div>
-          ) : isCode && useInAppText ? (
+          ) : isCode && !useTextIframe ? (
             <div className="h-full w-full overflow-auto bg-background p-4 sm:p-6">
               {codeContent !== null && (
                 <pre className="text-xs sm:text-sm leading-relaxed font-mono text-foreground whitespace-pre tab-size-4">
