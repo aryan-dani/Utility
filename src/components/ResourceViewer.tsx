@@ -31,7 +31,6 @@ import dynamic from "next/dynamic";
 import type { PdfPreviewHandle } from "@/components/PdfPreview";
 import { folderIdForResource, folderLabelFromId, getResourceFileRole } from "@/lib/resourceGroups";
 import {
-  fetchCachedDriveFile,
   getDirectDownloadUrl,
   matchCachedDriveFile,
 } from "@/lib/driveFileCache";
@@ -189,9 +188,15 @@ export default function ResourceViewer({
   const [codeContent, setCodeContent] = useState<string | null>(null);
   const [pdfDirectFailed, setPdfDirectFailed] = useState(false);
   const [hasCachedPdf, setHasCachedPdf] = useState(false);
+  const [hasCachedText, setHasCachedText] = useState(false);
   const usePdfJs = isPdf && !!driveId && hasCachedPdf && !pdfDirectFailed;
+  const useInAppText =
+    isTextFetch && (!driveId || hasCachedText || codeContent !== null);
   const usesIframePreview =
-    !isTextFetch && !isNotebook && !isImage && !usePdfJs && !!embedUrl;
+    !!embedUrl &&
+    !usePdfJs &&
+    !isImage &&
+    (!isTextFetch || !useInAppText);
   const activeIframeSrc = embedUrl;
 
   const resourcePreviewKey = `${resource.id}:${embedUrl}:${resource.file_url}`;
@@ -204,6 +209,7 @@ export default function ResourceViewer({
     setCodeContent(null);
     setPdfDirectFailed(false);
     setHasCachedPdf(false);
+    setHasCachedText(false);
   }
 
   useEffect(() => {
@@ -233,14 +239,17 @@ export default function ResourceViewer({
       try {
         if (driveId) {
           const cached = await matchCachedDriveFile(driveId);
-          const blob =
-            cached ??
-            (await fetchCachedDriveFile(driveId, {
-              signal: abort.signal,
-              maxBytes: 8 * 1024 * 1024,
-            }));
-          const text = await blob.text();
+          if (!cached) {
+            if (!cancelled) {
+              setHasCachedText(false);
+              setCodeContent(null);
+              setLoadError(false);
+            }
+            return;
+          }
+          const text = await cached.text();
           if (!cancelled) {
+            setHasCachedText(true);
             setCodeContent(text);
             setIsLoading(false);
           }
@@ -566,7 +575,7 @@ export default function ResourceViewer({
             </div>
           )}
 
-          {isNotebook ? (
+          {isNotebook && useInAppText ? (
             <div className="h-full w-full">
               {codeContent !== null && <NotebookViewer content={codeContent} />}
               {!isLoading && loadError && codeContent === null && (
@@ -608,7 +617,7 @@ export default function ResourceViewer({
                 </div>
               )}
             </div>
-          ) : isCsv ? (
+          ) : isCsv && useInAppText ? (
             <div className="h-full w-full">
               {codeContent !== null && <CsvPreview content={codeContent} />}
               {!isLoading && loadError && codeContent === null && (
@@ -623,7 +632,7 @@ export default function ResourceViewer({
                 </div>
               )}
             </div>
-          ) : isCode ? (
+          ) : isCode && useInAppText ? (
             <div className="h-full w-full overflow-auto bg-background p-4 sm:p-6">
               {codeContent !== null && (
                 <pre className="text-xs sm:text-sm leading-relaxed font-mono text-foreground whitespace-pre tab-size-4">
