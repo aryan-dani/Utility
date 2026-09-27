@@ -49,15 +49,15 @@ export async function writeResourcePreview(resourceId, buffer, title = "") {
     ? buffer
     : Buffer.from(buffer ?? []);
 
-  if (bytes.length === 0) {
-    return { skipped: "empty" };
-  }
-  if (bytes.length > PREVIEW_MAX_BYTES) {
+  if (bytes.length === 0 || bytes.includes(0) || bytes.length > PREVIEW_MAX_BYTES) {
     await db.collection(PREVIEW_COLLECTION).doc(resourceId).delete();
-    return { skipped: "too_large", bytes: bytes.length };
-  }
-  if (bytes.includes(0)) {
-    return { skipped: "binary" };
+    const skipped =
+      bytes.length === 0
+        ? "empty"
+        : bytes.length > PREVIEW_MAX_BYTES
+          ? "too_large"
+          : "binary";
+    return { skipped, bytes: bytes.length };
   }
 
   const text = bytes.toString("utf8");

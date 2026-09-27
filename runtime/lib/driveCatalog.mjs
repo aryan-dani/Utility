@@ -7,6 +7,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import { db } from "./firebase.mjs";
 import { parseAcademicYearFromPath } from "./academicYear.mjs";
 import {
+  PREVIEW_COLLECTION,
   deleteResourcePreview,
   isPreviewableName,
   storePreviewFromDrive,
@@ -472,6 +473,7 @@ export async function upsertResources(files, options = {}) {
           for (const id of chunk) {
             delBatch.delete(db.collection("resources").doc(id));
             delBatch.delete(db.collection("resource_content").doc(id));
+            delBatch.delete(db.collection(PREVIEW_COLLECTION).doc(id));
           }
           await delBatch.commit();
 

@@ -297,8 +297,13 @@ export default function ResourceViewer({
       } catch (err) {
         if (abort.signal.aborted || cancelled) return;
         if (!cancelled) {
-          setLoadError(true);
-          setIsLoading(false);
+          if (driveId) {
+            setUseTextIframe(true);
+            setLoadError(false);
+          } else {
+            setLoadError(true);
+            setIsLoading(false);
+          }
         }
         void err;
       }
