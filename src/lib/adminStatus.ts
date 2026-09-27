@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const CACHE_PREFIX = "utility-admin-status:";

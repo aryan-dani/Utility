@@ -1,4 +1,4 @@
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { localDateKey } from "@/lib/dateLocal";
 
 const STORAGE_KEY = "utility_activity_logs";

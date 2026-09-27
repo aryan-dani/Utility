@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { Plus, Loader2, MessageCircle } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { authFetch } from "@/lib/authFetch";
 import { notify } from "@/lib/toast";
 import { useAcademicStore } from "@/store/academicStore";

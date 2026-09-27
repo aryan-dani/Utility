@@ -6,6 +6,7 @@ import Navigation from '@/components/Navigation';
 import ConditionalFooter from '@/components/ConditionalFooter';
 import Footer from '@/components/Footer';
 import { Providers } from '@/components/Providers';
+import { AuthGate } from '@/components/AuthGate';
 import InstallPrompt from '@/components/pwa/InstallPrompt';
 import { SW_RECOVERY_SCRIPT } from '@/components/pwa/swRecoveryScript';
 import { Analytics } from '@vercel/analytics/next';
@@ -119,7 +120,7 @@ export default function RootLayout({
                     </div>
                   }
                 >
-                  {children}
+                  <AuthGate>{children}</AuthGate>
                 </Suspense>
               </main>
               <Suspense fallback={<Footer />}>

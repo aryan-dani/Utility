@@ -1,7 +1,7 @@
 'use client';
 
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase/auth';
 import { Flame, Trophy, Calendar, Zap, Info } from 'lucide-react';
 import { ACTIVITY_STORAGE_KEY, localDateKey } from '@/lib/activity';
 

@@ -9,7 +9,7 @@ import {
   HelpCircle,
   BookOpen,
 } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { authFetch } from "@/lib/authFetch";
 import { notify } from "@/lib/toast";

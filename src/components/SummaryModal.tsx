@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { X, Brain, Copy, Check, Info, Layers } from 'lucide-react';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase/auth';
 import { NotesDisclaimer } from './NotesDisclaimer';
 import { authFetch } from '@/lib/authFetch';
 import { useMotionSafe } from '@/lib/motion';

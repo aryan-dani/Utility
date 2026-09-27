@@ -32,7 +32,7 @@ import { useVisualizerPlayback } from "@/lib/visualize/useVisualizerPlayback";
 import { usePendingPlay } from "@/lib/visualize/usePendingPlay";
 import { AlgorithmStep } from "@/lib/visualize/types";
 import { saveGrid } from "@/lib/visualize/client";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
 
 const GRID_PSEUDOCODE = {

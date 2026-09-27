@@ -32,7 +32,8 @@ import {
   AIDS_SEM_4_SUBJECTS,
   AIDS_SEM_5_SUBJECTS,
 } from '@/lib/syllabusData';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase/auth';
+import { db } from '@/lib/firebase/db';
 import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
 import { notify } from '@/lib/toast';
 import { parseUnitKey, unitFolderId } from '@/lib/resourceGroups';

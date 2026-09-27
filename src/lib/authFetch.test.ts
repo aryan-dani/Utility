@@ -4,7 +4,7 @@ const { getIdToken } = vi.hoisted(() => ({
   getIdToken: vi.fn(),
 }));
 
-vi.mock("@/lib/firebase", () => ({
+vi.mock("@/lib/firebase/auth", () => ({
   auth: {
     currentUser: {
       getIdToken,

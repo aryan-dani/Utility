@@ -3,7 +3,8 @@
 import Image from "next/image";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
+import { db } from "@/lib/firebase/db";
 import { updateProfile, type User as FirebaseUser, type UserInfo } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import {

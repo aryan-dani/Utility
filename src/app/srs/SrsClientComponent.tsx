@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { MOTION } from '@/lib/motion';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { notify } from '@/lib/toast';
 import { localDateKey } from '@/lib/dateLocal';

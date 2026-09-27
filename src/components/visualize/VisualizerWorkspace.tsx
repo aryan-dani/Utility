@@ -13,7 +13,7 @@ import { AlgorithmMeta } from "@/lib/visualize/types";
 import { SearchTreeAlgorithmId } from "@/lib/visualize/engines/searchTree";
 import { fetchSavedGrid } from "@/lib/visualize/client";
 import { SavedGridData } from "@/lib/visualize/grid";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { ErrorState, PageHeader, PageShell } from "@/components/ui";
 

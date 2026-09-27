@@ -120,7 +120,7 @@ export default function CommandPalette() {
     let cancelled = false;
     (async () => {
       try {
-        const { auth } = await import('@/lib/firebase');
+        const { auth } = await import('@/lib/firebase/auth');
         const user = auth.currentUser;
         if (!user) {
           if (!cancelled) setIsAdmin(false);
@@ -170,85 +170,6 @@ export default function CommandPalette() {
       cancelled = true;
     };
   }, [academicYear, branch, semester, isCommandPaletteOpen]);
-
-  // Global keydown listener for ⌘K / Ctrl+K and other shortcuts
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // 1. Check for Ctrl+K / Meta+K
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setCommandPaletteOpen(!isCommandPaletteOpen);
-        return;
-      }
-
-      // 2. Check for other shortcuts (Alt+Letter)
-      const isModifier = e.altKey;
-      if (!isModifier) return;
-
-      const activeEl = document.activeElement;
-      const isInsideCommandPaletteInput = activeEl === inputRef.current;
-
-      // Do not hijack Alt combinations when user is in input/textarea, except when inside command palette itself
-      if (
-        activeEl &&
-        !isInsideCommandPaletteInput &&
-        (activeEl.tagName === 'INPUT' ||
-         activeEl.tagName === 'TEXTAREA' ||
-         activeEl.getAttribute('contenteditable') === 'true')
-      ) {
-        return;
-      }
-
-      const qs = workspaceQuery(academicYear, branch, semester);
-      const key = e.key.toLowerCase();
-      const shortcutMap: Record<string, () => void> = {
-        t: () => {
-          navigate(`/timer?mode=work&start=true&${qs}`);
-          setCommandPaletteOpen(false);
-        },
-        b: () => {
-          navigate(`/timer?mode=break&start=true&${qs}`);
-          setCommandPaletteOpen(false);
-        },
-        a: () => {
-          navigate(`/ask?${qs}`);
-          setCommandPaletteOpen(false);
-        },
-        g: () => {
-          navigate(`/gpa?${qs}`);
-          setCommandPaletteOpen(false);
-        },
-        r: () => {
-          navigate(`/srs?${qs}`);
-          setCommandPaletteOpen(false);
-        },
-        s: () => {
-          navigate(`/syllabus?${qs}`);
-          setCommandPaletteOpen(false);
-        },
-        c: () => {
-          navigate(`/community?${qs}`);
-          setCommandPaletteOpen(false);
-        },
-        '?': () => {
-          setCommandPaletteOpen(true);
-          setQuery('?');
-        },
-        '/': () => {
-          setCommandPaletteOpen(true);
-          setQuery('?');
-        },
-      };
-
-      if (shortcutMap[key]) {
-        e.preventDefault();
-        shortcutMap[key]();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isCommandPaletteOpen, setCommandPaletteOpen, academicYear, branch, semester, navigate]);
 
   const [prevPaletteOpen, setPrevPaletteOpen] = useState(isCommandPaletteOpen);
   if (isCommandPaletteOpen && !prevPaletteOpen) {

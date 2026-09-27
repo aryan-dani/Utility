@@ -12,7 +12,8 @@ import {
   HelpCircle,
   Sparkles,
 } from "lucide-react";
-import { auth, db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
+import { db } from "@/lib/firebase/db";
 import { useAcademicStore } from "@/store/academicStore";
 import {
   isAcademicYear,

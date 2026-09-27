@@ -8,7 +8,7 @@ import {
   CalendarDays, MoreHorizontal, Minus, List, Columns, Calendar, RefreshCw, Undo2
 } from 'lucide-react';
 import Link from 'next/link';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { logActivity } from '@/lib/activity';
 import { parsePrompt, mergeEntries } from '@/lib/promptParser';

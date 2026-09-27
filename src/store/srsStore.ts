@@ -1,5 +1,6 @@
 import { create } from 'zustand';
-import { auth, db } from '@/lib/firebase';
+import { auth } from '@/lib/firebase/auth';
+import { db } from '@/lib/firebase/db';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { logActivity } from '@/lib/activity';
 import { localDateKey } from '@/lib/dateLocal';

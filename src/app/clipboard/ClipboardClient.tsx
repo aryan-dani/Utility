@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { FileText, GraduationCap, Hash, Link2, Link2Off, X } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { authFetch } from "@/lib/authFetch";
 import { notify } from "@/lib/toast";
 import { getDriveEmbedUrl, getDriveFileId } from "@/lib/fileUtils";

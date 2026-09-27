@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import AppLink from "@/components/ui/AppLink";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import {
   AlgorithmProgress,
   SavedGrid,

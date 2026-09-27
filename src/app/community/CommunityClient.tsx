@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
 import { useAcademicStore } from "@/store/academicStore";
 import { useSRSStore } from "@/store/srsStore";

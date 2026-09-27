@@ -31,7 +31,7 @@ import {
   Flag,
 } from 'lucide-react';
 import { useAcademicStore } from '@/store/academicStore';
-import { auth } from '@/lib/firebase';
+import { auth } from '@/lib/firebase/auth';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { logActivity } from '@/lib/activity';

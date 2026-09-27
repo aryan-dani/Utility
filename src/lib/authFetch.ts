@@ -1,6 +1,6 @@
 "use client";
 
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 
 /** Attach a fresh Bearer token when a user is signed in. */
 export async function getAuthHeaders(): Promise<Record<string, string>> {

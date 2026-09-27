@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { authFetch } from "@/lib/authFetch";
 import { notify } from "@/lib/toast";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { useAdminStatus } from "@/lib/adminStatus";
 import type {
   QAQuestionWithAnswers,

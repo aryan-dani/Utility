@@ -4,7 +4,7 @@ import { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { ArrowLeft, Layers, Loader2, Eye, EyeOff } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import {
   createUserWithEmailAndPassword,
 } from "firebase/auth";

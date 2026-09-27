@@ -35,7 +35,7 @@ import ResourceSection from "./resources/ResourceSection";
 import { cleanResourceTitle } from "@/lib/titleUtils";
 import { NotesDisclaimer } from "./NotesDisclaimer";
 import { isDatasetResource } from "@/lib/resourceLinks";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import {
   groupByAssignment,
   groupByUnit,

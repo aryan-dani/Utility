@@ -1,4 +1,4 @@
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { SavedGridData } from "@/lib/visualize/grid";
 
 export type SavedGrid = {

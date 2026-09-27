@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import { Check, Copy } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { onAuthStateChanged, type User as FirebaseUser } from "firebase/auth";
 import { notify } from "@/lib/toast";
 import Link from "next/link";

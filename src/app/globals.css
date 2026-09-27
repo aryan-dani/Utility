@@ -830,12 +830,11 @@ input[type="range"].accent-slider::-moz-range-thumb:hover {
 
 /* ── OS chrome helpers ─────────────────────────────────────────────────────────── */
 
-/* Floating glass island — nav dock, footer, Ask window */
+/* Solid island — no backdrop-filter. Windows Chromium paints text twice
+   when a tall fixed layer blurs the page behind it. */
 .shell-island {
   border-radius: var(--radius-shell);
-  background: rgb(var(--card) / 0.85);
-  backdrop-filter: blur(40px);
-  -webkit-backdrop-filter: blur(40px);
+  background: rgb(var(--card) / 0.97);
   border: 1px solid rgb(var(--border) / 0.8);
   box-shadow:
     0 12px 40px rgba(0, 0, 0, 0.06),
@@ -843,7 +842,7 @@ input[type="range"].accent-slider::-moz-range-thumb:hover {
   overflow: hidden;
 }
 .dark .shell-island {
-  background: rgb(var(--card) / 0.92);
+  background: rgb(var(--card) / 0.97);
   border-color: rgb(255 255 255 / 0.16);
   box-shadow:
     0 24px 64px -16px rgba(0, 0, 0, 0.7),

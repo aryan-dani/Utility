@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import AppLink from "@/components/ui/AppLink";
 import { ArrowRight } from "lucide-react";
-import { auth } from "@/lib/firebase";
+import { auth } from "@/lib/firebase/auth";
 import { useAcademicStore } from "@/store/academicStore";
 import {
   readStoredWorkspace,
