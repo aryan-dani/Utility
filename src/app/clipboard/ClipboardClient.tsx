@@ -17,6 +17,11 @@ import {
   shareUrls,
 } from "@/lib/clipboard";
 import {
+  readLocalClipboardPad,
+  writeLocalClipboardPad,
+} from "@/lib/clipboardLocal";
+import { NeedsConnection, useOnline } from "@/components/NeedsConnection";
+import {
   Button,
   ButtonLink,
   EmptyState,
@@ -101,10 +106,12 @@ function JoinCodeForm() {
 }
 
 export default function ClipboardClient() {
+  const online = useOnline();
   const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [loading, setLoading] = useState(true);
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [localOnly, setLocalOnly] = useState(false);
   const [text, setText] = useState("");
   const [updatedAt, setUpdatedAt] = useState<string | null>(null);
   const [shareId, setShareId] = useState<string | null>(null);
@@ -139,6 +146,22 @@ export default function ClipboardClient() {
     setDirty(false);
     dirtyRef.current = false;
     setSaveState(data.updated_at ? "saved" : "idle");
+    setLocalOnly(false);
+  };
+
+  const applyLocalPad = () => {
+    const local = readLocalClipboardPad();
+    if (!local) return false;
+    setText(local.text);
+    setUpdatedAt(local.updated_at);
+    setDriveFileId(local.drive_file_id);
+    setDriveFileName(local.drive_file_name);
+    setDirty(false);
+    dirtyRef.current = false;
+    setSaveState("saved");
+    setLocalOnly(true);
+    setError(null);
+    return true;
   };
 
   const load = useCallback(async () => {
@@ -154,7 +177,13 @@ export default function ClipboardClient() {
         return;
       }
       applyPayload(data);
+      writeLocalClipboardPad({
+        text: data.text ?? "",
+        drive_file_id: data.drive_file_id ?? null,
+        drive_file_name: data.drive_file_name ?? null,
+      });
     } catch {
+      if (applyLocalPad()) return;
       setError("Could not load your clipboard.");
     } finally {
       setLoading(false);
@@ -173,6 +202,7 @@ export default function ClipboardClient() {
         setDriveFileName(null);
         setDriveUrl("");
         setError(null);
+        setLocalOnly(false);
         setDirty(false);
         dirtyRef.current = false;
         setSaveState("idle");
@@ -192,6 +222,13 @@ export default function ClipboardClient() {
       savingRef.current = true;
       setSaveState("saving");
       setError(null);
+
+      const local = writeLocalClipboardPad({
+        text: payload,
+        drive_file_id: driveIdRef.current,
+        drive_file_name: driveNameRef.current,
+      });
+
       try {
         const res = await authFetch("/api/clipboard", {
           method: "PUT",
@@ -216,6 +253,7 @@ export default function ClipboardClient() {
         setUpdatedAt(data.updated_at);
         setShareId(data.share_id);
         setShareExpiresAt(data.share_expires_at);
+        setLocalOnly(false);
         if (textRef.current !== payload) {
           dirtyRef.current = true;
           setDirty(true);
@@ -226,9 +264,12 @@ export default function ClipboardClient() {
         setSaveState("saved");
         return true;
       } catch {
-        setSaveState("error");
-        setError("Could not save clipboard.");
-        return false;
+        setUpdatedAt(local.updated_at);
+        setLocalOnly(true);
+        dirtyRef.current = false;
+        setDirty(false);
+        setSaveState("saved");
+        return true;
       } finally {
         savingRef.current = false;
       }
@@ -242,6 +283,11 @@ export default function ClipboardClient() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!signedIn || !online || !localOnly) return;
+    dirtyRef.current = true;
+    void save();
+  }, [online, localOnly, signedIn, save]);
   useEffect(() => {
     if (!signedIn || !dirty) return;
     const timer = window.setTimeout(() => {
@@ -275,6 +321,10 @@ export default function ClipboardClient() {
   }, [signedIn, loading, save]);
 
   const createShare = async () => {
+    if (!navigator.onLine) {
+      notify.error("Sharing needs a connection.");
+      return;
+    }
     setSharing(true);
     try {
       if (dirtyRef.current || savingRef.current) {
@@ -333,9 +383,11 @@ export default function ClipboardClient() {
       ? "Saving…"
       : saveState === "error"
         ? "Could not save"
-        : dirty
-          ? "Unsaved"
-          : formatSaved(updatedAt);
+        : localOnly
+          ? "Saved on this device"
+          : dirty
+            ? "Unsaved"
+            : formatSaved(updatedAt);
 
   return (
     <PageShell width="narrow">
@@ -345,6 +397,13 @@ export default function ClipboardClient() {
         description="One pad on your account — it saves as you type. Attach a Google Drive PDF as a link (bytes stay on Drive). Hand someone a 24-hour code if they are on a lab PC."
         divider
       />
+
+      {!online && (
+        <NeedsConnection
+          className="mb-6"
+          description="Editing still works on this device. Sharing a code needs the internet; your pad will sync when you are back online."
+        />
+      )}
 
       <div className="mb-6">
         <JoinCodeForm />

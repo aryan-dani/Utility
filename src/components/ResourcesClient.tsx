@@ -72,6 +72,7 @@ import { logResourceOpen } from "@/lib/activity";
 import { authFetch } from "@/lib/authFetch";
 import { useWorkspaceResources } from "@/lib/useWorkspaceResources";
 import { Button, Card, Badge, PageHeader, Input, IconButton, EmptyState, ErrorState, PageShell } from "@/components/ui";
+import { NeedsConnection, useOnline } from "@/components/NeedsConnection";
 import PageSkeleton from "@/components/PageSkeleton";
 import type { RAGSearchResult } from "@/lib/ragSearch";
 
@@ -104,6 +105,7 @@ function filterLabel(filter: ResourceFilter): string | null {
 }
 
 export default function ResourcesClient() {
+  const online = useOnline();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -890,12 +892,19 @@ export default function ResourcesClient() {
       <div className="border-b border-border mb-8" />
 
       {catalogError ? (
-        <ErrorState
-          className="mb-8"
-          title="Couldn’t load the vault catalog"
-          description={`${catalogError}. This isn’t an empty semester. Please try again.`}
-          onRetry={retryCatalog}
-        />
+        !online ? (
+          <NeedsConnection
+            className="mb-8"
+            description="The vault catalog needs the internet. Files you already opened for offline stay available from this device."
+          />
+        ) : (
+          <ErrorState
+            className="mb-8"
+            title="Couldn’t load the vault catalog"
+            description={`${catalogError}. This isn’t an empty semester. Please try again.`}
+            onRetry={retryCatalog}
+          />
+        )
       ) : resources.length === 0 ? (
         <EmptyState
           icon={<Folder className="w-10 h-10 text-muted/40" />}

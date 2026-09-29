@@ -167,6 +167,17 @@ const config = isDev
               cacheName: "firebase-auth",
             },
           },
+          // OAuth return must not wait on NetworkFirst's 5s timeout.
+          {
+            urlPattern: ({ request, url, sameOrigin }) =>
+              sameOrigin &&
+              request.mode === "navigate" &&
+              (url.pathname === "/login" || url.pathname === "/signup"),
+            handler: "NetworkOnly",
+            options: {
+              cacheName: "auth-pages",
+            },
+          },
           // Same-origin navigations: prefer network so the next visit gets new HTML.
           // Auth pages inherit this; keep a short timeout so offline still falls back.
           {
@@ -217,6 +228,9 @@ const config = isDev
             },
           },
         ],
+        // Campus Wi-Fi: hop failed navigations on utilityos.tech to the Vercel host
+        // before Workbox serves a stale cached shell of the blocked origin.
+        importScripts: ["/campus-nav-sw.js"],
       },
     })(nextConfig);
 

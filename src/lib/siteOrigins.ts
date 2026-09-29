@@ -84,12 +84,24 @@ export function shouldProbeCanonicalOrigin(hostname: string): boolean {
   return isCanonicalHost(hostname);
 }
 
+/**
+ * Hop to the Vercel campus host when the custom domain cannot load.
+ * `originOk` is the result of this load's /api/ok probe (not a session cache).
+ */
 export function shouldRequestCampusHop(
   hostname: string,
   originOk: boolean,
   hopRequested: boolean,
 ): boolean {
   return shouldProbeCanonicalOrigin(hostname) && !originOk && !hopRequested;
+}
+
+/** Service worker / offline page: online on the blocked host → campus. */
+export function shouldCampusHopOnNavigateFailure(
+  hostname: string,
+  online: boolean,
+): boolean {
+  return isCanonicalHost(hostname) && online;
 }
 
 export function isCatalogNetworkFailure(error: unknown): boolean {
@@ -110,20 +122,19 @@ export function markOriginHealthy(): void {
   }
 }
 
-/** One replace per tab session. Canonical hosts only; skip if /api/ok already succeeded. */
+/** One replace per tab session after a failed probe. Canonical hosts only. */
 export function requestCampusHop(): boolean {
   if (typeof window === "undefined") return false;
 
-  let originOk = false;
   let hopRequested = false;
   try {
-    originOk = sessionStorage.getItem(ORIGIN_PROBE_OK_KEY) === "1";
     hopRequested = sessionStorage.getItem(ORIGIN_HOP_REQUESTED_KEY) === "1";
   } catch {
     /* private mode */
   }
 
-  if (!shouldRequestCampusHop(window.location.hostname, originOk, hopRequested)) {
+  // This load already failed the probe; do not skip for a prior ORIGIN_PROBE_OK.
+  if (!shouldRequestCampusHop(window.location.hostname, false, hopRequested)) {
     return false;
   }
 

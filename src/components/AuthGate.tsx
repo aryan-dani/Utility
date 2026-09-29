@@ -15,6 +15,9 @@ const OnboardingStory = dynamic(
   { ssr: false },
 );
 
+/** Offline auth resolve — long enough for IndexedDB, short enough to feel usable. */
+const AUTH_OFFLINE_TIMEOUT_MS = 2500;
+
 function AuthBusy() {
   return (
     <div
@@ -38,10 +41,37 @@ export function AuthGate({ children }: { children: ReactNode }) {
   const [uid, setUid] = useState<string | null>(null);
 
   useEffect(() => {
-    return onAuthStateChanged(auth, (user) => {
-      setUid(user?.uid ?? null);
+    let cancelled = false;
+    let finished = false;
+
+    const finish = (nextUid: string | null) => {
+      if (cancelled || finished) return;
+      finished = true;
+      setUid(nextUid);
       setReady(true);
+    };
+
+    const unsub = onAuthStateChanged(auth, (user) => {
+      finish(user?.uid ?? null);
     });
+
+    void auth.authStateReady().then(() => {
+      if (cancelled || finished) return;
+      finish(auth.currentUser?.uid ?? null);
+    });
+
+    const timer = window.setTimeout(() => {
+      if (cancelled || finished) return;
+      if (typeof navigator !== "undefined" && !navigator.onLine) {
+        finish(auth.currentUser?.uid ?? null);
+      }
+    }, AUTH_OFFLINE_TIMEOUT_MS);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+      unsub();
+    };
   }, []);
 
   const publicPage = isPublicPath(pathname) || isAuthPage(pathname);

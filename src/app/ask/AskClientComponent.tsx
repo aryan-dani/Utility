@@ -43,6 +43,7 @@ import AcademicBreadcrumb from '@/components/AcademicBreadcrumb';
 import AppLink from '@/components/ui/AppLink';
 import { buildResourcesHref, pageFromSectionLabel } from '@/lib/resourceUrl';
 import { Button, ButtonLink, Modal, Select, PageHeader, Segmented, IconButton, PageShell, Input } from '@/components/ui';
+import { NeedsConnection, useOnline } from '@/components/NeedsConnection';
 import { SourceCardList, renderWithCitations } from '@/components/ask/SourceCard';
 import type { RetrievalSource } from '@/lib/rag/types';
 import { stripInvalidCitations, validMarkerSet } from '@/lib/agent/router';
@@ -416,6 +417,7 @@ function loadChatSessionsFromStorage(): { sessions: ChatSession[]; activeSession
 const EMPTY_ARRAY: ChatMessage[] = [];
 
 export default function AskClient() {
+  const online = useOnline();
   const { academicYear, branch, semester } = useAcademicStore();
   const {
     resources,
@@ -812,6 +814,11 @@ export default function AskClient() {
       return;
     }
 
+    if (!navigator.onLine) {
+      notify.error('Ask AI needs a connection.');
+      return;
+    }
+
     stickToBottomRef.current = true;
     setAssistantSources([]);
     setScopeWidened(false);
@@ -1111,6 +1118,11 @@ export default function AskClient() {
       className="flex flex-col flex-1 min-h-0 overflow-hidden !py-0 h-[calc(100dvh-3.5rem-3.5rem-env(safe-area-inset-top)-env(safe-area-inset-bottom))] md:h-dvh"
     >
       <section className="shell-island flex flex-col overflow-hidden flex-1 min-h-0">
+        {!online && (
+          <div className="px-4 sm:px-5 pt-3 shrink-0">
+            <NeedsConnection description="Ask AI needs the internet to answer. Planner, Timer, and your saved flashcards still work offline." />
+          </div>
+        )}
         <div className="grid grid-rows-[auto_minmax(0,1fr)] min-h-0 flex-1">
       {/* Top Navigation Tabs */}
       <div className="border-b border-border bg-card/60 px-4 sm:px-5 py-2.5 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shrink-0">

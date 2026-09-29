@@ -10,6 +10,7 @@ import {
   isSameOriginAuthHost,
   pwaScopeExtensions,
   resolveClientAuthDomain,
+  shouldCampusHopOnNavigateFailure,
   shouldProbeCanonicalOrigin,
   shouldRequestCampusHop,
   webAppOriginAssociation,
@@ -53,6 +54,18 @@ describe("siteOrigins", () => {
     expect(shouldRequestCampusHop("utilityos.tech", true, false)).toBe(false);
     expect(shouldRequestCampusHop("utilityos.tech", false, true)).toBe(false);
     expect(shouldRequestCampusHop(CAMPUS_HOST, false, false)).toBe(false);
+  });
+
+  it("hops to campus when navigate fails while online on the custom domain", () => {
+    expect(shouldCampusHopOnNavigateFailure("utilityos.tech", true)).toBe(true);
+    expect(shouldCampusHopOnNavigateFailure("www.utilityos.tech", true)).toBe(
+      true,
+    );
+    expect(shouldCampusHopOnNavigateFailure("utilityos.tech", false)).toBe(
+      false,
+    );
+    expect(shouldCampusHopOnNavigateFailure(CAMPUS_HOST, true)).toBe(false);
+    expect(shouldCampusHopOnNavigateFailure("localhost", true)).toBe(false);
   });
 
   it("lists apex, www, and campus as PWA scope extensions", () => {

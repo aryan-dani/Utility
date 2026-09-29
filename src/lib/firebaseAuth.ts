@@ -39,7 +39,9 @@ export function googleAuthProvider() {
   return new GoogleAuthProvider();
 }
 
-const INTENT_KEY = "utility.auth.intent";
+export const AUTH_INTENT_KEY = "utility.auth.intent";
+const INTENT_KEY = AUTH_INTENT_KEY;
+const PENDING_UI_KEY = "utility.auth.pendingUi";
 const MERGE_KEY = "utility.auth.merge";
 const REDIRECT_TO_KEY = "utility.auth.redirectTo";
 
@@ -432,15 +434,62 @@ export async function confirmMergeWithGoogle(auth: Auth): Promise<LinkMergeResul
 let redirectOutcome: LinkMergeResult | null = null;
 let redirectOutcomePromise: Promise<LinkMergeResult> | null = null;
 
+/** Survives takeIntent() so /login can show “Finishing…” while getRedirectResult runs. */
+let pendingSignInProvider: "google" | "github" | null = null;
+
+/** Peek without clearing — used to show “Finishing Google/GitHub…” before paint. */
+export function peekPendingSignInProvider(): "google" | "github" | null {
+  if (pendingSignInProvider) return pendingSignInProvider;
+  if (typeof window === "undefined") return null;
+  try {
+    const stored = sessionStorage.getItem(PENDING_UI_KEY);
+    if (stored === "google" || stored === "github") return stored;
+    const intent = sessionStorage.getItem(INTENT_KEY);
+    if (intent === "signin-google") return "google";
+    if (intent === "signin-github") return "github";
+  } catch {
+    /* private mode */
+  }
+  return null;
+}
+
+function capturePendingSignInProvider() {
+  if (typeof window === "undefined") return;
+  try {
+    const intent = sessionStorage.getItem(INTENT_KEY);
+    if (intent === "signin-google") {
+      pendingSignInProvider = "google";
+      sessionStorage.setItem(PENDING_UI_KEY, "google");
+    } else if (intent === "signin-github") {
+      pendingSignInProvider = "github";
+      sessionStorage.setItem(PENDING_UI_KEY, "github");
+    }
+  } catch {
+    /* private mode */
+  }
+}
+
 export async function consumeRedirectResult(auth: Auth): Promise<LinkMergeResult> {
   if (redirectOutcome) return redirectOutcome;
   if (!redirectOutcomePromise) {
+    capturePendingSignInProvider();
     redirectOutcomePromise = consumeRedirectResultImpl(auth).then((result) => {
       redirectOutcome = result;
       return result;
     });
   }
   return redirectOutcomePromise;
+}
+
+/** Call when the finishing screen can dismiss (success navigate or show form). */
+export function clearPendingSignInProvider() {
+  pendingSignInProvider = null;
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(PENDING_UI_KEY);
+  } catch {
+    /* private mode */
+  }
 }
 
 async function consumeRedirectResultImpl(auth: Auth): Promise<LinkMergeResult> {

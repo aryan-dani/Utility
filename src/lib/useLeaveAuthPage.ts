@@ -1,31 +1,21 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/auth";
 import {
   consumeRedirectResult,
   getPendingMergeStep,
-  preferRedirectAuth,
   takeRememberedRedirectTo,
 } from "@/lib/firebaseAuth";
 import { sanitizeRedirectTo } from "@/lib/workspace";
 
-function go(path: string, replace: (url: string) => void) {
-  const next = sanitizeRedirectTo(path);
-  if (preferRedirectAuth()) {
-    window.location.replace(next);
-    return;
-  }
-  replace(next);
-}
-
 /**
  * Leave /login or /signup as soon as Firebase has a user.
- * Do not wait for getRedirectResult — it can hang in the Store WebView.
+ * Always hard-navigate after OAuth return — Next soft replace can stay on
+ * /login in the Store WebView. Do not wait for getRedirectResult alone; it
+ * can hang, but start it early (see firebase/auth.ts) and race auth state.
  */
 export function useLeaveAuthPage(redirectTo: string) {
-  const router = useRouter();
   const left = useRef(false);
 
   useEffect(() => {
@@ -35,7 +25,7 @@ export function useLeaveAuthPage(redirectTo: string) {
       if (cancelled || left.current) return;
       if (getPendingMergeStep()) return;
       left.current = true;
-      go(target, (url) => router.replace(url));
+      window.location.replace(sanitizeRedirectTo(target));
     };
 
     const unsub = auth.onAuthStateChanged((user) => {
@@ -52,7 +42,7 @@ export function useLeaveAuthPage(redirectTo: string) {
           outcome.status === "needs-google-confirm"
         ) {
           left.current = true;
-          go("/profile", (url) => router.replace(url));
+          window.location.replace("/profile");
           return;
         }
         if (
@@ -71,5 +61,5 @@ export function useLeaveAuthPage(redirectTo: string) {
       cancelled = true;
       unsub();
     };
-  }, [redirectTo, router]);
+  }, [redirectTo]);
 }

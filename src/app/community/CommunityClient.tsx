@@ -25,6 +25,7 @@ import {
 import { logActivity } from "@/lib/activity";
 import { notify } from "@/lib/toast";
 import { Button, Badge, Card, Modal, Segmented, PageHeader, PageShell } from "@/components/ui";
+import { NeedsConnection, useOnline } from "@/components/NeedsConnection";
 import { authFetch } from "@/lib/authFetch";
 
 import { WHATSAPP_COMMUNITY_URL, WHATSAPP_GROUPS } from "@/lib/communityLinks";
@@ -74,6 +75,8 @@ export default function CommunityClient({
   const [currentUserUid, setCurrentUserUid] = useState<string | null>(null);
   const [sortBy, setSortBy] = useState<"top" | "newest">("top");
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [loadFailed, setLoadFailed] = useState(false);
+  const online = useOnline();
 
   useEffect(() => {
     initStore();
@@ -88,9 +91,17 @@ export default function CommunityClient({
         const json = (await res.json()) as { decks?: CommunityDeck[] };
         if (!cancelled && Array.isArray(json.decks)) {
           setDecks(json.decks);
+          setLoadFailed(false);
         }
       } catch {
-        if (!cancelled) notify.error("Could not load community decks.");
+        if (!cancelled) {
+          setLoadFailed(true);
+          notify.error(
+            typeof navigator !== "undefined" && !navigator.onLine
+              ? "Community decks need a connection."
+              : "Could not load community decks.",
+          );
+        }
       }
     })();
     return () => {
@@ -508,7 +519,13 @@ export default function CommunityClient({
       </div>
 
       {/* Empty States */}
-      {filteredDecks.length === 0 && (
+      {filteredDecks.length === 0 &&
+        (loadFailed && !online ? (
+          <NeedsConnection
+            className="my-12"
+            description="Community decks need the internet to load. Your saved SRS decks on this device still work offline."
+          />
+        ) : (
         <Card
           padding="lg"
           className="flex flex-col items-center justify-center p-16 text-center border-dashed bg-surface my-12"
@@ -527,7 +544,7 @@ export default function CommunityClient({
             <ArrowRight className="w-4 h-4" />
           </Button>
         </Card>
-      )}
+        ))}
 
       <Modal
         open={!!activeDeck}

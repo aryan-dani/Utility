@@ -25,6 +25,7 @@ import {
   PageShell,
   Card,
 } from "@/components/ui";
+import { NeedsConnection, useOnline } from "@/components/NeedsConnection";
 import type {
   QAQuestion,
   QuestionCategory,
@@ -42,12 +43,14 @@ import SavedQuestionsView from "./SavedQuestionsView";
 type BoardTab = "board" | "saved";
 
 export default function QABoardView() {
+  const online = useOnline();
   const academicYear = useAcademicStore((s) => s.academicYear);
   const branch = useAcademicStore((s) => s.branch);
   const semester = useAcademicStore((s) => s.semester);
 
   const [questions, setQuestions] = useState<QAQuestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [composerOpen, setComposerOpen] = useState(false);
   const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
@@ -142,8 +145,14 @@ export default function QABoardView() {
       const next = (json.questions || []) as QAQuestion[];
       setQuestions(next);
       applyViewerState(next);
+      setLoadFailed(false);
     } catch {
-      notify.error("Could not load questions.");
+      setLoadFailed(true);
+      notify.error(
+        typeof navigator !== "undefined" && !navigator.onLine
+          ? "Doubt Board needs a connection."
+          : "Could not load questions.",
+      );
     } finally {
       setLoading(false);
     }
@@ -165,12 +174,18 @@ export default function QABoardView() {
           const next = (json.questions || []) as QAQuestion[];
           setQuestions(next);
           applyViewerState(next);
+          setLoadFailed(false);
           setLoading(false);
         }
       })
       .catch(() => {
         if (active) {
-          notify.error("Could not load questions.");
+          setLoadFailed(true);
+          notify.error(
+            typeof navigator !== "undefined" && !navigator.onLine
+              ? "Doubt Board needs a connection."
+              : "Could not load questions.",
+          );
           setLoading(false);
         }
       });
@@ -447,6 +462,11 @@ export default function QABoardView() {
             <div className="flex items-center justify-center py-16">
               <Loader2 className="w-6 h-6 animate-spin text-muted" />
             </div>
+          ) : loadFailed && !online && questions.length === 0 ? (
+            <NeedsConnection
+              description="Doubt Board needs the internet to load and post questions."
+              onRetry={() => void fetchQuestions(true)}
+            />
           ) : filtered.length === 0 ? (
             <EmptyState
               icon={<MessageCircle className="w-10 h-10" />}

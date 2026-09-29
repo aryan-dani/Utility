@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import {
   markOriginHealthy,
-  ORIGIN_PROBE_OK_KEY,
   ORIGIN_PROBE_TIMEOUT_MS,
   requestCampusHop,
   shouldProbeCanonicalOrigin,
@@ -11,19 +10,15 @@ import {
 
 /**
  * Cached service workers on utilityos.tech can still run JS when the live
- * origin is blocked. One tiny /api/ok probe per tab session; on failure,
- * replace to the Vercel campus host. No polling.
+ * origin is blocked. Probe /api/ok on every full load of the custom domain;
+ * on failure, replace to the Vercel campus host. No polling.
+ * (An earlier sessionStorage “origin ok” flag is not consulted — joining
+ * campus Wi-Fi mid-tab would otherwise stick on the blocked host.)
  */
 export function CampusOriginGuard() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!shouldProbeCanonicalOrigin(window.location.hostname)) return;
-
-    try {
-      if (sessionStorage.getItem(ORIGIN_PROBE_OK_KEY) === "1") return;
-    } catch {
-      /* private mode */
-    }
 
     const controller = new AbortController();
     let cancelled = false;

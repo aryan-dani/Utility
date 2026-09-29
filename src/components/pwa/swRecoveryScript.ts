@@ -3,7 +3,9 @@
  *
  * 1. One-time bust of broken App Shell service workers that served /~offline for
  *    every navigation (React #418). Keeps utility-pdf-* caches.
- * 2. Hydration diagnostics: on React #418/#423/#425, snapshot the client text
+ * 2. On utilityos.tech, probe /api/ok immediately; hop to the campus Vercel host
+ *    when the custom domain is unreachable (before React mounts).
+ * 3. Hydration diagnostics: on React #418/#423/#425, snapshot the client text
  *    nodes, fetch the server HTML, and log which text differs. Detects Chrome
  *    auto-translate and extensions that rewrite text before React hydrates.
  */
@@ -11,8 +13,49 @@ export const SW_RECOVERY_SCRIPT = `(function(){
   var VER="2026-09-08-hydration-safari";
   var KEY="utility-sw-bust";
   var DIAG_KEY="utility-hydration-diag";
+  var CAMPUS="https://planner-flax-six.vercel.app";
+  var HOP_KEY="uo-origin-hop";
   var SKIP=/^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE)$/;
   var IGNORE={"Loading…":1};
+
+  function isCanonicalHost(h){
+    return h==="utilityos.tech"||h==="www.utilityos.tech";
+  }
+
+  function campusUrl(){
+    var path=location.pathname||"/";
+    if(path==="/~offline") path="/";
+    return CAMPUS+path+(location.search||"")+(location.hash||"");
+  }
+
+  function requestCampusHop(){
+    if(!isCanonicalHost(location.hostname)) return false;
+    try{
+      if(sessionStorage.getItem(HOP_KEY)==="1") return false;
+      sessionStorage.setItem(HOP_KEY,"1");
+    }catch(e){}
+    location.replace(campusUrl());
+    return true;
+  }
+
+  function probeOrigin(){
+    if(!isCanonicalHost(location.hostname)) return;
+    if(!navigator.onLine) return;
+    var controller=typeof AbortController!=="undefined"?new AbortController():null;
+    var timedOut=false;
+    var timer=setTimeout(function(){
+      timedOut=true;
+      if(controller) controller.abort();
+    },4000);
+    var opts={cache:"no-store"};
+    if(controller) opts.signal=controller.signal;
+    fetch("/api/ok",opts).then(function(res){
+      if(!res.ok) throw new Error("unreachable");
+    }).catch(function(){
+      if(controller&&controller.signal.aborted&&!timedOut) return;
+      requestCampusHop();
+    }).finally(function(){clearTimeout(timer);});
+  }
 
   function texts(root){
     var out=[];
@@ -48,6 +91,18 @@ export const SW_RECOVERY_SCRIPT = `(function(){
     Promise.all(tasks).then(function(){location.reload();}).catch(function(){location.reload();});
   }
 
+  function recoverOfflineShell(){
+    if(!(navigator.onLine)) return false;
+    var h1=document.querySelector("h1");
+    if(!h1||(h1.textContent||"").trim().toLowerCase()!=="you're offline") return false;
+    if(isCanonicalHost(location.hostname)){
+      requestCampusHop();
+      return true;
+    }
+    clearAndReload();
+    return true;
+  }
+
   var diagDone=false;
   window.addEventListener("error",function(e){
     var m=(e&&e.message)||"";
@@ -57,9 +112,7 @@ export const SW_RECOVERY_SCRIPT = `(function(){
     var clientTexts=texts(document.body);
     var html=document.documentElement;
     var translated=/translated-(ltr|rtl)/.test(html.className)||!!document.querySelector(".goog-te-banner-frame,#goog-gt-tt,.skiptranslate");
-    var h1=document.querySelector("h1");
-    var offlineShell=navigator.onLine&&h1&&(h1.textContent||"").trim().toLowerCase()==="you're offline";
-    if(offlineShell){clearAndReload();return;}
+    if(recoverOfflineShell()) return;
     fetch(location.href,{cache:"no-store",credentials:"same-origin"}).then(function(r){return r.text();}).then(function(src){
       var doc=new DOMParser().parseFromString(src,"text/html");
       var s=counts(texts(doc.body)), c=counts(clientTexts);
@@ -87,11 +140,9 @@ export const SW_RECOVERY_SCRIPT = `(function(){
 
   function run(){
     try{
+      probeOrigin();
       if(localStorage.getItem(KEY)===VER){
-        var h1=document.querySelector("h1");
-        if(navigator.onLine && h1 && (h1.textContent||"").trim().toLowerCase()==="you're offline"){
-          clearAndReload();
-        }
+        recoverOfflineShell();
         return;
       }
       localStorage.setItem(KEY,VER);

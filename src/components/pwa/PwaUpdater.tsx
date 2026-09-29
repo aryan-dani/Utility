@@ -8,7 +8,7 @@ import {
   decideWaitingWorkerAction,
   SW_UPDATE_SESSION,
 } from '@/lib/pwa/updatePolicy';
-
+import { warmOfflineLocalToolPages } from '@/lib/pwa/warmOfflineShell';
 const TOAST_ID = 'utility-sw-update';
 const CONTROLLER_FALLBACK_MS = 1500;
 /** Focus/visibility SW checks — keep mount + hourly interval uncapped. */
@@ -255,6 +255,7 @@ export default function PwaUpdater() {
     document.addEventListener('visibilitychange', onVisible);
     window.addEventListener('focus', onVisible);
     void checkForUpdates({ force: true });
+    void warmOfflineLocalToolPages();
 
     const handleControllerChange = async () => {
       const applying = sessionFlag(SW_UPDATE_SESSION.applying);
@@ -262,6 +263,7 @@ export default function PwaUpdater() {
       // First SW claim (no prior controller): browser activates the worker — do not reload.
       if (!applying && !hadController) {
         hadController = true;
+        void warmOfflineLocalToolPages();
         return;
       }
       hadController = true;

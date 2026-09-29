@@ -19,6 +19,10 @@ import {
 } from "@/lib/firebaseAuth";
 import { usePreferRedirectAuth } from "@/lib/usePreferRedirectAuth";
 import { useLeaveAuthPage } from "@/lib/useLeaveAuthPage";
+import {
+  OAuthFinishingScreen,
+  usePendingOAuthReturn,
+} from "@/lib/usePendingOAuthReturn";
 import { describeError } from "@/lib/errors";
 import { PageHeader } from "@/components/ui";
 
@@ -31,6 +35,7 @@ function SignupContent() {
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const preferRedirect = usePreferRedirectAuth();
+  const pendingOAuth = usePendingOAuthReturn();
   const searchParams = useSearchParams();
   const router = useRouter();
 
@@ -124,6 +129,10 @@ function SignupContent() {
       setGithubLoading(false);
     }
   };
+
+  if (pendingOAuth) {
+    return <OAuthFinishingScreen provider={pendingOAuth} />;
+  }
 
   if (sessionReady && alreadySignedIn) {
     return (
