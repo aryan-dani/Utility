@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "@/lib/firebase/auth";
-import { isAuthPage, isPublicPath } from "@/lib/authRoutes";
+import { isAuthPage, isPublicPath, normalizePathname } from "@/lib/authRoutes";
 
 const OnboardingStory = dynamic(
   () =>
@@ -32,7 +32,7 @@ function AuthBusy() {
 
 /** Vault, Ask, Planner, Doubt Board, and the other tools need a signed-in user. */
 export function AuthGate({ children }: { children: ReactNode }) {
-  const pathname = usePathname() || "/";
+  const pathname = normalizePathname(usePathname());
   const router = useRouter();
   const [ready, setReady] = useState(false);
   const [uid, setUid] = useState<string | null>(null);

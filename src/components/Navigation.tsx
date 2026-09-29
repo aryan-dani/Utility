@@ -37,6 +37,7 @@ import {
 } from "@/lib/workspace";
 import { ScopeSelector } from "@/components/academic/ScopeSelector";
 import { fetchAdminStatus } from "@/lib/adminStatus";
+import { normalizePathname } from "@/lib/authRoutes";
 import { useIsClient, useIsMac, useLocalStorageBoolean, useMediaQuery, writeLocalStorageBoolean } from "@/lib/clientHooks";
 import { useIsStandalone } from "@/lib/pwa/displayMode";
 import { Sheet, TabBar } from "@/components/ui";
@@ -892,7 +893,7 @@ function SidebarDock({
 }
 
 function NavigationInner() {
-  const pathname = usePathname();
+  const pathname = normalizePathname(usePathname());
   const router = useRouter();
   const academicYear = useAcademicStore((s) => s.academicYear);
   const branch = useAcademicStore((s) => s.branch);

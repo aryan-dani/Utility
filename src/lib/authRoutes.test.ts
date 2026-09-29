@@ -1,9 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { isAuthPage, isPublicPath } from "./authRoutes";
+import { isAuthPage, isPublicPath, normalizePathname } from "./authRoutes";
 
 describe("authRoutes", () => {
+  it("normalizes empty and prerender /index to /", () => {
+    expect(normalizePathname(null)).toBe("/");
+    expect(normalizePathname(undefined)).toBe("/");
+    expect(normalizePathname("")).toBe("/");
+    expect(normalizePathname("/index")).toBe("/");
+    expect(normalizePathname("/")).toBe("/");
+    expect(normalizePathname("/resources")).toBe("/resources");
+  });
+
   it("keeps marketing, legal, campus, and share links public", () => {
     expect(isPublicPath("/")).toBe(true);
+    expect(isPublicPath("/index")).toBe(true);
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/privacy")).toBe(true);
     expect(isPublicPath("/campus")).toBe(true);

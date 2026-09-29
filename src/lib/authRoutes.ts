@@ -9,14 +9,28 @@ const PUBLIC_EXACT = new Set([
   "/~offline",
 ]);
 
+/**
+ * Production prerender encodes app/page.tsx as the segment "index", so the
+ * server-side PathnameContext is "/index" while the browser uses "/".
+ * Normalize before any public/active-route check so SSR and hydration match.
+ */
+export function normalizePathname(
+  pathname: string | null | undefined,
+): string {
+  if (!pathname || pathname === "/index") return "/";
+  return pathname;
+}
+
 export function isPublicPath(pathname: string): boolean {
-  if (PUBLIC_EXACT.has(pathname)) return true;
-  if (pathname.startsWith("/account/delete")) return true;
-  if (pathname.startsWith("/clipboard/s/")) return true;
-  if (pathname.startsWith("/campus/")) return true;
+  const path = normalizePathname(pathname);
+  if (PUBLIC_EXACT.has(path)) return true;
+  if (path.startsWith("/account/delete")) return true;
+  if (path.startsWith("/clipboard/s/")) return true;
+  if (path.startsWith("/campus/")) return true;
   return false;
 }
 
 export function isAuthPage(pathname: string): boolean {
-  return pathname === "/login" || pathname === "/signup";
+  const path = normalizePathname(pathname);
+  return path === "/login" || path === "/signup";
 }
