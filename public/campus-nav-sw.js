@@ -18,13 +18,19 @@
   };
 
   /**
-   * Mirrors src/lib/pwa/offlineNavigation.ts decideOfflineNavigation.
-   * Keep both in sync — unit tests cover the TS copy.
+   * Mirrors src/lib/pwa/offlineNavigation.ts (decideOfflineNavigation +
+   * shouldBypassCampusNavigation). Keep both in sync — unit tests cover the TS copy.
    */
   function decide(hasCachedDocument, online) {
     if (hasCachedDocument) return "use-cache";
     if (online) return "campus-hop";
     return "offline-page";
+  }
+
+  function shouldBypass(pathname) {
+    if (pathname.indexOf("/__/auth") === 0) return true;
+    if (pathname === "/login" || pathname === "/signup") return true;
+    return false;
   }
 
   async function matchCachedDocument(req) {
@@ -53,6 +59,10 @@
       return;
     }
     if (!CANONICAL[url.hostname]) return;
+    // Let Workbox NetworkOnly (or the browser) own OAuth — do not respondWith.
+    // Intercepting /__/auth/handler delays/breaks the popup close handshake while
+    // IndexedDB already signed the opener in (blank window that hangs for seconds).
+    if (shouldBypass(url.pathname)) return;
 
     event.respondWith(
       (async function () {
@@ -64,12 +74,16 @@
           var res = await fetch(req, { signal: controller.signal });
           clearTimeout(timer);
           if (res && res.ok) {
+            // Return immediately; do not await cache.put (that delayed OAuth pages).
             try {
               var copy = res.clone();
-              var cache = await caches.open("pages");
-              await cache.put(req, copy);
+              caches.open("pages").then(function (cache) {
+                return cache.put(req, copy);
+              }).catch(function () {
+                /* quota / private mode */
+              });
             } catch (e) {
-              /* quota / private mode */
+              /* clone failed */
             }
             return res;
           }

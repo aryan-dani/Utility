@@ -13,6 +13,18 @@ export function decideOfflineNavigation(input: {
   return "offline-page";
 }
 
+/**
+ * Paths the campus companion SW must not `respondWith`.
+ * Mirrored in `public/campus-nav-sw.js` — keep in sync.
+ * Firebase popup/redirect handlers need Workbox NetworkOnly (or the browser)
+ * so the opener can finish the handshake and close the window promptly.
+ */
+export function shouldBypassCampusNavigation(pathname: string): boolean {
+  if (pathname.startsWith("/__/auth")) return true;
+  if (pathname === "/login" || pathname === "/signup") return true;
+  return false;
+}
+
 /** HTML routes to warm once per service worker so they open offline. */
 export const OFFLINE_WARM_PATHS = [
   "/planner",

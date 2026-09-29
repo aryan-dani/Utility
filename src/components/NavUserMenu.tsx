@@ -235,14 +235,16 @@ export default function NavUserMenu({
   if (!user) {
     if (collapsed) {
       return (
-        <AppLink
-          href="/signup"
-          aria-label="Create account"
-          className="flex items-center justify-center w-10 h-10 rounded-xl bg-foreground text-background font-semibold text-xs hover:opacity-90 transition-all shadow-xs active:scale-95"
-          title="Create account"
-        >
-          <UserPlus className="w-4 h-4" />
-        </AppLink>
+        <div className="relative w-full flex justify-center">
+          <AppLink
+            href="/signup"
+            aria-label="Create account"
+            title="Create account"
+            className="w-10 h-10 flex items-center justify-center rounded-xl text-muted hover:text-foreground hover:bg-foreground/[0.06] dark:hover:bg-white/[0.08] active:scale-[0.97] transition-all"
+          >
+            <UserPlus className="w-4 h-4" />
+          </AppLink>
+        </div>
       );
     }
     return (

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   decideOfflineNavigation,
   offlineWarmStorageKey,
+  shouldBypassCampusNavigation,
   shouldWarmOfflineShell,
 } from "./offlineNavigation";
 
@@ -25,6 +26,22 @@ describe("decideOfflineNavigation", () => {
     expect(
       decideOfflineNavigation({ hasCachedDocument: false, online: false }),
     ).toBe("offline-page");
+  });
+});
+
+describe("shouldBypassCampusNavigation", () => {
+  it("leaves Firebase Auth and login/signup to NetworkOnly", () => {
+    expect(shouldBypassCampusNavigation("/__/auth/handler")).toBe(true);
+    expect(shouldBypassCampusNavigation("/__/auth")).toBe(true);
+    expect(shouldBypassCampusNavigation("/__/auth/iframe")).toBe(true);
+    expect(shouldBypassCampusNavigation("/login")).toBe(true);
+    expect(shouldBypassCampusNavigation("/signup")).toBe(true);
+  });
+
+  it("still handles normal app documents", () => {
+    expect(shouldBypassCampusNavigation("/planner")).toBe(false);
+    expect(shouldBypassCampusNavigation("/")).toBe(false);
+    expect(shouldBypassCampusNavigation("/login/extra")).toBe(false);
   });
 });
 
