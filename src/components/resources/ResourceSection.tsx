@@ -34,8 +34,13 @@ interface ResourceSectionProps {
   favoriteIds?: Set<string>;
   defaultExpanded?: boolean;
   relatedCodesById?: Record<string, ResourceItem[]>;
-  /** Folder id to keep expanded / scroll into view */
+  /** Folder id to keep expanded / highlight */
   activeFolderId?: string | null;
+  /**
+   * Folder id to scroll into view once (deep links / browser back).
+   * Must not track user toggles — that jumps the page to the top on expand.
+   */
+  scrollToFolderId?: string | null;
   onFolderChange?: (folderId: string | null) => void;
   highlightFileId?: string | null;
 }
@@ -83,6 +88,7 @@ export default function ResourceSection({
   defaultExpanded = true,
   relatedCodesById = {},
   activeFolderId = null,
+  scrollToFolderId = null,
   onFolderChange,
   highlightFileId = null,
 }: ResourceSectionProps) {
@@ -104,12 +110,12 @@ export default function ResourceSection({
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    if (!flattenAllSingles || !activeFolderId || !scrollRef.current) return;
+    if (!flattenAllSingles || !scrollToFolderId || !scrollRef.current) return;
     const el = scrollRef.current.querySelector(
-      folderScrollSelector(activeFolderId),
+      folderScrollSelector(scrollToFolderId),
     );
     el?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  }, [flattenAllSingles, activeFolderId, singletonCardItems.length]);
+  }, [flattenAllSingles, scrollToFolderId, singletonCardItems.length]);
 
   const [prevActiveFolder, setPrevActiveFolder] = useState(activeFolderId);
   if (useFolders && folders && activeFolderId && prevActiveFolder !== activeFolderId) {
@@ -158,6 +164,7 @@ export default function ResourceSection({
   return (
     <div className="space-y-4">
       <button
+        type="button"
         onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center gap-3 pb-3 border-b border-border group cursor-pointer select-none"
       >
@@ -264,7 +271,7 @@ export default function ResourceSection({
                             highlightFileId === item.id ||
                             activeFolderId === folder.id
                           }
-                          scrollTarget={activeFolderId === folder.id}
+                          scrollTarget={scrollToFolderId === folder.id}
                         />
                       );
                     }
@@ -282,7 +289,7 @@ export default function ResourceSection({
                         favoriteIds={favoriteIds}
                         highlightFileId={highlightFileId}
                         activeFolderId={activeFolderId}
-                        scrollToId={activeFolderId}
+                        scrollToId={scrollToFolderId}
                       />
                     );
                   })}

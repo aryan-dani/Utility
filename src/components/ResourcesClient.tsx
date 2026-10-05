@@ -131,6 +131,8 @@ export default function ResourcesClient() {
   const [selectedSubject, setSelectedSubject] = useState<string | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<ResourceFilter>("all");
   const [activeFolderId, setActiveFolderId] = useState<string | null>(null);
+  /** One-shot scroll target for deep links — never set from user expand toggles. */
+  const [scrollToFolderId, setScrollToFolderId] = useState<string | null>(null);
   const [viewerResource, setViewerResource] = useState<ResourceItem | null>(
     null,
   );
@@ -151,6 +153,8 @@ export default function ResourcesClient() {
   const [scopeLoading, setScopeLoading] = useState(false);
   const subjectPendingTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const searchRequestId = useRef(0);
+  /** Next URL folder sync came from a user expand — skip scrollIntoView. */
+  const [suppressFolderScroll, setSuppressFolderScroll] = useState(false);
 
   if (prevScope !== scopeKey) {
     setPrevScope(scopeKey);
@@ -160,6 +164,7 @@ export default function ResourcesClient() {
     setScopeLoading(true);
     setSelectedFilter("all");
     setActiveFolderId(null);
+    setScrollToFolderId(null);
     setViewerResource(null);
   }
   const isScopeLoading = scopeLoading && catalogLoading;
@@ -332,7 +337,10 @@ export default function ResourcesClient() {
         const urlFolder = parseResourceFolder(
           searchParams.get("folder") || initialFolder,
         );
-        if (urlFolder) setActiveFolderId(urlFolder);
+        if (urlFolder) {
+          setActiveFolderId(urlFolder);
+          setScrollToFolderId(urlFolder);
+        }
       } else if (fromLiveUrl) {
         setSelectedSubject(fromLiveUrl);
         setSelectedFilter(parseResourceFilter(urlFilterParam));
@@ -348,18 +356,26 @@ export default function ResourcesClient() {
   if (!skipFolderUrlHydrate && prevUrlFolderParam !== urlFolderParam) {
     setPrevUrlFolderParam(urlFolderParam);
     const urlFolder = parseResourceFolder(urlFolderParam);
+    const fromUser = suppressFolderScroll;
+    if (fromUser) setSuppressFolderScroll(false);
+
     if (!urlFolder) {
       setActiveFolderId(null);
+      if (!fromUser) setScrollToFolderId(null);
     } else if (selectedSubject) {
       const scope = folderScopeSubject(urlFolder);
       const subjectScope = subjectFolderScope(selectedSubject);
       if (scope && scope !== subjectScope) {
         setActiveFolderId(null);
+        if (!fromUser) setScrollToFolderId(null);
       } else {
         setActiveFolderId(urlFolder);
+        // User expand already synced the URL — do not scrollIntoView (jumps to top).
+        if (!fromUser) setScrollToFolderId(urlFolder);
       }
     } else {
       setActiveFolderId(urlFolder);
+      if (!fromUser) setScrollToFolderId(urlFolder);
     }
   }
   if (skipFolderUrlHydrate) {
@@ -561,8 +577,15 @@ export default function ResourcesClient() {
   }, [setViewerResource, setViewerPage]);
 
   const handleFolderChange = useCallback((folderId: string | null) => {
+    setSuppressFolderScroll(true);
     setActiveFolderId(folderId);
-  }, [setActiveFolderId]);
+  }, [setSuppressFolderScroll, setActiveFolderId]);
+
+  useEffect(() => {
+    if (!scrollToFolderId) return;
+    const timer = window.setTimeout(() => setScrollToFolderId(null), 900);
+    return () => window.clearTimeout(timer);
+  }, [scrollToFolderId]);
 
   const handleVaultSearch = useCallback(
     (value: string) => {
@@ -1212,7 +1235,7 @@ export default function ResourcesClient() {
                     </p>
                   </Card>
                 ) : (
-                  <div className="space-y-8">
+                  <div className="space-y-8 [overflow-anchor:none]">
                     {(visibleContentResults.length > 0 || visibleSearchingContent) && (
                       <div className="space-y-4 bg-surface/40 border border-border rounded-xl p-5 shadow-sm overflow-hidden">
                         <div className="flex items-center gap-2.5 border-b border-border pb-3">
@@ -1307,6 +1330,7 @@ export default function ResourcesClient() {
                         onFavorite={handleFavorite}
                         favoriteIds={favoriteIds}
                         activeFolderId={activeFolderId}
+                        scrollToFolderId={scrollToFolderId}
                         onFolderChange={handleFolderChange}
                         highlightFileId={viewerResource?.id}
                       />
@@ -1359,6 +1383,7 @@ export default function ResourcesClient() {
                         onFavorite={handleFavorite}
                         favoriteIds={favoriteIds}
                         activeFolderId={activeFolderId}
+                        scrollToFolderId={scrollToFolderId}
                         onFolderChange={handleFolderChange}
                         highlightFileId={viewerResource?.id}
                       />
@@ -1376,6 +1401,7 @@ export default function ResourcesClient() {
                         onFavorite={handleFavorite}
                         favoriteIds={favoriteIds}
                         activeFolderId={activeFolderId}
+                        scrollToFolderId={scrollToFolderId}
                         onFolderChange={handleFolderChange}
                         highlightFileId={viewerResource?.id}
                       />
@@ -1393,6 +1419,7 @@ export default function ResourcesClient() {
                         onFavorite={handleFavorite}
                         favoriteIds={favoriteIds}
                         activeFolderId={activeFolderId}
+                        scrollToFolderId={scrollToFolderId}
                         onFolderChange={handleFolderChange}
                         highlightFileId={viewerResource?.id}
                       />

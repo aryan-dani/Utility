@@ -3,9 +3,8 @@
 import { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/auth";
-import {
-  signInWithEmailAndPassword,
-} from "firebase/auth";
+import { sendPasswordResetEmail, signInWithEmailAndPassword } from "firebase/auth";
+import { FirebaseError } from "firebase/app";
 import Link from "next/link";
 import { ArrowLeft, Loader2, Eye, EyeOff, Layers } from "lucide-react";
 import { motion } from "framer-motion";
@@ -26,12 +25,17 @@ import {
 import { describeError } from "@/lib/errors";
 import { PageHeader } from "@/components/ui";
 
+const RESET_SUCCESS =
+  "If an account exists for that email, we sent a reset link.";
+
 function LoginContent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resetNotice, setResetNotice] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
   const [githubLoading, setGithubLoading] = useState(false);
   const preferRedirect = usePreferRedirectAuth();
@@ -63,6 +67,7 @@ function LoginContent() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+    setResetNotice(null);
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
@@ -73,9 +78,41 @@ function LoginContent() {
     }
   };
 
+  const handleForgotPassword = async () => {
+    const trimmed = email.trim();
+    setError(null);
+    setResetNotice(null);
+
+    if (!trimmed) {
+      setError("Enter the email on the account.");
+      document.getElementById("login-email")?.focus();
+      return;
+    }
+
+    setResetLoading(true);
+    try {
+      await sendPasswordResetEmail(auth, trimmed, {
+        url: `${window.location.origin}/login`,
+        handleCodeInApp: false,
+      });
+      setResetNotice(RESET_SUCCESS);
+    } catch (err: unknown) {
+      const code = err instanceof FirebaseError ? err.code : undefined;
+      // Do not reveal whether the address is registered.
+      if (code === "auth/user-not-found") {
+        setResetNotice(RESET_SUCCESS);
+      } else {
+        setError(describeError(err));
+      }
+    } finally {
+      setResetLoading(false);
+    }
+  };
+
   const handleGoogleSignIn = async () => {
     setGoogleLoading(true);
     setError(null);
+    setResetNotice(null);
 
     try {
       const cred = await signInWithPopupOrRedirect(auth, "google");
@@ -93,6 +130,7 @@ function LoginContent() {
   const handleGithubSignIn = async () => {
     setGithubLoading(true);
     setError(null);
+    setResetNotice(null);
 
     try {
       const cred = await signInWithPopupOrRedirect(auth, "github");
@@ -193,6 +231,14 @@ function LoginContent() {
               {error}
             </div>
           )}
+          {resetNotice && (
+            <div
+              className="mb-5 text-sm text-foreground bg-foreground/5 border border-border p-3 rounded-xl"
+              role="status"
+            >
+              {resetNotice}
+            </div>
+          )}
 
           <Link
             href={`/signup?redirectTo=${encodeURIComponent(redirectTo)}`}
@@ -225,7 +271,7 @@ function LoginContent() {
             <button
               type="button"
               onClick={handleGoogleSignIn}
-              disabled={googleLoading || githubLoading || loading}
+              disabled={googleLoading || githubLoading || loading || resetLoading}
               className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
             >
               {googleLoading ? (
@@ -240,7 +286,7 @@ function LoginContent() {
             <button
               type="button"
               onClick={handleGithubSignIn}
-              disabled={googleLoading || githubLoading || loading}
+              disabled={googleLoading || githubLoading || loading || resetLoading}
               className="bg-background border border-border text-foreground py-2.5 rounded-xl text-sm font-semibold hover:bg-surface disabled:opacity-50 transition-all flex items-center justify-center gap-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)]"
             >
               {githubLoading ? (
@@ -318,11 +364,21 @@ function LoginContent() {
                   )}
                 </button>
               </div>
+              <div className="mt-1.5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={() => void handleForgotPassword()}
+                  disabled={resetLoading || loading || googleLoading || githubLoading}
+                  className="text-xs font-medium text-muted hover:text-foreground disabled:opacity-50 transition-colors"
+                >
+                  {resetLoading ? "Sending reset link…" : "Forgot password?"}
+                </button>
+              </div>
             </div>
 
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || resetLoading}
               className="w-full bg-foreground text-background py-2.5 rounded-xl text-sm font-semibold hover:opacity-90 disabled:opacity-50 transition-all flex items-center justify-center gap-2 mt-2 active:scale-[0.97] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] disabled:active:scale-100"
             >
               {loading ? (
