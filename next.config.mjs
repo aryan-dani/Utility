@@ -73,6 +73,17 @@ const nextConfig = {
 
     return [
       {
+        source: "/ok.txt",
+        headers: [
+          {
+            key: "Cache-Control",
+            value:
+              "public, max-age=60, s-maxage=3600, stale-while-revalidate=86400",
+          },
+          { key: "Content-Type", value: "text/plain; charset=utf-8" },
+        ],
+      },
+      {
         source: "/.well-known/assetlinks.json",
         headers: [
           {
@@ -141,6 +152,7 @@ const config = isDev
         "!utility-logo-og.png",
         "!screenshots/**",
         "!.well-known/**",
+        "!ok.txt",
       ],
       // Offline document only via NetworkFirst handlerDidError — never App Shell navigateFallback
       // (that serves /~offline for every navigation and causes React hydration #418).
@@ -156,7 +168,19 @@ const config = isDev
         skipWaiting: false,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
-        exclude: [/\.map$/, /^manifest.*\.js$/],
+        // Do not precache the hashed JS/CSS graph — each deploy was 100+ CDN
+        // requests per returning user. Runtime CacheFirst on /_next/static/ still
+        // offline-caches chunks after the first visit. Offline HTML for local
+        // tools comes from warmOfflineLocalToolPages → pages cache.
+        exclude: [/\.map$/, /^manifest.*\.js$/, /^static\//],
+        manifestTransforms: [
+          async (manifestEntries) => ({
+            manifest: manifestEntries.filter(
+              (entry) => !String(entry.url).includes("/_next/static/"),
+            ),
+            warnings: [],
+          }),
+        ],
         runtimeCaching: [
           // Never cache Firebase Auth handler (same-origin proxy for Store OAuth).
           {

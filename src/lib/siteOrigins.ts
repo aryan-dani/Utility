@@ -61,11 +61,30 @@ export function isSameOriginAuthHost(host: string): boolean {
   );
 }
 
-/** Prefer the current host for /__/auth when it is a trusted app origin. */
-export function resolveClientAuthDomain(host: string, fromEnv: string): string {
-  if (isSameOriginAuthHost(host)) return host;
+/**
+ * Prefer the current host for /__/auth only when same-origin OAuth is required
+ * (installed PWA / Store WebView). Normal browser tabs use firebaseapp.com so
+ * the Firebase helper scripts never ride the Vercel rewrite (Fast Origin Transfer).
+ *
+ * `firebaseAppAuthDomain` should be `<project>.firebaseapp.com`. When the env
+ * still points at a site host (legacy Store setup), pass that fallback so
+ * desktop does not keep proxying through Vercel.
+ */
+export function resolveClientAuthDomain(
+  host: string,
+  fromEnv: string,
+  preferSameOriginAuth = false,
+  firebaseAppAuthDomain?: string,
+): string {
+  if (preferSameOriginAuth && isSameOriginAuthHost(host)) return host;
+  if (firebaseAppAuthDomain && isSameOriginAuthHost(fromEnv)) {
+    return firebaseAppAuthDomain;
+  }
   return fromEnv;
 }
+
+/** Static reachability probe — no Function, no origin transfer. */
+export const ORIGIN_PROBE_PATH = "/ok.txt";
 
 export function campusFallbackUrl(
   pathname: string,
@@ -78,7 +97,8 @@ export function campusFallbackUrl(
 
 export const ORIGIN_PROBE_OK_KEY = "uo-origin-ok";
 export const ORIGIN_HOP_REQUESTED_KEY = "uo-origin-hop";
-export const ORIGIN_PROBE_TIMEOUT_MS = 4000;
+/** Fast failure window — timeout alone must not hop (page may already be live). */
+export const ORIGIN_PROBE_TIMEOUT_MS = 1500;
 
 export function shouldProbeCanonicalOrigin(hostname: string): boolean {
   return isCanonicalHost(hostname);
@@ -86,7 +106,7 @@ export function shouldProbeCanonicalOrigin(hostname: string): boolean {
 
 /**
  * Hop to the Vercel campus host when the custom domain cannot load.
- * `originOk` is the result of this load's /api/ok probe (not a session cache).
+ * `originOk` is the result of this load's /ok.txt probe (not a session cache).
  */
 export function shouldRequestCampusHop(
   hostname: string,

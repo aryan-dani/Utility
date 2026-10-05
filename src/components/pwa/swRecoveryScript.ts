@@ -3,18 +3,19 @@
  *
  * 1. One-time bust of broken App Shell service workers that served /~offline for
  *    every navigation (React #418). Keeps utility-pdf-* caches.
- * 2. On utilityos.tech, probe /api/ok immediately; hop to the campus Vercel host
- *    when the custom domain is unreachable (before React mounts).
+ * 2. On utilityos.tech, probe static /ok.txt immediately; hop to the campus
+ *    Vercel host when the custom domain is unreachable (before React mounts).
  * 3. Hydration diagnostics: on React #418/#423/#425, snapshot the client text
  *    nodes, fetch the server HTML, and log which text differs. Detects Chrome
  *    auto-translate and extensions that rewrite text before React hydrates.
  */
 export const SW_RECOVERY_SCRIPT = `(function(){
-  var VER="2026-09-08-hydration-safari";
+  var VER="2026-10-02-ok-probe";
   var KEY="utility-sw-bust";
   var DIAG_KEY="utility-hydration-diag";
   var CAMPUS="https://planner-flax-six.vercel.app";
   var HOP_KEY="uo-origin-hop";
+  var PROBE="/ok.txt";
   var SKIP=/^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE)$/;
   var IGNORE={"Loading…":1};
 
@@ -38,6 +39,15 @@ export const SW_RECOVERY_SCRIPT = `(function(){
     return true;
   }
 
+  function documentCameFromNetwork(){
+    try{
+      var nav=performance.getEntriesByType("navigation")[0];
+      if(!nav) return true;
+      if(nav.transferSize===0&&nav.decodedBodySize>0) return false;
+      return true;
+    }catch(e){return true;}
+  }
+
   function probeOrigin(){
     if(!isCanonicalHost(location.hostname)) return;
     if(!navigator.onLine) return;
@@ -46,13 +56,14 @@ export const SW_RECOVERY_SCRIPT = `(function(){
     var timer=setTimeout(function(){
       timedOut=true;
       if(controller) controller.abort();
-    },4000);
+    },1500);
     var opts={cache:"no-store"};
     if(controller) opts.signal=controller.signal;
-    fetch("/api/ok",opts).then(function(res){
+    fetch(PROBE,opts).then(function(res){
       if(!res.ok) throw new Error("unreachable");
     }).catch(function(){
       if(controller&&controller.signal.aborted&&!timedOut) return;
+      if(timedOut&&documentCameFromNetwork()) return;
       requestCampusHop();
     }).finally(function(){clearTimeout(timer);});
   }

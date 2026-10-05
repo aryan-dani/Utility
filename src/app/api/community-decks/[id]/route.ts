@@ -40,7 +40,7 @@ export async function GET(
       },
       {
         headers: {
-          "Cache-Control": "private, max-age=60",
+          "Cache-Control": "private, max-age=3600",
         },
       },
     );

@@ -102,11 +102,11 @@ Reviewers often fail OAuth **popups** (and Google may still block OAuth inside S
 
 ### Same-origin auth proxy (Store OAuth experiment)
 
-`next.config.mjs` rewrites `/__/auth/*` → `https://<project>.firebaseapp.com/__/auth/*` (transparent proxy). On `utilityos.tech`, `www.utilityos.tech`, and `planner-flax-six.vercel.app`, the client uses that host as `authDomain`.
+`next.config.mjs` rewrites `/__/auth/*` → `https://<project>.firebaseapp.com/__/auth/*` (transparent proxy). Installed Store / PWA / WebView shells set `authDomain` to the current host at runtime so redirect OAuth stays same-origin. Desktop browser tabs keep `*.firebaseapp.com` (avoids Fast Origin Transfer on every page).
 
 **One-time console setup (required for Google/GitHub in Store):**
 
-1. Vercel Production: set `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` to `utilityos.tech` (or `www.utilityos.tech` if that is the canonical host), then redeploy.
+1. Vercel Production: set `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN` to `<project>.firebaseapp.com` (desktop default). Store/PWA override to the page host when `preferRedirectAuth()` is true.
 2. Firebase Console → Authentication → Settings → **Authorized domains**: include `utilityos.tech`, `www.utilityos.tech`, and `planner-flax-six.vercel.app` (campus Wi-Fi fallback).
 3. Google Cloud Console → APIs & Services → Credentials → your OAuth 2.0 Web client → **Authorized redirect URIs**: add  
    `https://utilityos.tech/__/auth/handler`, `https://www.utilityos.tech/__/auth/handler`, and `https://planner-flax-six.vercel.app/__/auth/handler` (keep the existing `*.firebaseapp.com/__/auth/handler` URI).

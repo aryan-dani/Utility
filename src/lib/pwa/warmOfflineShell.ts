@@ -34,9 +34,10 @@ export async function warmOfflineLocalToolPages(): Promise<void> {
     await Promise.allSettled(
       OFFLINE_WARM_PATHS.map(async (path) => {
         const url = new URL(path, window.location.origin).href;
+        // Default HTTP cache — ISR HTML can be a CDN hit. Do not cache: "reload"
+        // (that forces Cache-Control: no-cache and burns Fast Origin Transfer).
         const res = await fetch(url, {
           credentials: "same-origin",
-          cache: "reload",
         });
         if (!res.ok) return;
         await cache.put(url, res.clone());

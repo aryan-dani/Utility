@@ -157,9 +157,10 @@ function isPopupBlocked(code: string | undefined) {
  * (and Google may still block OAuth inside embedded WebViews).
  * Prefer full-page redirect there; email/password remains the reliable fallback.
  *
- * With same-origin /__/auth proxy (next.config rewrites) + authDomain on
- * utilityos.tech, redirect OAuth can succeed in the Store shell for GitHub
- * and sometimes Google.
+ * With same-origin /__/auth proxy (next.config rewrites) + authDomain set to
+ * the current host only when this returns true, redirect OAuth can succeed in
+ * the Store shell for GitHub and sometimes Google. Desktop browsers keep
+ * firebaseapp.com so helper scripts never ride the Vercel rewrite.
  */
 export function preferRedirectAuth(): boolean {
   if (typeof window === "undefined") return false;

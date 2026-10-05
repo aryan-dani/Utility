@@ -14,7 +14,18 @@ const CONTROLLER_FALLBACK_MS = 1500;
 /** Focus/visibility SW checks — keep mount + hourly interval uncapped. */
 const VISIBILITY_UPDATE_DEBOUNCE_MS = 20 * 60 * 1000;
 
-/** Clear SW/runtime caches on update; never touch utility-pdf-v2 (Drive PDF Cache API). */
+/** Drop only HTML page cache on update — hashed next-static / precache stay. */
+async function clearPagesCache() {
+  if (!('caches' in window)) return;
+  const keys = await caches.keys();
+  await Promise.all(
+    keys
+      .filter((key) => key === 'pages' || key.startsWith('pages-'))
+      .map((key) => caches.delete(key)),
+  );
+}
+
+/** Hard recovery only: clear Workbox caches; never touch utility-pdf-v2. */
 async function clearWorkboxCaches() {
   if (!('caches' in window)) return;
   const keys = await caches.keys();
@@ -279,9 +290,9 @@ export default function PwaUpdater() {
       }
       setSessionFlag(SW_UPDATE_SESSION.justUpdated, true);
       try {
-        await clearWorkboxCaches();
+        await clearPagesCache();
       } catch (e) {
-        console.error('Failed to clear caches:', e);
+        console.error('Failed to clear page cache:', e);
       }
       window.location.reload();
     };

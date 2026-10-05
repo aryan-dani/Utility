@@ -31,16 +31,36 @@ describe("siteOrigins", () => {
     expect(isSameOriginAuthHost("preview.vercel.app")).toBe(false);
   });
 
-  it("uses the current host as authDomain on trusted origins", () => {
-    expect(resolveClientAuthDomain(CAMPUS_HOST, "from-env.firebaseapp.com")).toBe(
-      CAMPUS_HOST,
-    );
+  it("uses the current host as authDomain only when same-origin OAuth is preferred", () => {
     expect(
-      resolveClientAuthDomain("utilityos.tech", "from-env.firebaseapp.com"),
+      resolveClientAuthDomain(CAMPUS_HOST, "from-env.firebaseapp.com", true),
+    ).toBe(CAMPUS_HOST);
+    expect(
+      resolveClientAuthDomain("utilityos.tech", "from-env.firebaseapp.com", true),
     ).toBe("utilityos.tech");
     expect(
-      resolveClientAuthDomain("localhost", "from-env.firebaseapp.com"),
+      resolveClientAuthDomain("utilityos.tech", "from-env.firebaseapp.com", false),
     ).toBe("from-env.firebaseapp.com");
+    expect(
+      resolveClientAuthDomain("localhost", "from-env.firebaseapp.com", true),
+    ).toBe("from-env.firebaseapp.com");
+    // Legacy env set to the site host → desktop falls back to firebaseapp.com.
+    expect(
+      resolveClientAuthDomain(
+        "utilityos.tech",
+        "utilityos.tech",
+        false,
+        "proj.firebaseapp.com",
+      ),
+    ).toBe("proj.firebaseapp.com");
+    expect(
+      resolveClientAuthDomain(
+        "utilityos.tech",
+        "utilityos.tech",
+        true,
+        "proj.firebaseapp.com",
+      ),
+    ).toBe("utilityos.tech");
   });
 
   it("builds a campus fallback URL and only probes the custom domain", () => {

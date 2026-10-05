@@ -1,4 +1,5 @@
 import { initializeApp, getApps, getApp } from "firebase/app";
+import { preferRedirectAuth } from "@/lib/firebaseAuth";
 import { resolveClientAuthDomain } from "@/lib/siteOrigins";
 
 function cleanEnvValue(val: string | undefined): string | undefined {
@@ -14,19 +15,29 @@ function cleanEnvValue(val: string | undefined): string | undefined {
 }
 
 /**
- * Prefer same-origin authDomain on production hosts so /__/auth is proxied
- * (see next.config.mjs rewrites). Falls back to NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN.
+ * Same-origin authDomain (proxied /__/auth) only for Store / installed PWA.
+ * Desktop browsers use firebaseapp.com so helper scripts skip the Vercel rewrite.
  */
 function resolveAuthDomain(): string {
   const fromEnv =
     cleanEnvValue(process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN) ||
     "placeholder-auth-domain";
+  const projectId = cleanEnvValue(process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID);
+  const firebaseAppAuth =
+    projectId && !projectId.includes("placeholder")
+      ? `${projectId}.firebaseapp.com`
+      : undefined;
 
   if (typeof window === "undefined") {
-    return fromEnv;
+    return resolveClientAuthDomain("ssr", fromEnv, false, firebaseAppAuth);
   }
 
-  return resolveClientAuthDomain(window.location.hostname, fromEnv);
+  return resolveClientAuthDomain(
+    window.location.hostname,
+    fromEnv,
+    preferRedirectAuth(),
+    firebaseAppAuth,
+  );
 }
 
 const firebaseConfig = {

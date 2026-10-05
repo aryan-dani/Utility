@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { revalidateTag } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 import { safeEqualSecret } from "@/lib/safeEqual";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +24,11 @@ export async function POST(request: Request) {
   revalidateTag("subjects", "max");
   revalidateTag("resources", "max");
   revalidateTag("syllabus", "max");
+  // Bust the public CDN-cached catalog route (year/branch/semester query variants).
+  revalidatePath("/api/resources/list");
 
   return NextResponse.json({
     success: true,
-    revalidated: ["subjects", "resources", "syllabus"],
+    revalidated: ["subjects", "resources", "syllabus", "/api/resources/list"],
   });
 }
