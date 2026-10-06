@@ -50,6 +50,8 @@ module.exports = {
         toast: '200',
       },
       borderRadius: {
+        /* v3 `rounded-sm` was 0.125rem; v4's default sm is 0.25rem. */
+        sm: '0.125rem',
         DEFAULT: 'var(--radius)',
         md: 'var(--radius-md)',
         lg: 'var(--radius-lg)',

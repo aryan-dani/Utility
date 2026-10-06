@@ -1,0 +1,20 @@
+{
+  "name": "braces",
+  "version": "3.0.4",
+  "description": "Bash-like brace expansion. Local 3.0.4 patch adds a nesting-depth guard for GHSA-vfj7-8cjw-p6xm; upstream has no patched release.",
+  "homepage": "https://github.com/micromatch/braces",
+  "author": "Jon Schlinkert (https://github.com/jonschlinkert)",
+  "repository": "micromatch/braces",
+  "license": "MIT",
+  "main": "index.js",
+  "files": [
+    "index.js",
+    "lib"
+  ],
+  "engines": {
+    "node": ">=8"
+  },
+  "dependencies": {
+    "fill-range": "^7.1.1"
+  }
+}
