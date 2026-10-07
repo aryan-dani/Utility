@@ -539,7 +539,7 @@ export default function CommunityClient({
               ? `No matches for "${searchQuery}"`
               : "Be the first scholar to publish a deck!"}
           </p>
-          <Button variant="primary" size="sm" className="rounded-xl" onClick={() => { window.location.href = "/ask"; }}>
+          <Button variant="primary" size="sm" className="rounded-xl" onClick={() => { router.push("/ask"); }}>
             Generate & Publish a Deck
             <ArrowRight className="w-4 h-4" />
           </Button>

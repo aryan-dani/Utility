@@ -88,6 +88,7 @@ export default function RootLayout({
           triggers a React 19 client warning when rendered in <body>. */}
       <head>
         {/* Static: Lightning CSS cannot parse ::highlight() yet */}
+        {/* eslint-disable-next-line @next/next/no-css-tags -- must stay a public static file; bundling breaks on ::highlight() */}
         <link rel="stylesheet" href="/find-highlight.css" />
         <script
           id="utility-sw-recovery"

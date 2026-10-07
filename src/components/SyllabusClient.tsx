@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { SubjectItem, ResourceItem } from '@/lib/dataFetcher';
 import { useAcademicStore } from '@/store/academicStore';
 import { cleanResourceTitle } from '@/lib/titleUtils';
@@ -249,6 +250,7 @@ function getModulesForSubject(name: string) {
 }
 
 export default function SyllabusClient() {
+  const router = useRouter();
   const { searchQuery } = useAcademicStore();
   const {
     resources: catalogResources,
@@ -816,7 +818,7 @@ export default function SyllabusClient() {
                                       size="sm"
                                       className="rounded-xl shadow-3xs hover:-translate-y-0.5"
                                       onClick={() => {
-                                        window.location.href = `/ask?tab=chat&prompt=${encodeURIComponent(`Create a detailed study guide explaining this syllabus topic: "${subject.name} - ${mod.title}". Focus on: ${mod.desc}`)}`;
+                                        router.push(`/ask?tab=chat&prompt=${encodeURIComponent(`Create a detailed study guide explaining this syllabus topic: "${subject.name} - ${mod.title}". Focus on: ${mod.desc}`)}`);
                                       }}
                                     >
                                       <Brain className="w-3.5 h-3.5 text-foreground/80 shrink-0" />
@@ -827,7 +829,7 @@ export default function SyllabusClient() {
                                       size="sm"
                                       className="rounded-xl shadow-3xs hover:-translate-y-0.5"
                                       onClick={() => {
-                                        window.location.href = `/ask?tab=flashcards&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}&auto=true`;
+                                        router.push(`/ask?tab=flashcards&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}&auto=true`);
                                       }}
                                     >
                                       <Layers className="w-3.5 h-3.5 text-foreground/80 shrink-0" />
@@ -838,7 +840,7 @@ export default function SyllabusClient() {
                                       size="sm"
                                       className="rounded-xl shadow-3xs hover:-translate-y-0.5"
                                       onClick={() => {
-                                        window.location.href = `/ask?tab=quiz&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}&auto=true`;
+                                        router.push(`/ask?tab=quiz&topic=${encodeURIComponent(`${subject.name} - ${mod.title}`)}&auto=true`);
                                       }}
                                     >
                                       <HelpCircle className="w-3.5 h-3.5 text-foreground/80 shrink-0" />
@@ -908,7 +910,7 @@ export default function SyllabusClient() {
             size="md"
             className="rounded-2xl shadow-sm hover:scale-[1.01] group"
             onClick={() => {
-              window.location.href = buildResourcesHref({ academicYear, branch, semester });
+              router.push(buildResourcesHref({ academicYear, branch, semester }));
             }}
           >
             <Layers className="w-4 h-4 text-primary" />

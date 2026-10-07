@@ -3,6 +3,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import AppLink from "@/components/ui/AppLink";
 import { ChevronDown, LogOut, User, UserPlus } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
@@ -62,6 +63,7 @@ export default function NavUserMenu({
   ) => void;
   onUserChange?: (user: NavUser | null) => void;
 }) {
+  const router = useRouter();
   const [user, setUser] = useState<NavUser | null>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [menuCoords, setMenuCoords] = useState<MenuCoords | null>(null);
@@ -229,7 +231,7 @@ export default function NavUserMenu({
     clearLocalUserData();
     useAcademicStore.getState().resetWorkspace();
     setUserMenuOpen(false);
-    window.location.href = "/";
+    router.push("/");
   };
 
   if (!user) {
