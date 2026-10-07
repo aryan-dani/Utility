@@ -150,14 +150,15 @@ export default async function Home() {
           </div>
           <HomeExamCountdown />
           <p className="text-xs text-muted max-w-md leading-relaxed">
-            Campus Wi-Fi blocking this site? Open{" "}
+            On college Wi-Fi, open{" "}
             <a
               href={CAMPUS_ORIGIN}
               className="text-foreground underline underline-offset-4 font-medium"
             >
               {CAMPUS_ORIGIN.replace("https://", "")}
             </a>{" "}
-            instead.
+            first — utilityos.tech often fails the certificate check before any
+            redirect can run. Bookmark that host for campus.
           </p>
         </div>
       </section>

@@ -86,15 +86,17 @@ export default function InstallPage() {
       <div className="w-full mt-6 border border-border bg-card rounded-xl px-6 py-5 text-sm text-muted leading-relaxed text-left">
         <p className="text-foreground font-semibold mb-1">Campus Wi-Fi</p>
         <p>
-          If utilityos.tech is blocked on college networks, open{" "}
+          First visit on college Wi-Fi: open{" "}
           <a
             href={CAMPUS_ORIGIN}
             className="text-foreground underline underline-offset-4 font-medium"
           >
             {CAMPUS_ORIGIN.replace("https://", "")}
           </a>{" "}
-          and sign in there. Cached tabs on the custom domain will hop over
-          automatically when the live origin is unreachable.
+          and sign in there. utilityos.tech often shows a certificate warning
+          before any site code can run, so that host will not auto-redirect.
+          After a good visit with the app installed, later failed loads on the
+          custom domain can hop to the campus host automatically.
         </p>
       </div>
 
