@@ -93,7 +93,9 @@
     "proxy-addr": "2.0.8",
     "braces": "file:./scripts/vendor/braces",
     "postcss-selector-parser": "7.1.6",
-    "@google-cloud/pubsub": "6.1.0"
+    "@google-cloud/pubsub": "6.1.0",
+    "sharp": "0.35.5",
+    "@modelcontextprotocol/sdk": "1.32.1"
   },
   "allowScripts": {
     "@firebase/util": true,
