@@ -7,19 +7,19 @@ import {
 } from "./offlineNavigation";
 
 describe("decideOfflineNavigation", () => {
-  it("serves a cached document before hopping or going offline", () => {
+  it("hops to campus whenever online, even if a document is cached", () => {
     expect(
       decideOfflineNavigation({ hasCachedDocument: true, online: true }),
-    ).toBe("use-cache");
-    expect(
-      decideOfflineNavigation({ hasCachedDocument: true, online: false }),
-    ).toBe("use-cache");
-  });
-
-  it("hops to campus only when online and nothing is cached", () => {
+    ).toBe("campus-hop");
     expect(
       decideOfflineNavigation({ hasCachedDocument: false, online: true }),
     ).toBe("campus-hop");
+  });
+
+  it("serves a cached document only when offline", () => {
+    expect(
+      decideOfflineNavigation({ hasCachedDocument: true, online: false }),
+    ).toBe("use-cache");
   });
 
   it("stays on the offline page when offline and uncached", () => {

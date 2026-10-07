@@ -1,6 +1,7 @@
 /**
  * What to do when a document navigation fails on the custom domain.
- * Cache always wins so visited Planner/Timer/etc. keep working offline.
+ * While online, prefer the campus host — a cached shell of utilityos.tech is
+ * useless when Sophos TLS inspection blocks the origin. Cache only when offline.
  */
 export type OfflineNavigationAction = "use-cache" | "campus-hop" | "offline-page";
 
@@ -8,8 +9,8 @@ export function decideOfflineNavigation(input: {
   hasCachedDocument: boolean;
   online: boolean;
 }): OfflineNavigationAction {
-  if (input.hasCachedDocument) return "use-cache";
   if (input.online) return "campus-hop";
+  if (input.hasCachedDocument) return "use-cache";
   return "offline-page";
 }
 

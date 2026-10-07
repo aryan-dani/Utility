@@ -3,8 +3,9 @@
  * Loaded via Workbox importScripts before route handlers.
  *
  * On utilityos.tech / www, a failed or timed-out document navigation:
- * 1. Serves a previously cached document for that URL when present
- * 2. Else hops to the Vercel campus host while the device reports online
+ * 1. Hops to the Vercel campus host while the device reports online
+ *    (ignore cache — Sophos TLS can make the custom domain unusable)
+ * 2. Else serves a previously cached document when offline
  * 3. Else falls through to /~offline
  *
  * Keep visited Planner/Timer/etc. available with no internet.
@@ -22,8 +23,8 @@
    * shouldBypassCampusNavigation). Keep both in sync — unit tests cover the TS copy.
    */
   function decide(hasCachedDocument, online) {
-    if (hasCachedDocument) return "use-cache";
     if (online) return "campus-hop";
+    if (hasCachedDocument) return "use-cache";
     return "offline-page";
   }
 
