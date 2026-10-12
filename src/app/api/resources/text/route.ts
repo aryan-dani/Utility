@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 const RESOURCE_ID_RE = /^[a-f0-9]{8}-[a-f0-9]{4}-4[a-f0-9]{3}-a[a-f0-9]{3}-[a-f0-9]{12}$/i;
 
 /** Matches runtime/lib/resourcePreview.mjs PREVIEW_MAX_BYTES — keep in sync. */
-const PREVIEW_MAX_CHARS = 64 * 1024;
+const PREVIEW_MAX_CHARS = 900 * 1024;
 
 /** Read stored source/notebook text from Firestore. Never fetches Drive. */
 export async function GET(request: Request) {

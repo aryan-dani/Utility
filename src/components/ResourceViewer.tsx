@@ -31,6 +31,7 @@ import dynamic from "next/dynamic";
 import type { PdfPreviewHandle } from "@/components/PdfPreview";
 import { folderIdForResource, folderLabelFromId, getResourceFileRole } from "@/lib/resourceGroups";
 import {
+  fetchCachedDriveFile,
   getDirectDownloadUrl,
   matchCachedDriveFile,
 } from "@/lib/driveFileCache";
@@ -189,13 +190,11 @@ export default function ResourceViewer({
   const [codeContent, setCodeContent] = useState<string | null>(null);
   const [pdfDirectFailed, setPdfDirectFailed] = useState(false);
   const [hasCachedPdf, setHasCachedPdf] = useState(false);
-  const [useTextIframe, setUseTextIframe] = useState(false);
   const usePdfJs = isPdf && !!driveId && hasCachedPdf && !pdfDirectFailed;
+  // Notebooks, source, and CSVs render in-app. Drive's embed cannot preview
+  // them and shows "No preview available".
   const usesIframePreview =
-    !!embedUrl &&
-    !usePdfJs &&
-    !isImage &&
-    (!isTextFetch || useTextIframe);
+    !!embedUrl && !usePdfJs && !isImage && !isTextFetch;
   const activeIframeSrc = embedUrl;
 
   const resourcePreviewKey = `${resource.id}:${embedUrl}:${resource.file_url}`;
@@ -208,7 +207,6 @@ export default function ResourceViewer({
     setCodeContent(null);
     setPdfDirectFailed(false);
     setHasCachedPdf(false);
-    setUseTextIframe(false);
   }
 
   useEffect(() => {
@@ -232,6 +230,18 @@ export default function ResourceViewer({
     let cancelled = false;
     const abort = new AbortController();
 
+    const MAX_TEXT_BYTES = 8 * 1024 * 1024;
+
+    function acceptText(text: string) {
+      if (new TextEncoder().encode(text).length > MAX_TEXT_BYTES) {
+        throw new Error("File too large to preview in-app");
+      }
+      if (!cancelled) {
+        setCodeContent(text);
+        setIsLoading(false);
+      }
+    }
+
     async function loadText() {
       setIsLoading(true);
       setLoadError(false);
@@ -239,32 +249,34 @@ export default function ResourceViewer({
         if (driveId) {
           const cached = await matchCachedDriveFile(driveId);
           if (cached) {
-            const text = await cached.text();
-            if (!cancelled) {
-              setCodeContent(text);
-              setIsLoading(false);
-            }
+            acceptText(await cached.text());
             return;
           }
-          const previewRes = await authFetch(
-            `/api/resources/text?id=${encodeURIComponent(resource.id)}`,
-            { signal: abort.signal },
-          );
-          if (previewRes.ok) {
-            const payload = (await previewRes.json()) as { text?: string };
-            if (typeof payload.text === "string" && payload.text.length > 0) {
-              if (!cancelled) {
-                setCodeContent(payload.text);
-                setUseTextIframe(false);
-                setIsLoading(false);
+          let stored: string | null = null;
+          try {
+            const previewRes = await authFetch(
+              `/api/resources/text?id=${encodeURIComponent(resource.id)}`,
+              { signal: abort.signal },
+            );
+            if (previewRes.ok) {
+              const payload = (await previewRes.json()) as { text?: string };
+              if (typeof payload.text === "string" && payload.text.length > 0) {
+                stored = payload.text;
               }
-              return;
             }
+          } catch (err) {
+            if (abort.signal.aborted || cancelled) return;
+            void err;
           }
-          if (!cancelled) {
-            setUseTextIframe(true);
-            setLoadError(false);
+          if (stored) {
+            acceptText(stored);
+            return;
           }
+          const blob = await fetchCachedDriveFile(driveId, {
+            signal: abort.signal,
+            maxBytes: MAX_TEXT_BYTES,
+          });
+          acceptText(await blob.text());
           return;
         }
         const res = await fetch(resource.file_url, {
@@ -281,29 +293,16 @@ export default function ResourceViewer({
 
         const totalHeader = res.headers.get("content-length");
         const total = totalHeader ? Number(totalHeader) : null;
-        const MAX_TEXT_BYTES = 8 * 1024 * 1024;
         if (total !== null && Number.isFinite(total) && total > MAX_TEXT_BYTES) {
           throw new Error("File too large to preview in-app");
         }
 
-        const text = await res.text();
-        if (new TextEncoder().encode(text).length > MAX_TEXT_BYTES) {
-          throw new Error("File too large to preview in-app");
-        }
-        if (!cancelled) {
-          setCodeContent(text);
-          setIsLoading(false);
-        }
+        acceptText(await res.text());
       } catch (err) {
         if (abort.signal.aborted || cancelled) return;
         if (!cancelled) {
-          if (driveId) {
-            setUseTextIframe(true);
-            setLoadError(false);
-          } else {
-            setLoadError(true);
-            setIsLoading(false);
-          }
+          setLoadError(true);
+          setIsLoading(false);
         }
         void err;
       }
@@ -592,20 +591,28 @@ export default function ResourceViewer({
             </div>
           )}
 
-          {isNotebook && !useTextIframe ? (
+          {isNotebook ? (
             <div className="h-full w-full">
               {codeContent !== null && <NotebookViewer content={codeContent} />}
               {!isLoading && loadError && codeContent === null && (
                 <div className="h-full flex flex-col items-center justify-center gap-3 text-center text-muted">
                   <p className="text-sm">Could not load notebook in-app.</p>
                   <a
-                    href={resource.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={downloadUrl}
                     className="text-foreground underline underline-offset-4 text-sm"
                   >
-                    Open on Drive
+                    Download
                   </a>
+                  {colabUrl ? (
+                    <a
+                      href={colabUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-foreground underline underline-offset-4 text-sm"
+                    >
+                      Open in Colab
+                    </a>
+                  ) : null}
                 </div>
               )}
             </div>
@@ -634,7 +641,7 @@ export default function ResourceViewer({
                 </div>
               )}
             </div>
-          ) : isCsv && !useTextIframe ? (
+          ) : isCsv ? (
             <div className="h-full w-full">
               {codeContent !== null && <CsvPreview content={codeContent} />}
               {!isLoading && loadError && codeContent === null && (
@@ -649,7 +656,7 @@ export default function ResourceViewer({
                 </div>
               )}
             </div>
-          ) : isCode && !useTextIframe ? (
+          ) : isCode ? (
             <div className="h-full w-full overflow-auto bg-background p-4 sm:p-6">
               {codeContent !== null && (
                 <pre className="text-xs sm:text-sm leading-relaxed font-mono text-foreground whitespace-pre tab-size-4">
@@ -660,12 +667,10 @@ export default function ResourceViewer({
                 <div className="h-full flex flex-col items-center justify-center gap-3 text-center text-muted">
                   <p className="text-sm">Could not load source in-app.</p>
                   <a
-                    href={resource.file_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    href={downloadUrl}
                     className="text-foreground underline underline-offset-4 text-sm"
                   >
-                    Open on Drive
+                    Download
                   </a>
                 </div>
               )}

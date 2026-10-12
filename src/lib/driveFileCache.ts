@@ -84,12 +84,12 @@ export async function matchCachedDriveFile(
 }
 
 /**
- * Cache-first Drive download.
+ * Cache-first Drive download. Bytes stay in the browser.
  *
- * Google's `drive.usercontent.google.com/download` often returns 403 and no
- * `Access-Control-Allow-Origin` for cross-origin fetch(). Callers that preview
- * files should use `matchCachedDriveFile` + Drive iframe instead of this.
- * This network path is only for an explicit user "save offline" action.
+ * Notebooks, source, and CSVs call this when the user opens a file that has
+ * no stored preview — Drive's embed cannot render those types. The download
+ * often 403s without CORS; those callers show an in-app error with a
+ * download link instead of embedding Drive.
  */
 export async function fetchCachedDriveFile(
   driveId: string,

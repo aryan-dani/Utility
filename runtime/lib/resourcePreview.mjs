@@ -7,8 +7,8 @@ import { db } from "./firebase.mjs";
 import { getDrive } from "./drive.mjs";
 
 export const PREVIEW_COLLECTION = "resource_previews";
-/** Small enough for Spark. Bigger notebooks/CSVs stay on the Drive iframe. */
-export const PREVIEW_MAX_BYTES = 64 * 1024;
+/** Under Firestore's 1 MB document limit. Larger files are fetched in the browser. */
+export const PREVIEW_MAX_BYTES = 900 * 1024;
 
 export const PREVIEW_EXTS = new Set([
   "c",
