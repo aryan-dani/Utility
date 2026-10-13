@@ -34,8 +34,8 @@ import {
   AIDS_SEM_5_SUBJECTS,
 } from '@/lib/syllabusData';
 import { auth } from '@/lib/firebase/auth';
-import { db } from '@/lib/firebase/db';
-import { collection, query, where, getDocs, doc, setDoc, updateDoc } from 'firebase/firestore';
+import { authFetch } from '@/lib/authFetch';
+import { plannerStorageKey } from '@/lib/plannerStorage';
 import { notify } from '@/lib/toast';
 import { parseUnitKey, unitFolderId } from '@/lib/resourceGroups';
 import { buildResourcesHref } from '@/lib/resourceUrl';
@@ -316,11 +316,12 @@ export default function SyllabusClient() {
     if (!schedulingModule) return;
 
     const dateParts = scheduleDate.split('-');
-    const year = parseInt(dateParts[0]);
-    const month = parseInt(dateParts[1]);
+    const year = parseInt(dateParts[0], 10);
+    const month = parseInt(dateParts[1], 10);
+    if (!Number.isFinite(year) || !Number.isFinite(month)) return;
 
     const taskText = scheduleTitle || `Study: ${schedulingModule.subjectName} - ${schedulingModule.moduleTitle}`;
-    
+
     const newTask: Task = {
       id: generateId(),
       text: taskText,
@@ -329,63 +330,87 @@ export default function SyllabusClient() {
       category: scheduleCategory as Task['category'],
     };
 
-    const key = `utility_planner_v2_${year}_${month}`;
-    let planData: Record<string, Task[]> = {};
-    let planMeta = { title: 'Study Plan', month, year, is_public: false };
+    const key = plannerStorageKey(year, month);
 
-    try {
-      const saved = localStorage.getItem(key);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        planData = parsed.data || {};
-        planMeta = parsed.meta || planMeta;
-      }
-    } catch (e) {
-      console.error(e);
-    }
-
-    if (!planData[scheduleDate]) {
-      planData[scheduleDate] = [];
-    }
-    planData[scheduleDate].push(newTask);
-
-    localStorage.setItem(key, JSON.stringify({ data: planData, meta: planMeta }));
-    notify.success(`Scheduled task on ${scheduleDate}`);
+    const rememberLocally = (
+      planData: Record<string, Task[]>,
+      meta: { title: string; month: number; year: number; is_public: boolean; id?: string; updated_at?: string },
+    ) => {
+      localStorage.setItem(key, JSON.stringify({ data: planData, meta }));
+    };
 
     const user = auth.currentUser;
-    if (user) {
+    if (!user) {
+      let planData: Record<string, Task[]> = {};
+      let planMeta = { title: 'Study Plan', month, year, is_public: false };
       try {
-        const q = query(
-          collection(db, 'planner_plans'),
-          where('owner_id', '==', user.uid),
-          where('month', '==', month),
-          where('year', '==', year)
-        );
-        const snapshot = await getDocs(q);
-
-        if (!snapshot.empty) {
-          const docId = snapshot.docs[0].id;
-          await updateDoc(doc(db, 'planner_plans', docId), {
-            data: planData,
-            updated_at: new Date().toISOString()
-          });
-        } else {
-          const newDocRef = doc(collection(db, 'planner_plans'));
-          await setDoc(newDocRef, {
-            owner_id: user.uid,
-            owner_email: user.email,
-            title: planMeta.title,
-            month,
-            year,
-            data: planData,
-            is_public: false,
-            updated_at: new Date().toISOString()
-          });
+        const saved = localStorage.getItem(key);
+        if (saved) {
+          const parsed = JSON.parse(saved) as {
+            data?: Record<string, Task[]>;
+            meta?: typeof planMeta;
+          };
+          planData = parsed.data || {};
+          planMeta = parsed.meta || planMeta;
         }
-        notify.success('Synced to Cloud Planner');
-      } catch (err) {
-        console.error('Firebase sync error:', err);
+      } catch (e) {
+        console.error(e);
       }
+      const day = Array.isArray(planData[scheduleDate]) ? planData[scheduleDate] : [];
+      planData = { ...planData, [scheduleDate]: [...day, newTask] };
+      rememberLocally(planData, planMeta);
+      notify.success(`Scheduled task on ${scheduleDate}`);
+      setPlannerModalOpen(false);
+      setSchedulingModule(null);
+      return;
+    }
+
+    try {
+      const existing = await authFetch(`/api/planner?month=${month}&year=${year}`);
+      if (!existing.ok) throw new Error('Could not load the cloud plan');
+      const body = (await existing.json()) as {
+        plan?: {
+          id?: string;
+          title?: string;
+          is_public?: boolean;
+          data?: Record<string, Task[]>;
+        } | null;
+      };
+      const cloud = body.plan;
+      const planData: Record<string, Task[]> = { ...(cloud?.data || {}) };
+      const day = Array.isArray(planData[scheduleDate]) ? planData[scheduleDate] : [];
+      planData[scheduleDate] = [...day, newTask];
+      const title = cloud?.title || 'Study Plan';
+      const isPublic = !!cloud?.is_public;
+
+      const saved = await authFetch('/api/planner', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          month,
+          year,
+          title,
+          is_public: isPublic,
+          data: planData,
+          ...(cloud?.id ? { planId: cloud.id } : {}),
+        }),
+      });
+      if (!saved.ok) throw new Error('Could not save the cloud plan');
+      const savedBody = (await saved.json()) as { id?: string };
+
+      rememberLocally(planData, {
+        title,
+        month,
+        year,
+        is_public: isPublic,
+        id: savedBody.id || cloud?.id,
+        updated_at: new Date().toISOString(),
+      });
+      notify.success(`Scheduled task on ${scheduleDate}`);
+    } catch (err) {
+      console.error('Planner sync error:', err);
+      notify.error('Could not add this to your cloud plan.');
+      return;
     }
 
     setPlannerModalOpen(false);

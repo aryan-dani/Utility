@@ -92,30 +92,34 @@ export async function POST(
 
     const db = adminDb();
     const deckRef = db.collection("community_decks").doc(id);
-    const deckDoc = await deckRef.get();
-    if (!deckDoc.exists) {
-      return NextResponse.json({ error: "Deck not found" }, { status: 404 });
-    }
-
     const voteRef = db.collection("community_deck_upvotes").doc(`${auth.uid}_${id}`);
-    const existingVote = await voteRef.get();
-    if (existingVote.exists) {
-      const upvotes = Number(deckDoc.data()?.upvotes || 0);
-      return NextResponse.json({ success: true, upvotes, alreadyUpvoted: true });
-    }
 
-    await db.runTransaction(async (transaction) => {
+    const outcome = await db.runTransaction(async (transaction) => {
+      const existingVote = await transaction.get(voteRef);
+      const deckDoc = await transaction.get(deckRef);
+      if (!deckDoc.exists) return { missing: true as const };
+      const upvotes = Number(deckDoc.data()?.upvotes || 0);
+      if (existingVote.exists) {
+        return { missing: false as const, alreadyUpvoted: true, upvotes };
+      }
       transaction.set(voteRef, {
         uid: auth.uid,
         deck_id: id,
         created_at: FieldValue.serverTimestamp(),
       });
       transaction.update(deckRef, { upvotes: FieldValue.increment(1) });
+      return { missing: false as const, alreadyUpvoted: false, upvotes: upvotes + 1 };
     });
-    const updated = await deckRef.get();
-    const upvotes = Number(updated.data()?.upvotes || 0);
 
-    return NextResponse.json({ success: true, upvotes });
+    if (outcome.missing) {
+      return NextResponse.json({ error: "Deck not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      upvotes: outcome.upvotes,
+      ...(outcome.alreadyUpvoted ? { alreadyUpvoted: true } : {}),
+    });
   } catch (error) {
     console.error("Error upvoting deck:", error);
     return NextResponse.json(

@@ -49,18 +49,21 @@ export async function writeResourcePreview(resourceId, buffer, title = "") {
     ? buffer
     : Buffer.from(buffer ?? []);
 
-  if (bytes.length === 0 || bytes.includes(0) || bytes.length > PREVIEW_MAX_BYTES) {
+  if (bytes.length === 0 || bytes.length > PREVIEW_MAX_BYTES) {
     await db.collection(PREVIEW_COLLECTION).doc(resourceId).delete();
-    const skipped =
-      bytes.length === 0
-        ? "empty"
-        : bytes.length > PREVIEW_MAX_BYTES
-          ? "too_large"
-          : "binary";
-    return { skipped, bytes: bytes.length };
+    return {
+      skipped: bytes.length === 0 ? "empty" : "too_large",
+      bytes: bytes.length,
+    };
   }
 
-  const text = bytes.toString("utf8");
+  // Firestore strings cannot contain U+0000. Strip those bytes so a notebook
+  // with one null is stored instead of deleting the preview.
+  const text = bytes.toString("utf8").replace(/\u0000/g, "");
+  if (text.length === 0) {
+    await db.collection(PREVIEW_COLLECTION).doc(resourceId).delete();
+    return { skipped: "empty", bytes: bytes.length };
+  }
   await db.collection(PREVIEW_COLLECTION).doc(resourceId).set({
     text,
     title,

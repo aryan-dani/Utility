@@ -49,9 +49,9 @@ export async function POST(request: Request) {
 
     const voteId = `${auth.uid}_${target_type}_${target_id}`;
     const voteRef = db.collection("qa_votes").doc(voteId);
-    const existingVote = await voteRef.get();
 
     await db.runTransaction(async (transaction) => {
+      const existingVote = await transaction.get(voteRef);
       if (existingVote.exists) {
         const oldValue = existingVote.data()?.value as number;
         if (oldValue === value) {
