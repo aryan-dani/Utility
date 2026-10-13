@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import AppLink from "@/components/ui/AppLink";
 import { ArrowRight } from "lucide-react";
-import { auth } from "@/lib/firebase/auth";
 import { useAcademicStore } from "@/store/academicStore";
 import {
   readStoredWorkspace,
@@ -18,10 +17,18 @@ export default function AuthButtons() {
   const storeSemester = useAcademicStore((s) => s.semester);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged((user) => {
-      setIsLoggedIn(!!user);
+    let cancelled = false;
+    let unsubscribe = () => {};
+    void import("@/lib/firebase/auth").then(({ auth }) => {
+      if (cancelled) return;
+      unsubscribe = auth.onAuthStateChanged((user) => {
+        setIsLoggedIn(!!user);
+      });
     });
-    return () => unsubscribe();
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
   }, []);
 
   const { academicYear, branch, semester } = resolveWorkspace(

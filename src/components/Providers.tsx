@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { LazyMotion, domAnimation } from "framer-motion";
 import { ThemeProvider, useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import { PWAProvider } from "@/contexts/PWAContext";
@@ -54,23 +55,25 @@ function ToasterProvider() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <ThemeProvider
-      attribute="class"
-      defaultTheme="system"
-      enableSystem
-      disableTransitionOnChange={false}
-      storageKey="utility-theme"
-    >
-      <PWAProvider>
-        <ThemeColorSync />
-        <CampusOriginGuard />
-        <NavigationProgress />
-        <CommandShortcuts />
-        {children}
-        <CommandPaletteHost />
-        <PwaUpdater />
-        <ToasterProvider />
-      </PWAProvider>
-    </ThemeProvider>
+    <LazyMotion features={domAnimation}>
+      <ThemeProvider
+        attribute="class"
+        defaultTheme="system"
+        enableSystem
+        disableTransitionOnChange={false}
+        storageKey="utility-theme"
+      >
+        <PWAProvider>
+          <ThemeColorSync />
+          <CampusOriginGuard />
+          <NavigationProgress />
+          <CommandShortcuts />
+          {children}
+          <CommandPaletteHost />
+          <PwaUpdater />
+          <ToasterProvider />
+        </PWAProvider>
+      </ThemeProvider>
+    </LazyMotion>
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { useIsClient } from "@/lib/clientHooks";
 import { useMotionSafe } from "@/lib/motion";
 
@@ -80,7 +80,7 @@ export function DockTooltip({
         !disabled &&
         createPortal(
           <AnimatePresence>
-            <motion.div
+            <m.div
               initial={
                 tip.initial === false
                   ? false
@@ -116,7 +116,7 @@ export function DockTooltip({
                   {shortcut}
                 </kbd>
               )}
-            </motion.div>
+            </m.div>
           </AnimatePresence>,
           document.body,
         )}

@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase/auth";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 const CACHE_PREFIX = "utility-admin-status:";
@@ -80,33 +78,44 @@ export function useAdminStatus(): { isAdmin: boolean; loading: boolean; email: s
 
   useEffect(() => {
     let cancelled = false;
-    const unsub = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        if (!cancelled) {
-          setIsAdmin(false);
-          setEmail(null);
-          setLoading(false);
+    let unsub = () => {};
+
+    void (async () => {
+      const [{ auth }, { onAuthStateChanged }] = await Promise.all([
+        import("@/lib/firebase/auth"),
+        import("firebase/auth"),
+      ]);
+      if (cancelled) return;
+
+      unsub = onAuthStateChanged(auth, async (user) => {
+        if (!user) {
+          if (!cancelled) {
+            setIsAdmin(false);
+            setEmail(null);
+            setLoading(false);
+          }
+          return;
         }
-        return;
-      }
-      try {
-        const status = await fetchAdminStatus(
-          () => user.getIdToken(),
-          user.uid,
-        );
-        if (!cancelled) {
-          setIsAdmin(status.isAdmin);
-          setEmail(status.email);
-          setLoading(false);
+        try {
+          const status = await fetchAdminStatus(
+            () => user.getIdToken(),
+            user.uid,
+          );
+          if (!cancelled) {
+            setIsAdmin(status.isAdmin);
+            setEmail(status.email);
+            setLoading(false);
+          }
+        } catch {
+          if (!cancelled) {
+            setIsAdmin(false);
+            setEmail(null);
+            setLoading(false);
+          }
         }
-      } catch {
-        if (!cancelled) {
-          setIsAdmin(false);
-          setEmail(null);
-          setLoading(false);
-        }
-      }
-    });
+      });
+    })();
+
     return () => {
       cancelled = true;
       unsub();

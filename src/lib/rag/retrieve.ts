@@ -205,8 +205,8 @@ async function fetchNeighborChunks(
   topN: number,
 ): Promise<Array<ChunkRecord & { fusedScore: number }>> {
   const db = adminDb();
-  const neighbors: Array<ChunkRecord & { fusedScore: number }> = [];
   const seen = new Set(hits.map((h) => h.id));
+  const pending: Array<{ id: string; fusedScore: number }> = [];
 
   for (const hit of hits.slice(0, topN)) {
     for (const offset of [-1, 1]) {
@@ -215,16 +215,27 @@ async function fetchNeighborChunks(
       const neighborId = `${hit.resource_id}_${idx}`;
       if (seen.has(neighborId)) continue;
       seen.add(neighborId);
-      const doc = await db.collection("resource_chunks").doc(neighborId).get();
-      if (doc.exists) {
-        neighbors.push({
-          id: doc.id,
-          ...doc.data(),
-          fusedScore: hit.fusedScore * 0.5,
-        } as ChunkRecord & { fusedScore: number });
-      }
+      pending.push({ id: neighborId, fusedScore: hit.fusedScore * 0.5 });
     }
   }
+
+  if (pending.length === 0) return [];
+
+  const snaps = await db.getAll(
+    ...pending.map((item) => db.collection("resource_chunks").doc(item.id)),
+  );
+
+  const neighbors: Array<ChunkRecord & { fusedScore: number }> = [];
+  snaps.forEach((doc, index) => {
+    if (!doc.exists) return;
+    const score = pending[index]?.fusedScore;
+    if (score == null) return;
+    neighbors.push({
+      id: doc.id,
+      ...doc.data(),
+      fusedScore: score,
+    } as ChunkRecord & { fusedScore: number });
+  });
 
   return neighbors;
 }

@@ -6,11 +6,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import AppLink from "@/components/ui/AppLink";
 import { ChevronDown, LogOut, User, UserPlus } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
-import { auth } from "@/lib/firebase/auth";
-import { db } from "@/lib/firebase/db";
-import { signOut, onIdTokenChanged } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
+import { AnimatePresence, m } from "framer-motion";
 import type { AcademicYear, Branch, Semester } from "@/store/academicStore";
 import { isAcademicYear } from "@/lib/academic/scope";
 import { clearLocalUserData } from "@/lib/localUserData";
@@ -74,7 +70,20 @@ export default function NavUserMenu({
   const motionSafe = useMotionSafe();
 
   useEffect(() => {
-    const unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+    let cancelled = false;
+    let unsubscribe = () => {};
+
+    void (async () => {
+      const [{ auth }, { onIdTokenChanged }, { db }, firestore] = await Promise.all([
+        import("@/lib/firebase/auth"),
+        import("firebase/auth"),
+        import("@/lib/firebase/db"),
+        import("firebase/firestore"),
+      ]);
+      if (cancelled) return;
+      const { doc, getDoc, setDoc } = firestore;
+
+      unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         const next = {
           email: firebaseUser.email || undefined,
@@ -177,8 +186,13 @@ export default function NavUserMenu({
         document.cookie =
           "__session=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT; SameSite=Lax";
       }
-    });
-    return () => unsubscribe();
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sync prefs once per auth session
   }, []);
 
@@ -227,6 +241,10 @@ export default function NavUserMenu({
   }, []);
 
   const handleLogout = async () => {
+    const [{ auth }, { signOut }] = await Promise.all([
+      import("@/lib/firebase/auth"),
+      import("firebase/auth"),
+    ]);
     await signOut(auth);
     clearLocalUserData();
     useAcademicStore.getState().resetWorkspace();
@@ -272,7 +290,7 @@ export default function NavUserMenu({
   const menu = (
     <AnimatePresence>
       {userMenuOpen && menuCoords && (
-        <motion.div
+        <m.div
           ref={menuPanelRef}
           initial={
             motionSafe.reduce
@@ -324,7 +342,7 @@ export default function NavUserMenu({
             <LogOut className="w-3.5 h-3.5 shrink-0" />
             <span>Sign out</span>
           </button>
-        </motion.div>
+        </m.div>
       )}
     </AnimatePresence>
   );

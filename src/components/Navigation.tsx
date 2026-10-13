@@ -27,7 +27,7 @@ import {
   UserPlus,
   LogIn,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m, AnimatePresence } from "framer-motion";
 import dynamic from "next/dynamic";
 import { useAcademicStore, AcademicYear, Branch, Semester } from "../store/academicStore";
 import { startNavigationProgress } from "./NavigationProgress";
@@ -706,7 +706,7 @@ function SidebarDock({
         }`}
       >
         {pill && (
-          <motion.div
+          <m.div
             aria-hidden
             className="absolute top-0 rounded-xl bg-foreground shadow-md pointer-events-none z-0"
             initial={false}
@@ -883,7 +883,7 @@ function SidebarDock({
         createPortal(
           <AnimatePresence>
             {scopeOpen && showSelectors && scopeCoords && (
-              <motion.div
+              <m.div
                 ref={scopePanelRef}
                 initial={{
                   opacity: 0,
@@ -934,7 +934,7 @@ function SidebarDock({
                     updateUrl(academicYear, branch, val);
                   }}
                 />
-              </motion.div>
+              </m.div>
             )}
           </AnimatePresence>,
           document.body,

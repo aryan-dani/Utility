@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
@@ -70,7 +70,7 @@ export function Sheet({
     <AnimatePresence>
       {open && (
         <div className="fixed inset-0 z-modal md:hidden" role="dialog" aria-modal="true">
-          <motion.button
+          <m.button
             type="button"
             aria-label="Close sheet"
             {...motionSafe.fade}
@@ -78,7 +78,7 @@ export function Sheet({
             onClick={onClose}
             className="absolute inset-0 bg-background/80"
           />
-          <motion.div
+          <m.div
             ref={panelRef}
             {...motionSafe.sheet}
             transition={{ duration: motionSafe.duration, ease: motionSafe.ease }}
@@ -107,7 +107,7 @@ export function Sheet({
               </Button>
             </div>
             <div className="overflow-y-auto flex-1 px-3 pb-4">{children}</div>
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>

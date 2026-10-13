@@ -9,7 +9,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { ChevronDown, Search, Check, Plus } from "lucide-react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { cn } from "@/lib/cn";
 import { useMotionSafe } from "@/lib/motion";
 
@@ -217,7 +217,7 @@ function SelectInner<T extends string | number>({
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div
+          <m.div
             {...motionSafe.menu}
             transition={{
               duration: motionSafe.durations.fast,
@@ -367,7 +367,7 @@ function SelectInner<T extends string | number>({
                 </button>
               </div>
             )}
-          </motion.div>
+          </m.div>
         )}
       </AnimatePresence>
     </div>

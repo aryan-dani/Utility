@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m } from "framer-motion";
 import { X } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
@@ -89,7 +89,7 @@ export function Modal({
           role="dialog"
           aria-modal="true"
         >
-          <motion.button
+          <m.button
             type="button"
             aria-label="Close dialog"
             {...motionSafe.fade}
@@ -98,7 +98,7 @@ export function Modal({
             className="absolute inset-0 bg-background/90"
           />
 
-          <motion.div
+          <m.div
             ref={panelRef}
             {...motionSafe.pop}
             transition={{ duration: motionSafe.duration, ease: motionSafe.ease }}
@@ -132,7 +132,7 @@ export function Modal({
               </div>
             )}
             <div className="overflow-y-auto flex-1 p-4 sm:p-5">{children}</div>
-          </motion.div>
+          </m.div>
         </div>
       )}
     </AnimatePresence>
