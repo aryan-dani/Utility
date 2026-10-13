@@ -9,6 +9,7 @@ import React, {
   Suspense,
   startTransition,
 } from "react";
+import { createPortal } from "react-dom";
 import AppLink from "@/components/ui/AppLink";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -222,6 +223,8 @@ function currentSearchParams(): URLSearchParams {
 
 type PillBox = { x: number; y: number; width: number; height: number };
 
+type ScopeCoords = { top: number; left: number; width: number };
+
 type SidebarDockProps = {
   collapsed: boolean;
   showSelectors: boolean;
@@ -278,11 +281,14 @@ function SidebarDock({
   scopedHref,
 }: SidebarDockProps) {
   const motionSafe = useMotionSafe();
+  const isClient = useIsClient();
   const scrollRef = useRef<HTMLDivElement>(null);
   const selectorGridRef = useRef<HTMLDivElement>(null);
   const scopeRef = useRef<HTMLDivElement>(null);
+  const scopePanelRef = useRef<HTMLDivElement>(null);
   const skipNextSpring = useRef(true);
   const [scopeOpen, setScopeOpen] = useState(false);
+  const [scopeCoords, setScopeCoords] = useState<ScopeCoords | null>(null);
   const [prevPathname, setPrevPathname] = useState(pathname);
   const [layoutTick, setLayoutTick] = useState(0);
   const [pill, setPill] = useState<PillBox | null>(null);
@@ -382,16 +388,54 @@ function SidebarDock({
     };
   }, [measure]);
 
+  // The scope row uses overflow-hidden so it can collapse. A menu inside that
+  // row is clipped, so the panel is portaled and positioned from the trigger.
+  useLayoutEffect(() => {
+    if (!scopeOpen || !showSelectors) return;
+    const el = scopeRef.current;
+    if (!el) return;
+
+    const update = () => {
+      const rect = el.getBoundingClientRect();
+      const next: ScopeCoords = isCollapsed
+        ? { top: rect.top, left: rect.right + 12, width: 288 }
+        : {
+            top: rect.bottom + 8,
+            left: rect.left + 8,
+            width: Math.max(rect.width - 16, 220),
+          };
+      setScopeCoords((prev) =>
+        prev &&
+        prev.top === next.top &&
+        prev.left === next.left &&
+        prev.width === next.width
+          ? prev
+          : next,
+      );
+    };
+
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener("resize", update);
+    window.addEventListener("scroll", update, true);
+    return () => {
+      ro.disconnect();
+      window.removeEventListener("resize", update);
+      window.removeEventListener("scroll", update, true);
+    };
+  }, [scopeOpen, showSelectors, isCollapsed]);
+
   useEffect(() => {
+    if (!scopeOpen) return;
     function handler(e: MouseEvent) {
-      if (scopeRef.current && !scopeRef.current.contains(e.target as Node)) {
-        setScopeOpen(false);
-      }
+      const target = e.target as Node;
+      if (scopeRef.current?.contains(target)) return;
+      if (scopePanelRef.current?.contains(target)) return;
+      setScopeOpen(false);
     }
-    if (scopeOpen) {
-      document.addEventListener("mousedown", handler);
-      return () => document.removeEventListener("mousedown", handler);
-    }
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
   }, [scopeOpen]);
 
   if (prevPathname !== pathname) {
@@ -554,7 +598,7 @@ function SidebarDock({
               <DockTooltip
                 label={`${branch} · Sem ${semester}`}
                 badge="Switch"
-                disabled={!isCollapsed}
+                disabled={!isCollapsed || scopeOpen}
               >
                 {({ ref, onMouseEnter, onMouseLeave, onFocus, onBlur }) => (
                   <button
@@ -612,59 +656,6 @@ function SidebarDock({
                   </button>
                 )}
               </DockTooltip>
-
-              <AnimatePresence>
-                {scopeOpen && showSelectors && (
-                  <motion.div
-                    initial={{
-                      opacity: 0,
-                      scale: 0.96,
-                      y: isCollapsed ? 0 : 4,
-                      x: isCollapsed ? -6 : 0,
-                    }}
-                    animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
-                    exit={{
-                      opacity: 0,
-                      scale: 0.96,
-                      y: isCollapsed ? 0 : 4,
-                      x: isCollapsed ? -6 : 0,
-                    }}
-                    transition={{
-                      duration: motionSafe.durations.fast,
-                      ease: motionSafe.ease,
-                    }}
-                    className={`absolute bg-card/95 backdrop-blur-2xl border border-border/80 rounded-2xl shadow-2xl p-3 z-50 ${
-                      isCollapsed
-                        ? "w-72 left-full ml-3 top-0"
-                        : "w-[calc(100%-1rem)] left-2 top-full mt-2"
-                    }`}
-                  >
-                    <div className="flex items-center justify-between mb-2.5">
-                      <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-muted/70">
-                        Workspace Scope
-                      </p>
-                      <span className="text-2xs font-semibold text-muted tabular-nums px-1.5 py-0.5 rounded-md bg-surface border border-border/60">
-                        {branch} · Sem {semester}
-                      </span>
-                    </div>
-                    <ScopeSelector
-                      academicYear={academicYear}
-                      branch={branch}
-                      semester={semester}
-                      variant="sidebar"
-                      onAcademicYearChange={(val) => {
-                        updateUrl(val, branch, semester);
-                      }}
-                      onBranchChange={(val) => {
-                        updateUrl(academicYear, val, semester);
-                      }}
-                      onSemesterChange={(val) => {
-                        updateUrl(academicYear, branch, val);
-                      }}
-                    />
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           </div>
         </div>
@@ -888,6 +879,66 @@ function SidebarDock({
           )}
         </div>
       </div>
+      {isClient &&
+        createPortal(
+          <AnimatePresence>
+            {scopeOpen && showSelectors && scopeCoords && (
+              <motion.div
+                ref={scopePanelRef}
+                initial={{
+                  opacity: 0,
+                  scale: 0.96,
+                  y: isCollapsed ? 0 : 4,
+                  x: isCollapsed ? -6 : 0,
+                }}
+                animate={{ opacity: 1, scale: 1, y: 0, x: 0 }}
+                exit={{
+                  opacity: 0,
+                  scale: 0.96,
+                  y: isCollapsed ? 0 : 4,
+                  x: isCollapsed ? -6 : 0,
+                }}
+                transition={{
+                  duration: motionSafe.durations.fast,
+                  ease: motionSafe.ease,
+                }}
+                style={{
+                  position: "fixed",
+                  top: scopeCoords.top,
+                  left: scopeCoords.left,
+                  width: scopeCoords.width,
+                  zIndex: 120,
+                }}
+                className="bg-card/95 backdrop-blur-2xl border border-border/80 rounded-2xl shadow-2xl p-3"
+              >
+                <div className="flex items-center justify-between mb-2.5">
+                  <p className="text-[10px] font-bold tracking-[0.16em] uppercase text-muted/70">
+                    Workspace Scope
+                  </p>
+                  <span className="text-2xs font-semibold text-muted tabular-nums px-1.5 py-0.5 rounded-md bg-surface border border-border/60">
+                    {branch} · Sem {semester}
+                  </span>
+                </div>
+                <ScopeSelector
+                  academicYear={academicYear}
+                  branch={branch}
+                  semester={semester}
+                  variant="sidebar"
+                  onAcademicYearChange={(val) => {
+                    updateUrl(val, branch, semester);
+                  }}
+                  onBranchChange={(val) => {
+                    updateUrl(academicYear, val, semester);
+                  }}
+                  onSemesterChange={(val) => {
+                    updateUrl(academicYear, branch, val);
+                  }}
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>,
+          document.body,
+        )}
     </div>
   );
 }
