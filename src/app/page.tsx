@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import AppLink from "@/components/ui/AppLink";
 import {
   CalendarCheck,
@@ -19,8 +20,10 @@ import HomeStats from "./HomeStats";
 import HomeExamCountdown from "@/components/HomeExamCountdown";
 import { getHomeStats } from "@/lib/dataFetcher";
 import { BRANCHES, SEMESTERS } from "@/lib/academic/scope";
+import { homeJsonLd, indexableMeta, jsonLdScript } from "@/lib/seo";
 
 export const revalidate = 86400;
+export const metadata: Metadata = indexableMeta("/");
 
 const FLOW = [
   { href: "/syllabus", title: "Syllabus", hint: "Units & topics" },
@@ -131,6 +134,10 @@ export default async function Home() {
 
   return (
     <div className="flex-1 w-full flex flex-col relative overflow-x-clip">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: jsonLdScript(homeJsonLd()) }}
+      />
       {/* Hero */}
       <section className="w-full max-w-7xl mx-auto page-gutter pt-16 pb-12 sm:pt-24 sm:pb-20 md:pt-28 md:pb-24 flex flex-col items-center justify-center text-center relative md:min-h-[70vh]">
         <p className="font-display text-5xl sm:text-7xl md:text-8xl text-foreground tracking-tight mb-4 sm:mb-5">

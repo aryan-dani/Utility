@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import SupportClient from "./SupportClient";
 import { PageHeader } from "@/components/ui";
+import { indexableMeta } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Support",
-  description: "Optional support for Utility. UPI contribution to keep the workspace running.",
+  ...indexableMeta("/support"),
 };
 
 export default function SupportPage() {

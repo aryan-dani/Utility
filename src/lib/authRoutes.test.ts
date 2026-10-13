@@ -16,6 +16,7 @@ describe("authRoutes", () => {
     expect(isPublicPath("/index")).toBe(true);
     expect(isPublicPath("/login")).toBe(true);
     expect(isPublicPath("/privacy")).toBe(true);
+    expect(isPublicPath("/support")).toBe(true);
     expect(isPublicPath("/campus")).toBe(true);
     expect(isPublicPath("/campus/seating")).toBe(true);
     expect(isPublicPath("/clipboard/s/ab3km2")).toBe(true);

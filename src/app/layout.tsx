@@ -11,6 +11,8 @@ import InstallPrompt from '@/components/pwa/InstallPrompt';
 import { SW_RECOVERY_SCRIPT } from '@/components/pwa/swRecoveryScript';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import { CANONICAL_ORIGIN } from '@/lib/siteOrigins';
+import { searchVerification, SITE_DESCRIPTION, SITE_TITLE } from '@/lib/seo';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -35,14 +37,17 @@ export const viewport: Viewport = {
   viewportFit: 'cover',
 };
 
+const searchConsoleVerification = searchVerification();
+
 export const metadata: Metadata = {
-  metadataBase: new URL("https://utilityos.tech"),
+  metadataBase: new URL(CANONICAL_ORIGIN),
   title: {
-    default: 'Utility',
+    default: SITE_TITLE,
     template: '%s | Utility',
   },
-  description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
-  keywords: ['academic', 'syllabus', 'resources', 'planner', 'university', 'student', 'AI'],
+  description: SITE_DESCRIPTION,
+  keywords: ['MIT-WPU', 'AIDS', 'CSE', 'ECE', 'syllabus', 'study planner', 'GPA', 'academic workspace'],
+  ...(searchConsoleVerification ? { verification: searchConsoleVerification } : {}),
   icons: {
     icon: [
       { url: '/favicon.ico?v=20260905', sizes: 'any' },
@@ -53,18 +58,16 @@ export const metadata: Metadata = {
     apple: [{ url: '/apple-icon.png?v=20260905', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
-    title: 'Utility',
-    description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     type: 'website',
-    url: 'https://utilityos.tech',
+    url: CANONICAL_ORIGIN,
     siteName: 'Utility',
-    images: [{ url: '/utility-logo-og.png?v=20260905', width: 512, height: 512, alt: 'Utility' }],
   },
   twitter: {
-    card: 'summary',
-    title: 'Utility',
-    description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
-    images: ['/utility-logo-og.png?v=20260905'],
+    card: 'summary_large_image',
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
   appleWebApp: {
     capable: true,

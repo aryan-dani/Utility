@@ -10,12 +10,13 @@ import {
   SITE_ORIGIN,
 } from "@/lib/legal";
 
+import { indexableMeta } from "@/lib/seo";
+
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Delete your account",
-  description: `How to delete your ${APP_LEGAL_NAME} account and associated data.`,
-  robots: { index: true, follow: true },
+  ...indexableMeta("/account/delete"),
 };
 
 const MAIL_SUBJECT = encodeURIComponent(`${APP_LEGAL_NAME} account deletion request`);

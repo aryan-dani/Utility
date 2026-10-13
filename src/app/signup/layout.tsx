@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { PRIVATE_ROBOTS } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Sign up",
-  robots: { index: false, follow: false },
+  robots: PRIVATE_ROBOTS,
 };
 
 export default function SignupLayout({

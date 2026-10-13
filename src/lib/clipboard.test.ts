@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { CAMPUS_ORIGIN, CANONICAL_WWW_ORIGIN } from "./siteOrigins";
+import { CAMPUS_ORIGIN, CANONICAL_ORIGIN } from "./siteOrigins";
 import {
   CLIPBOARD_MAX_CHARS,
   clipTextLengthOk,
@@ -39,7 +39,7 @@ describe("clipboard helpers", () => {
     expect(formatShareCode("abcdefghjk")).toBe("abcde-fghjk");
     expect(sharePath("AB3K-M2")).toBe("/clipboard/s/ab3km2");
     expect(shareUrls("ab3km2")).toEqual({
-      canonical: `${CANONICAL_WWW_ORIGIN}/clipboard/s/ab3km2`,
+      canonical: `${CANONICAL_ORIGIN}/clipboard/s/ab3km2`,
       campus: `${CAMPUS_ORIGIN}/clipboard/s/ab3km2`,
     });
   });

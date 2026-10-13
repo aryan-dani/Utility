@@ -1,10 +1,11 @@
-/** Unsigned visitors may only see legal, install, campus hop, and inbound shares. */
+/** Unsigned visitors may see the home page, legal pages, install, support, campus, and inbound shares. */
 const PUBLIC_EXACT = new Set([
   "/",
   "/login",
   "/signup",
   "/privacy",
   "/install",
+  "/support",
   "/campus",
   "/~offline",
 ]);

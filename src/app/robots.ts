@@ -1,4 +1,6 @@
 import type { MetadataRoute } from "next";
+import { CANONICAL_ORIGIN } from "@/lib/siteOrigins";
+import { ROBOTS_DISALLOW } from "@/lib/seo";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -6,9 +8,9 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin", "/api/", "/login", "/signup", "/profile"],
+        disallow: [...ROBOTS_DISALLOW],
       },
     ],
-    sitemap: "https://utilityos.tech/sitemap.xml",
+    sitemap: `${CANONICAL_ORIGIN}/sitemap.xml`,
   };
 }

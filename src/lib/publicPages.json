@@ -1,0 +1,74 @@
+[
+  {
+    "path": "/",
+    "title": "Home",
+    "description": "Syllabus, course files, study planner, GPA calculator, and AI study help for MIT-WPU AIDS, CSE, and ECE.",
+    "changeFrequency": "weekly",
+    "priority": 1,
+    "lastModified": "2026-10-13"
+  },
+  {
+    "path": "/campus",
+    "title": "Campus",
+    "description": "Faculty seating, staff directory, and lab registry for MIT-WPU.",
+    "changeFrequency": "weekly",
+    "priority": 0.8,
+    "lastModified": "2026-10-13"
+  },
+  {
+    "path": "/campus/directory",
+    "title": "Faculty directory",
+    "description": "Browse MIT-WPU staff by program: designation, contact, and specialization.",
+    "changeFrequency": "weekly",
+    "priority": 0.7,
+    "lastModified": "2026-10-13"
+  },
+  {
+    "path": "/campus/labs",
+    "title": "Campus labs",
+    "description": "MIT-WPU lab rooms with floor, systems, capacity, and assistant details.",
+    "changeFrequency": "weekly",
+    "priority": 0.7,
+    "lastModified": "2026-10-13"
+  },
+  {
+    "path": "/campus/seating",
+    "title": "Faculty seating",
+    "description": "Cabin and seating assignments for MIT-WPU faculty.",
+    "changeFrequency": "weekly",
+    "priority": 0.7,
+    "lastModified": "2026-10-13"
+  },
+  {
+    "path": "/install",
+    "title": "Install",
+    "description": "Add Utility to your home screen or desktop for faster access and an app-like window.",
+    "changeFrequency": "monthly",
+    "priority": 0.5,
+    "lastModified": "2026-10-13"
+  },
+  {
+    "path": "/privacy",
+    "title": "Privacy policy",
+    "description": "How Utility collects, uses, and deletes your data.",
+    "changeFrequency": "monthly",
+    "priority": 0.4,
+    "lastModified": "2026-10-13"
+  },
+  {
+    "path": "/account/delete",
+    "title": "Delete your account",
+    "description": "How to delete your Utility account and associated data.",
+    "changeFrequency": "monthly",
+    "priority": 0.3,
+    "lastModified": "2026-10-13"
+  },
+  {
+    "path": "/support",
+    "title": "Support",
+    "description": "Optional support for Utility. A UPI contribution keeps the workspace running.",
+    "changeFrequency": "monthly",
+    "priority": 0.3,
+    "lastModified": "2026-10-13"
+  }
+]

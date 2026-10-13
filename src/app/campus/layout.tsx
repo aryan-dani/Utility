@@ -1,8 +1,9 @@
 import type { Metadata } from "next";
+import { indexableMeta } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Campus",
-  description: "Faculty seating, directory, and campus lab registry.",
+  ...indexableMeta("/campus"),
 };
 
 export default function CampusLayout({

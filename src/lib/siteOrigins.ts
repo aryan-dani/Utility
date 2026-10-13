@@ -14,7 +14,7 @@ export const CAMPUS_ORIGIN = `https://${CAMPUS_HOST}`;
 
 /**
  * Origins the installed PWA / Store shell should treat as one app.
- * Apex 308s to www; campus Wi-Fi hops to the Vercel host. Without
+ * www 308s to the apex; campus Wi-Fi hops to the Vercel host. Without
  * scope_extensions, Edge draws an out-of-scope tab + URL bar.
  */
 export const PWA_SCOPE_ORIGINS = [

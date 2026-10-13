@@ -1,5 +1,5 @@
 /** One Firestore doc per user (`clipboards/{uid}`). Spark-friendly. */
-import { CAMPUS_ORIGIN, CANONICAL_WWW_ORIGIN } from "@/lib/siteOrigins";
+import { CAMPUS_ORIGIN, CANONICAL_ORIGIN } from "@/lib/siteOrigins";
 
 export const CLIPBOARD_MAX_CHARS = 32_000;
 export const CLIPBOARD_SHARE_TTL_MS = 24 * 60 * 60 * 1000;
@@ -47,7 +47,7 @@ export function sharePath(raw: string): string {
 export function shareUrls(raw: string): { canonical: string; campus: string } {
   const path = sharePath(raw);
   return {
-    canonical: `${CANONICAL_WWW_ORIGIN}${path}`,
+    canonical: `${CANONICAL_ORIGIN}${path}`,
     campus: `${CAMPUS_ORIGIN}${path}`,
   };
 }

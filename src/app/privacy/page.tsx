@@ -8,12 +8,13 @@ import {
   CONTACT_MAILTO,
   SITE_ORIGIN,
 } from "@/lib/legal";
+import { indexableMeta } from "@/lib/seo";
 
 export const dynamic = "force-static";
 
 export const metadata: Metadata = {
   title: "Privacy policy",
-  description: `How ${APP_LEGAL_NAME} collects, uses, and deletes your data.`,
+  ...indexableMeta("/privacy"),
 };
 
 export default function PrivacyPage() {

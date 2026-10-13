@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { indexableMeta } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Install",
-  description:
-    "Add Utility to your home screen or desktop for faster access and an app-like window.",
+  ...indexableMeta("/install"),
 };
 
 export default function InstallLayout({
