@@ -43,10 +43,10 @@ export const metadata: Metadata = {
   metadataBase: new URL(CANONICAL_ORIGIN),
   title: {
     default: SITE_TITLE,
-    template: '%s | Utility',
+    template: '%s | Utility OS',
   },
   description: SITE_DESCRIPTION,
-  keywords: ['MIT-WPU', 'AIDS', 'CSE', 'ECE', 'syllabus', 'study planner', 'GPA', 'academic workspace'],
+  keywords: ['Utility OS', 'MIT-WPU', 'AIDS', 'CSE', 'ECE', 'syllabus', 'study planner', 'GPA', 'academic workspace'],
   ...(searchConsoleVerification ? { verification: searchConsoleVerification } : {}),
   icons: {
     icon: [

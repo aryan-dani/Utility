@@ -50,7 +50,7 @@ describe("public SEO pages", () => {
 
   it("writes llms.txt with public links and a signed-in boundary", () => {
     const text = llmsTxt();
-    expect(text.startsWith("# Utility\n")).toBe(true);
+    expect(text.startsWith("# Utility OS\n")).toBe(true);
     expect(text).toContain(SITE_DESCRIPTION);
     for (const page of PUBLIC_PAGES) {
       expect(text).toContain(absoluteUrl(page.path));

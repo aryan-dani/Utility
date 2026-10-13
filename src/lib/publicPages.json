@@ -2,7 +2,7 @@
   {
     "path": "/",
     "title": "Home",
-    "description": "Syllabus, course files, study planner, GPA calculator, and AI study help for MIT-WPU AIDS, CSE, and ECE.",
+    "description": "Utility OS is the MIT-WPU study workspace for syllabus, course files, a study planner, a GPA calculator, and AI study help. Built for AIDS, CSE, and ECE.",
     "changeFrequency": "weekly",
     "priority": 1,
     "lastModified": "2026-10-13"
@@ -42,7 +42,7 @@
   {
     "path": "/install",
     "title": "Install",
-    "description": "Add Utility to your home screen or desktop for faster access and an app-like window.",
+    "description": "Install Utility OS on your home screen or desktop, or get it from the Microsoft Store.",
     "changeFrequency": "monthly",
     "priority": 0.5,
     "lastModified": "2026-10-13"

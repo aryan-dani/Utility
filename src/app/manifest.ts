@@ -9,7 +9,7 @@ export default function manifest(): UtilityManifest {
   return {
     name: 'Utility OS',
     short_name: 'Utility OS',
-    description: 'A premium academic workspace. Access your syllabus, resources, AI assistant, and planner in one place.',
+    description: 'Utility OS is the MIT-WPU study workspace: syllabus, resources, AI study help, and planner in one place.',
     start_url: '/',
     id: '/',
     scope: '/',

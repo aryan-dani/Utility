@@ -141,7 +141,7 @@ export default async function Home() {
       {/* Hero */}
       <section className="w-full max-w-7xl mx-auto page-gutter pt-16 pb-12 sm:pt-24 sm:pb-20 md:pt-28 md:pb-24 flex flex-col items-center justify-center text-center relative md:min-h-[70vh]">
         <p className="font-display text-5xl sm:text-7xl md:text-8xl text-foreground tracking-tight mb-4 sm:mb-5">
-          Utility
+          Utility OS
         </p>
         <h1 className="text-xl sm:text-3xl md:text-4xl font-semibold tracking-tight leading-snug mb-4 sm:mb-5 text-foreground max-w-2xl mx-auto">
           Everything for your semester.{" "}

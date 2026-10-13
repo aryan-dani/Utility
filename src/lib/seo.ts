@@ -2,8 +2,11 @@ import type { Metadata, MetadataRoute } from "next";
 import { CANONICAL_ORIGIN } from "@/lib/siteOrigins";
 import publicPagesJson from "@/lib/publicPages.json";
 
-export const SITE_NAME = "Utility";
-export const SITE_TITLE = "Utility — academic workspace for MIT-WPU";
+export const SITE_NAME = "Utility OS";
+export const SITE_TITLE = "Utility OS — MIT-WPU study workspace";
+/** Microsoft Store listing that already ranks for this name. */
+export const MICROSOFT_STORE_URL =
+  "https://apps.microsoft.com/detail/9PPFG0G5R0MG";
 
 export const ROBOTS_DISALLOW = [
   "/admin",
@@ -78,15 +81,18 @@ export function homeJsonLd(): Record<string, unknown> {
       {
         "@type": "WebSite",
         name: SITE_NAME,
+        alternateName: "Utility",
         url: CANONICAL_ORIGIN,
         description: SITE_DESCRIPTION,
       },
       {
         "@type": "SoftwareApplication",
         name: SITE_NAME,
+        alternateName: "Utility",
         applicationCategory: "EducationalApplication",
         operatingSystem: "Web",
         url: CANONICAL_ORIGIN,
+        sameAs: MICROSOFT_STORE_URL,
         description: SITE_DESCRIPTION,
         offers: {
           "@type": "Offer",
@@ -111,7 +117,7 @@ export function llmsTxt(): string {
     "",
     `> ${SITE_DESCRIPTION}`,
     "",
-    "Utility is a student workspace for MIT-WPU branches AIDS, CSE, and ECE. The pages linked below are public.",
+    "Utility OS is a student workspace for MIT-WPU branches AIDS, CSE, and ECE. It is not utility billing or operating-system utility software. The pages linked below are public.",
     "",
     "## Public pages",
     "",
