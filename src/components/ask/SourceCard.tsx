@@ -108,20 +108,30 @@ export function SourceCardList({
 export function renderWithCitations(
   text: string,
   onCitationClick?: (marker: string) => void,
+  sources?: RetrievalSource[],
 ): ReactNode[] {
   const parts = text.split(/(\[S\d+\])/g);
   return parts.map((part, i) => {
     const match = part.match(/^\[S(\d+)\]$/);
     if (match) {
       const marker = `S${match[1]}`;
+      const source = sources?.find((item) => item.marker === marker);
+      const label = source
+        ? [source.subject_name, source.title, source.section_label].filter(Boolean).join(" · ")
+        : marker;
       return (
         <button
           key={`${marker}-${i}`}
           type="button"
           onClick={() => onCitationClick?.(marker)}
-          className="inline-flex items-center px-1.5 py-0.5 mx-0.5 text-2xs font-mono rounded border border-border bg-surface hover:bg-card text-foreground"
+          className="group/cite relative inline-flex items-center max-w-full px-1.5 py-0.5 mx-0.5 text-2xs font-mono rounded border border-border bg-surface hover:bg-card text-foreground align-baseline"
         >
-          [{marker}]
+          <span className="truncate">{label}</span>
+          {source?.snippet && (
+            <span className="hidden group-hover/cite:block absolute left-0 bottom-full z-30 mb-1 w-64 max-w-[70vw] rounded-lg border border-border bg-card p-2 text-left text-xs font-sans text-foreground shadow-popover">
+              {source.snippet}
+            </span>
+          )}
         </button>
       );
     }

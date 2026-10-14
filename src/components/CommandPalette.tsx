@@ -34,6 +34,12 @@ import { startNavigationProgress } from './NavigationProgress';
 import { subjectToSlug } from '@/lib/resourceUrl';
 import { fetchAdminStatus } from '@/lib/adminStatus';
 import { workspaceQuery } from '@/lib/workspace';
+import { parseCommandPrefix } from '@/lib/commandPrefixes';
+import { parseTaskWhen } from '@/lib/taskDate';
+import { loadCampusLookup, type CampusLookup } from '@/lib/campusLookup';
+import { searchSyllabusTopics } from '@/lib/syllabusData';
+import { appendTodayTask } from '@/lib/appendPlannerTask';
+import { startFocusMinutes } from '@/lib/focusTimer';
 import { notify } from '@/lib/toast';
 import { useIsMac } from '@/lib/clientHooks';
 import { Kbd, IconButton } from '@/components/ui';
@@ -42,7 +48,7 @@ import { useMotionSafe } from '@/lib/motion';
 interface CommandItem {
   id: string;
   title: string;
-  category: 'Quick Actions' | 'Navigation' | 'Subjects';
+  category: 'Quick Actions' | 'Navigation' | 'Subjects' | 'Search';
   icon: LucideIcon;
   action: () => void;
   shortcut?: string;
@@ -55,6 +61,148 @@ const subjectCache = new Map<
   string,
   { fetchedAt: number; subjects: Array<{ id: string; name: string }> }
 >();
+
+function readSrsDecks(): Array<{ id: string; name: string }> {
+  try {
+    const raw = localStorage.getItem("utility_srs_decks");
+    if (!raw) return [];
+    const parsed = JSON.parse(raw) as Array<{ id?: string; name?: string }>;
+    if (!Array.isArray(parsed)) return [];
+    return parsed
+      .filter((deck) => deck.id && deck.name)
+      .map((deck) => ({ id: String(deck.id), name: String(deck.name) }));
+  } catch {
+    return [];
+  }
+}
+
+function campusHitsFor(campus: CampusLookup | null, query: string) {
+  if (!campus) return [];
+  const hits: Array<{ id: string; title: string; badge: string; hint: string }> = [];
+  for (const member of campus.staff) {
+    const hay = `${member.name} ${member.designation} ${member.group}`.toLowerCase();
+    if (!hay.includes(query)) continue;
+    const seat = campus.seats.find((row) => row.name.toLowerCase() === member.name.toLowerCase());
+    hits.push({
+      id: `staff-${member.name}`,
+      title: member.name,
+      badge: "Directory",
+      hint: [member.designation, seat?.seat].filter(Boolean).join(" · "),
+    });
+    if (hits.length >= 4) return hits;
+  }
+  for (const lab of campus.labs) {
+    if (!`${lab.name} ${lab.room}`.toLowerCase().includes(query)) continue;
+    hits.push({
+      id: `lab-${lab.name}`,
+      title: lab.name,
+      badge: "Lab",
+      hint: [lab.room, lab.floor].filter(Boolean).join(" · "),
+    });
+    if (hits.length >= 6) break;
+  }
+  return hits;
+}
+
+function readGpaSnapshot(): { target: number; cgpa: number | null; markId: string | null; mark: number | null } {
+  let target = 8.5;
+  let cgpa: number | null = null;
+  let markId: string | null = null;
+  let mark: number | null = null;
+  try {
+    const roadmap = localStorage.getItem("gpa_roadmap_v1");
+    if (roadmap) {
+      const parsed = JSON.parse(roadmap) as {
+        targetCGPA?: number;
+        semestersData?: Record<string, { sgpa?: number; credits?: number; completed?: boolean }>;
+      };
+      if (typeof parsed.targetCGPA === "number") target = parsed.targetCGPA;
+      let points = 0;
+      let credits = 0;
+      for (const row of Object.values(parsed.semestersData || {})) {
+        if (!row?.completed || !row.credits || !row.sgpa) continue;
+        points += row.sgpa * row.credits;
+        credits += row.credits;
+      }
+      if (credits > 0) cgpa = points / credits;
+    }
+    const strategy = localStorage.getItem("gpa_strategy_v1");
+    if (strategy) {
+      const parsed = JSON.parse(strategy) as { marks?: Record<string, number> };
+      const entry = Object.entries(parsed.marks || {})[0];
+      if (entry) {
+        markId = entry[0];
+        mark = Number(entry[1]);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+  return { target, cgpa, markId, mark };
+}
+
+function writeGpaTarget(next: number) {
+  const raw = localStorage.getItem("gpa_roadmap_v1");
+  const parsed = raw ? JSON.parse(raw) as Record<string, unknown> : {};
+  localStorage.setItem("gpa_roadmap_v1", JSON.stringify({ ...parsed, targetCGPA: next }));
+}
+
+function nudgeSavedMark(delta: number) {
+  const raw = localStorage.getItem("gpa_strategy_v1");
+  if (!raw) return;
+  const parsed = JSON.parse(raw) as { marks?: Record<string, number> };
+  const marks = { ...(parsed.marks || {}) };
+  const id = Object.keys(marks)[0];
+  if (!id) return;
+  marks[id] = Math.min(100, Math.max(0, Math.round((Number(marks[id]) || 0) + delta)));
+  localStorage.setItem("gpa_strategy_v1", JSON.stringify({ ...parsed, marks }));
+}
+
+function GpaPanel() {
+  const snap = readGpaSnapshot();
+  const [target, setTarget] = useState(snap.target);
+  return (
+    <div className="border-b border-border px-4 py-3 space-y-2">
+      <p className="text-sm font-medium tabular-nums">
+        {snap.cgpa == null ? "No completed semesters saved" : `CGPA ${snap.cgpa.toFixed(2)}`}
+      </p>
+      <label className="flex items-center gap-2 text-xs text-muted">
+        Target
+        <input
+          type="number"
+          min={5}
+          max={10}
+          step={0.1}
+          value={target}
+          onChange={(event) => setTarget(Number(event.target.value))}
+          className="h-8 w-20 rounded-md border border-border bg-background px-2 text-foreground tabular-nums"
+        />
+        <button
+          type="button"
+          className="h-8 px-2 rounded-md border border-border"
+          onClick={() => {
+            writeGpaTarget(target);
+            notify.success(`Target ${target.toFixed(2)}`);
+          }}
+        >
+          Save
+        </button>
+      </label>
+      {snap.markId && snap.mark != null && (
+        <div className="flex items-center gap-2 text-xs">
+          <span className="truncate">{snap.markId}</span>
+          <span className="tabular-nums">{snap.mark}</span>
+          <button type="button" className="h-7 px-2 rounded-md border border-border" onClick={() => nudgeSavedMark(-5)}>
+            −5
+          </button>
+          <button type="button" className="h-7 px-2 rounded-md border border-border" onClick={() => nudgeSavedMark(5)}>
+            +5
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 function highlightMatch(text: string, query: string) {
   if (!query.trim()) return <span>{text}</span>;
@@ -85,6 +233,14 @@ export default function CommandPalette() {
     router.push(href);
   }, [router]);
   const [query, setQuery] = useState('');
+  const [catalog, setCatalog] = useState<Array<{ id: string; title: string; subject_name?: string }>>([]);
+  const [campus, setCampus] = useState<CampusLookup | null>(null);
+  const [clip, setClip] = useState<{
+    code: string;
+    status: "loading" | "ready" | "error";
+    text: string;
+  } | null>(null);
+  const [gpaOpen, setGpaOpen] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
   const isMac = useIsMac();
   const [isAdmin, setIsAdmin] = useState(false);
@@ -144,12 +300,6 @@ export default function CommandPalette() {
   useEffect(() => {
     if (!isCommandPaletteOpen) return;
 
-    const cacheKey = `${academicYear}:${branch}:${semester}`;
-    const cached = subjectCache.get(cacheKey);
-    if (cached && Date.now() - cached.fetchedAt < SUBJECT_CACHE_TTL_MS) {
-      return;
-    }
-
     let cancelled = false;
     loadWorkspaceResources(academicYear, branch, semester)
       .then((entry) => {
@@ -157,8 +307,19 @@ export default function CommandPalette() {
         const filtered = entry.subjects
           .filter((name) => name.toUpperCase() !== 'SYLLABUS')
           .map((name) => ({ id: subjectToSlug(name), name }));
+        const cacheKey = `${academicYear}:${branch}:${semester}`;
         subjectCache.set(cacheKey, { fetchedAt: Date.now(), subjects: filtered });
         setDynamicSubjects(filtered);
+        setCatalog(
+          entry.resources.slice(0, 400).map((resource) => ({
+            id: resource.id,
+            title: resource.title,
+            subject_name: resource.subject_name,
+          })),
+        );
+        void loadCampusLookup().then((lookup) => {
+          if (!cancelled) setCampus(lookup);
+        });
       })
       .catch((error) => {
         if (!cancelled) {
@@ -172,11 +333,13 @@ export default function CommandPalette() {
   }, [academicYear, branch, semester, isCommandPaletteOpen]);
 
   const [prevPaletteOpen, setPrevPaletteOpen] = useState(isCommandPaletteOpen);
-  if (isCommandPaletteOpen && !prevPaletteOpen) {
-    setQuery('');
-    setSelectedIndex(0);
-    setLastInteraction('key');
-  }
+    if (isCommandPaletteOpen && !prevPaletteOpen) {
+      setQuery('');
+      setSelectedIndex(0);
+      setLastInteraction('key');
+      setClip(null);
+      setGpaOpen(false);
+    }
   if (prevPaletteOpen !== isCommandPaletteOpen) {
     setPrevPaletteOpen(isCommandPaletteOpen);
   }
@@ -441,15 +604,134 @@ export default function CommandPalette() {
 
   // Filter items based on query
   const filteredItems = useMemo(() => {
-    if (!query.trim()) return items;
-    const q = query.toLowerCase();
-    return items.filter(
-      (item) =>
-        item.title.toLowerCase().includes(q) ||
-        item.category.toLowerCase().includes(q) ||
-        item.badge?.toLowerCase().includes(q)
-    );
-  }, [items, query]);
+    const trimmed = query.trim();
+    if (trimmed.startsWith('>')) {
+      const qs = workspaceQuery(academicYear, branch, semester);
+      return parseCommandPrefix(trimmed).map((command) => ({
+        id: command.id,
+        title: command.title,
+        category: 'Quick Actions' as const,
+        icon: command.kind === 'timer' ? Timer : command.kind === 'clip' ? ClipboardCopy : command.kind === 'gpa' ? Calculator : command.kind === 'todo' ? CalendarCheck : Brain,
+        hint: command.hint,
+        action: () => {
+          if (command.kind === 'timer') {
+            const minutes = Number(command.payload) || 25;
+            startFocusMinutes(minutes, 'Focus');
+            notify.success(`${minutes}m focus started`);
+            setCommandPaletteOpen(false);
+            return;
+          }
+          if (command.kind === 'clip') {
+            const code = command.payload.toLowerCase().replace(/[^abcdefghjkmnpqrstuvwxyz23456789]/g, '');
+            if (code.length < 6) {
+              notify.error('Enter the share code');
+              return;
+            }
+            setGpaOpen(false);
+            setClip({ code, status: 'loading', text: '' });
+            void fetch(`/api/clipboard/share/${encodeURIComponent(code)}`, { cache: 'no-store' })
+              .then(async (res) => {
+                if (!res.ok) {
+                  setClip({ code, status: 'error', text: 'That code is missing or expired.' });
+                  return;
+                }
+                const data = (await res.json()) as { text?: string };
+                setClip({ code, status: 'ready', text: data.text || '' });
+              })
+              .catch(() => {
+                setClip({ code, status: 'error', text: 'Could not load that code.' });
+              });
+            return;
+          }
+          if (command.kind === 'todo') {
+            if (!command.payload) return;
+            const when = parseTaskWhen(command.payload);
+            void appendTodayTask(when.text, when.date);
+            notify.success(`Added for ${when.label}`);
+            setCommandPaletteOpen(false);
+            return;
+          }
+          if (command.kind === 'gpa') {
+            if (command.payload) {
+              const next = Number(command.payload);
+              if (Number.isFinite(next)) writeGpaTarget(next);
+            }
+            setClip(null);
+            setGpaOpen(true);
+            return;
+          }
+          const ask = command.payload || trimmed.replace(/^>\s*ask\s*/i, '');
+          navigate(`/ask?tab=chat&prompt=${encodeURIComponent(ask)}&${qs}`);
+          setCommandPaletteOpen(false);
+        },
+      }));
+    }
+    const q = trimmed.toLowerCase();
+    const base = !q
+      ? items
+      : items.filter(
+          (item) =>
+            item.title.toLowerCase().includes(q) ||
+            item.category.toLowerCase().includes(q) ||
+            item.badge?.toLowerCase().includes(q)
+        );
+    if (q.length < 2) return base;
+    const qs = workspaceQuery(academicYear, branch, semester);
+    const fileHits = catalog
+      .filter((file) => `${file.title} ${file.subject_name || ''}`.toLowerCase().includes(q))
+      .slice(0, 5)
+      .map((file) => ({
+        id: `file-${file.id}`,
+        title: file.title,
+        category: 'Search' as const,
+        icon: FileText,
+        badge: file.subject_name,
+        action: () => {
+          const params = new URLSearchParams(qs);
+          params.set('view', file.id);
+          navigate(`/resources?${params.toString()}`);
+          setCommandPaletteOpen(false);
+        },
+      }));
+    const topicHits = searchSyllabusTopics(branch, semester, q).map((topic) => ({
+      id: `topic-${topic.subject}-${topic.title}`,
+      title: topic.title,
+      category: 'Search' as const,
+      icon: BookOpen,
+      badge: topic.subject,
+      action: () => {
+        navigate(`/syllabus?${qs}`);
+        setCommandPaletteOpen(false);
+      },
+    }));
+    const deckHits = readSrsDecks()
+      .filter((deck) => deck.name.toLowerCase().includes(q))
+      .slice(0, 4)
+      .map((deck) => ({
+        id: `deck-${deck.id}`,
+        title: deck.name,
+        category: 'Search' as const,
+        icon: Layers,
+        badge: 'SRS',
+        action: () => {
+          navigate(`/srs?${qs}`);
+          setCommandPaletteOpen(false);
+        },
+      }));
+    const campusHits = campusHitsFor(campus, q).map((hit) => ({
+      id: hit.id,
+      title: hit.title,
+      category: 'Search' as const,
+      icon: Building2,
+      badge: hit.badge,
+      hint: hit.hint,
+      action: () => {
+        notify.message(hit.title, { description: hit.hint });
+        setCommandPaletteOpen(false);
+      },
+    }));
+    return [...fileHits, ...topicHits, ...deckHits, ...campusHits, ...base];
+  }, [items, query, catalog, campus, academicYear, branch, semester, navigate, setCommandPaletteOpen]);
 
   // Group filtered items by category
   const groupedItems = useMemo(() => {
@@ -487,11 +769,21 @@ export default function CommandPalette() {
         setLastInteraction('key');
         setSelectedIndex((prev) => (prev - 1 + filteredItems.length) % filteredItems.length);
         inputRef.current?.focus();
+      } else if (e.key === 'Enter' && e.shiftKey && query.trim()) {
+        e.preventDefault();
+        const qs = workspaceQuery(academicYear, branch, semester);
+        navigate(`/ask?tab=chat&prompt=${encodeURIComponent(query.trim())}&${qs}`);
+        setCommandPaletteOpen(false);
       } else if (e.key === 'Enter') {
         e.preventDefault();
         if (filteredItems[selectedIndex]) {
           filteredItems[selectedIndex].action();
         }
+      } else if (e.key === 'Tab' && query.trim() && !query.trim().startsWith('>')) {
+        e.preventDefault();
+        const qs = workspaceQuery(academicYear, branch, semester);
+        navigate(`/ask?tab=chat&prompt=${encodeURIComponent(query.trim())}&${qs}`);
+        setCommandPaletteOpen(false);
       } else if (e.key === 'Tab') {
         const root = dialogRef.current;
         if (!root) return;
@@ -511,7 +803,7 @@ export default function CommandPalette() {
 
     window.addEventListener('keydown', handleModalKeyDown);
     return () => window.removeEventListener('keydown', handleModalKeyDown);
-  }, [isCommandPaletteOpen, filteredItems, selectedIndex, setCommandPaletteOpen]);
+  }, [isCommandPaletteOpen, filteredItems, selectedIndex, setCommandPaletteOpen, query, academicYear, branch, semester, navigate]);
 
   // Focus search input when opened
   useEffect(() => {
@@ -575,6 +867,28 @@ export default function CommandPalette() {
               )}
               <Kbd className="hidden sm:inline-flex">Esc</Kbd>
             </div>
+
+            {clip && (
+              <div className="border-b border-border px-4 py-3 space-y-2">
+                <p className="text-xs font-medium text-muted">Clipboard {clip.code}</p>
+                <pre className="max-h-32 overflow-auto whitespace-pre-wrap text-sm font-mono">
+                  {clip.status === "loading" ? "Loading…" : clip.text || "(empty)"}
+                </pre>
+                {clip.status === "ready" && (
+                  <button
+                    type="button"
+                    className="h-8 px-3 rounded-lg border border-border text-xs font-medium"
+                    onClick={() => {
+                      void navigator.clipboard.writeText(clip.text);
+                      notify.success("Copied");
+                    }}
+                  >
+                    Copy
+                  </button>
+                )}
+              </div>
+            )}
+            {gpaOpen && <GpaPanel />}
 
             {/* Results List */}
             <div ref={listRef} className="max-h-[60vh] overflow-y-auto p-2.5 space-y-4 custom-scrollbar">

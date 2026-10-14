@@ -27,6 +27,7 @@ export function isPublicPath(pathname: string): boolean {
   if (PUBLIC_EXACT.has(path)) return true;
   if (path.startsWith("/account/delete")) return true;
   if (path.startsWith("/clipboard/s/")) return true;
+  if (path.startsWith("/c/")) return true;
   if (path.startsWith("/campus/")) return true;
   return false;
 }

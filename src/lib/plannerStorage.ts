@@ -75,6 +75,27 @@ export function writePlannerMonth(
   }
 }
 
+export function appendLocalPlannerTask(dateISO: string, text: string, id: string): void {
+  const parsed = parsePlannerDate(dateISO);
+  if (!parsed || !text.trim()) return;
+  const existing = readPlannerMonth(parsed.year, parsed.month);
+  const data = existing?.data ? { ...existing.data } : {};
+  const day = Array.isArray(data[parsed.date]) ? data[parsed.date] : [];
+  data[parsed.date] = [
+    ...day,
+    { id, text: text.trim(), done: false, subtasks: [] },
+  ];
+  writePlannerMonth(parsed.year, parsed.month, {
+    data,
+    meta: existing?.meta || {
+      title: "Study Plan",
+      month: parsed.month,
+      year: parsed.year,
+      is_public: false,
+    },
+  });
+}
+
 /** Increment focus stats on a planner task for the given ISO date. Returns true if updated. */
 export function incrementTaskFocus(
   dateISO: string,

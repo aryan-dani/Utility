@@ -20,6 +20,7 @@ describe("authRoutes", () => {
     expect(isPublicPath("/campus")).toBe(true);
     expect(isPublicPath("/campus/seating")).toBe(true);
     expect(isPublicPath("/clipboard/s/ab3km2")).toBe(true);
+    expect(isPublicPath("/c/ab3km2")).toBe(true);
     expect(isPublicPath("/resources")).toBe(false);
     expect(isPublicPath("/qa")).toBe(false);
     expect(isPublicPath("/community")).toBe(false);

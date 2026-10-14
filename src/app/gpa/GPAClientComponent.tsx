@@ -945,6 +945,16 @@ export default function GPAClient() {
                       {targetCGPA.toFixed(2)}
                       <span className="text-xs font-bold text-muted">by Semester {targetSemester}</span>
                     </div>
+                    <input
+                      type="range"
+                      min={5}
+                      max={10}
+                      step={0.1}
+                      value={targetCGPA}
+                      aria-label="Target CGPA"
+                      onChange={(event) => setTargetCGPA(Number(event.target.value))}
+                      className="mt-3 w-full"
+                    />
                   </div>
                   
                   {/* Progress bar */}

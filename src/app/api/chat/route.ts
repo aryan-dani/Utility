@@ -37,6 +37,7 @@ const chatSchema = z.object({
     semester: z.number().int().min(1).max(8).optional(),
     subjects: z.array(z.string().max(120)).max(40).optional(),
     resourceId: z.string().max(128).optional(),
+    answerMode: z.enum(["quick", "exam", "quiz"]).optional(),
   }).optional(),
 });
 
@@ -56,6 +57,7 @@ function buildSystemPrompt(params: {
   syllabusBlock?: string;
   routedIntent: string;
   widened: boolean;
+  answerMode?: "quick" | "exam" | "quiz";
 }): string {
   const subjectList = params.subjects.length > 0
     ? params.subjects.join(", ")
@@ -73,6 +75,12 @@ function buildSystemPrompt(params: {
     ? `\nSYLLABUS REFERENCE:\n${params.syllabusBlock}`
     : "";
 
+  const modeNote = params.answerMode === "exam"
+    ? "\nANSWER MODE: 5-mark university answer. Use a short introduction, numbered points, one ASCII diagram or formula if it helps, and a one-line conclusion."
+    : params.answerMode === "quiz"
+      ? "\nANSWER MODE: Quiz the student. Ask one question, wait, and do not reveal the answer until they try."
+      : "\nANSWER MODE: Quick intuition. A few sentences and the key idea.";
+
   return `You are the Academic OS AI, a grounded tutor for ${params.branch} semester ${params.semester} students.
 
 You search this student's indexed course notes, slides, and syllabus for the current academic year, branch, and semester. When CONTEXT FROM STUDENT RESOURCES is present, use it and cite every factual claim with [S1], [S2], … matching the labels. Do not invent a training cutoff, claim you are offline, or say you can only use files the student pasted in the chat.
@@ -86,7 +94,7 @@ RULES:
 3. If no context is provided, say "I couldn't find this in your indexed notes" before giving general academic help.
 4. Prefer slide/page labels when mentioning sources (e.g. "Slide 14 of DBMS Unit 3").
 5. Use ### headings, **bold** key terms, and bullet points.
-6. Be concise. No filler.${widenedNote}
+6. Be concise. No filler.${widenedNote}${modeNote}
 
 ${contextSection}${syllabusSection}`;
 }
@@ -303,6 +311,7 @@ export async function POST(req: Request) {
     syllabusBlock: syllabusBlock + (resourceListBlock ? `\nAVAILABLE FILES:\n${resourceListBlock}` : ""),
     routedIntent: routed.intent,
     widened: retrieval?.widened ?? false,
+    answerMode: context?.answerMode,
   });
 
   const modelId = modelForIntent(routed.intent) === "fast"

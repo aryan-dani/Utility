@@ -169,16 +169,17 @@ function stabilizeStreamingMarkdown(content: string): string {
 function injectCitationChips(
   children: ReactNode,
   onCitationClick?: (marker: string) => void,
+  sources?: RetrievalSource[],
 ): ReactNode {
-  if (!onCitationClick) return children;
+  if (!onCitationClick && !sources?.length) return children;
   return Children.map(children, (child) => {
     if (typeof child === "string") {
-      return <>{renderWithCitations(child, onCitationClick)}</>;
+      return <>{renderWithCitations(child, onCitationClick, sources)}</>;
     }
     if (isValidElement(child) && (child as ReactElement<{ children?: ReactNode }>).props.children != null) {
       const el = child as ReactElement<{ children?: ReactNode }>;
       return cloneElement(el, {
-        children: injectCitationChips(el.props.children, onCitationClick),
+        children: injectCitationChips(el.props.children, onCitationClick, sources),
       });
     }
     return child;
@@ -190,10 +191,12 @@ const MessageContent = memo(function MessageContent({
   content,
   showCursor,
   onCitationClick,
+  sources,
 }: {
   content: string;
   showCursor?: boolean;
   onCitationClick?: (marker: string) => void;
+  sources?: RetrievalSource[];
 }) {
   const markdown = showCursor ? stabilizeStreamingMarkdown(content) : content;
   return (
@@ -227,14 +230,14 @@ const MessageContent = memo(function MessageContent({
             );
           },
           p: ({ children }) => (
-            <p>{injectCitationChips(children, onCitationClick)}</p>
+            <p>{injectCitationChips(children, onCitationClick, sources)}</p>
           ),
           li: ({ children }) => (
-            <li>{injectCitationChips(children, onCitationClick)}</li>
+            <li>{injectCitationChips(children, onCitationClick, sources)}</li>
           ),
           td: ({ children }) => (
             <td className="px-4 py-3 text-xs text-foreground/75 border-b border-border/40 font-semibold leading-relaxed">
-              {injectCitationChips(children, onCitationClick)}
+              {injectCitationChips(children, onCitationClick, sources)}
             </td>
           ),
           table: ({ children }) => (
@@ -446,6 +449,7 @@ export default function AskClient() {
   const [reportText, setReportText] = useState('');
   const [reportReason, setReportReason] = useState('inaccurate');
   const [reportSending, setReportSending] = useState(false);
+  const [answerMode, setAnswerMode] = useState<"quick" | "exam" | "quiz">("quick");
 
   // Chat refs & state
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -559,9 +563,10 @@ export default function AskClient() {
       branch, 
       semester, 
       subjects, 
-      resourceId: selectedResourceId !== 'all' ? selectedResourceId : undefined 
+      resourceId: selectedResourceId !== 'all' ? selectedResourceId : undefined,
+      answerMode,
     },
-  }), [academicYear, branch, semester, subjects, selectedResourceId]);
+  }), [academicYear, branch, semester, subjects, selectedResourceId, answerMode]);
 
   const chatTransport = useMemo(
     () =>
@@ -1347,6 +1352,11 @@ export default function AskClient() {
                             <MessageContent 
                               content={getMessageContent(m)} 
                               showCursor={isLoading && m.id === messages[messages.length - 1].id}
+                              sources={
+                                m.id === messages[messages.length - 1]?.id
+                                  ? assistantSources
+                                  : undefined
+                              }
                               onCitationClick={
                                 m.id === messages[messages.length - 1]?.id
                                   ? openCitation
@@ -1414,6 +1424,28 @@ export default function AskClient() {
 
             <div className="shrink-0 px-4 sm:px-6 pb-3 md:pb-4 md:safe-bottom pt-1">
               <form id="chat-form" onSubmit={handleSubmit} className="mx-auto w-full max-w-2xl">
+                <div className="flex gap-1 mb-2">
+                  {(
+                    [
+                      ["quick", "Quick"],
+                      ["exam", "5-mark"],
+                      ["quiz", "Quiz me"],
+                    ] as const
+                  ).map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setAnswerMode(id)}
+                      className={`h-7 px-2 rounded-md border text-2xs font-medium ${
+                        answerMode === id
+                          ? "border-foreground bg-foreground text-background"
+                          : "border-border text-muted"
+                      }`}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
                 <div className="rounded-xl border border-border bg-card shadow-xs transition-[border-color,box-shadow] duration-[var(--dur-fast)] ease-[var(--ease-out-premium)] focus-within:border-border-strong focus-within:shadow-sm">
                   <textarea
                     ref={inputRef}

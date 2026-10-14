@@ -202,6 +202,26 @@ export default function ActivityHeatmap() {
 
   const active = selected ?? daysInRange.find((d) => d.key === todayKey) ?? null;
 
+  if (!loading && totalContributions === 0) {
+    const signedIn = Boolean(auth.currentUser);
+    return (
+      <div className="w-full min-w-0 bg-card border border-border p-5 sm:p-6 rounded-2xl my-6">
+        <p className="text-sm font-medium text-foreground">
+          {signedIn ? "No study logs yet" : "Sign in to track your streak"}
+        </p>
+        <p className="text-xs text-muted mt-1 max-w-xl">
+          Daily study, flashcard reviews, and AI sessions show up here after the first log.
+        </p>
+        <a
+          href={signedIn ? "/timer" : "/login"}
+          className="inline-flex mt-3 text-xs font-medium underline underline-offset-4"
+        >
+          {signedIn ? "Start a focus session" : "Sign in"}
+        </a>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full min-w-0 bg-card border border-border p-4 sm:p-8 rounded-2xl shadow-sm my-6 sm:my-12">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6 sm:mb-8 pb-6 border-b border-border">

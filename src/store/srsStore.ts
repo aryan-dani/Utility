@@ -4,7 +4,7 @@ import { db } from '@/lib/firebase/db';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { logActivity } from '@/lib/activity';
 import { localDateKey } from '@/lib/dateLocal';
-import { applyGrade } from '@/lib/srs/scheduling';
+import { applyGrade, type GradeChoice } from '@/lib/srs/scheduling';
 import { generateId } from '@/lib/id';
 
 export interface Flashcard {
@@ -36,7 +36,7 @@ interface SRSState {
   addCard: (deckId: string, question: string, answer: string) => void;
   deleteCard: (cardId: string) => void;
   addMultipleCards: (deckId: string, items: { question: string; answer: string }[]) => void;
-  gradeCard: (cardId: string, gotIt: boolean) => void;
+  gradeCard: (cardId: string, grade: boolean | GradeChoice) => void;
   toggleStarCard: (cardId: string) => void;
   syncToCloud: () => Promise<void>;
   pullFromCloud: () => Promise<void>;
@@ -231,11 +231,11 @@ export const useSRSStore = create<SRSState>((set, get) => ({
     get().syncToCloud().catch(console.error);
   },
 
-  gradeCard: (cardId, gotIt) => {
+  gradeCard: (cardId, grade) => {
     const today = getTodayString();
     const nextCards = get().cards.map((c) => {
       if (c.id === cardId) {
-        const { box, nextReview } = applyGrade(c, gotIt);
+        const { box, nextReview } = applyGrade(c, grade);
         return {
           ...c,
           box,

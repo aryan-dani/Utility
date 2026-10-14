@@ -38,6 +38,7 @@ import {
 import { authFetch } from "@/lib/authFetch";
 import { useIsClient } from "@/lib/clientHooks";
 import { WindowChrome, IconButton } from "@/components/ui";
+import { StudyCompanion } from "@/components/resources/StudyCompanion";
 
 const PdfPreview = dynamic(() => import("@/components/PdfPreview"), {
   ssr: false,
@@ -541,7 +542,8 @@ export default function ResourceViewer({
           }
         />
 
-        <div className="relative flex-1 min-h-0 overflow-hidden bg-card">
+        <div className="relative flex-1 min-h-0 overflow-hidden bg-card flex">
+          <div className="relative flex-1 min-h-0 overflow-hidden">
           {isLoading && (
             <div className="absolute inset-0 flex flex-col items-between justify-between p-8 bg-background z-20">
               <div className="w-full flex-1 flex flex-col gap-6 mt-12 max-w-4xl mx-auto">
@@ -739,6 +741,11 @@ export default function ResourceViewer({
               </a>
             </div>
           )}
+          </div>
+          <StudyCompanion
+            resource={resource}
+            onJump={(page) => pdfRef.current?.scrollToPage(page)}
+          />
         </div>
       </div>
 

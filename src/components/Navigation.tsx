@@ -35,7 +35,9 @@ import {
   readStoredWorkspace,
   resolveWorkspace,
   writeStoredWorkspace,
+  workspaceQuery,
 } from "@/lib/workspace";
+import { readStudyScope } from "@/lib/studyScope";
 import { ScopeSelector } from "@/components/academic/ScopeSelector";
 import { fetchAdminStatus } from "@/lib/adminStatus";
 import { normalizePathname } from "@/lib/authRoutes";
@@ -43,6 +45,9 @@ import { useIsClient, useIsMac, useLocalStorageBoolean, useMediaQuery, writeLoca
 import { useIsStandalone } from "@/lib/pwa/displayMode";
 import { Sheet, TabBar } from "@/components/ui";
 import { SegmentedThemeToggle } from "@/components/shell/ThemeToggle";
+import { FocusTimerPill } from "@/components/shell/FocusTimerPill";
+import { CampusMirrorPill } from "@/components/shell/CampusMirrorPill";
+import { countDueCards } from "@/lib/srsDue";
 import { DockTooltip } from "@/components/shell/DockTooltip";
 import {
   ACADEMIC_LINKS,
@@ -183,7 +188,9 @@ function CollapsibleNavSection({
 function NavigationUrlSync() {
   const searchParams = useSearchParams();
   const setWorkspace = useAcademicStore((s) => s.setWorkspace);
+  const setStudyFocus = useAcademicStore((s) => s.setStudyFocus);
   const didHydrateWorkspace = useRef(false);
+  const didHydrateScope = useRef(false);
 
   const urlYear = searchParams.get("year");
   const urlBranch = searchParams.get("branch");
@@ -197,6 +204,16 @@ function NavigationUrlSync() {
     const hasUrl = !!(year || branch || semester);
     const stored = !didHydrateWorkspace.current ? readStoredWorkspace() : null;
     didHydrateWorkspace.current = true;
+    if (!didHydrateScope.current) {
+      didHydrateScope.current = true;
+      const urlSubject = live.get("subject");
+      const urlUnit = live.get("unit");
+      if (urlSubject) setStudyFocus(urlSubject, urlUnit || "");
+      else {
+        const scope = readStudyScope();
+        if (scope.subject) setStudyFocus(scope.subject, scope.unit);
+      }
+    }
 
     if (!hasUrl && !stored) return;
 
@@ -211,7 +228,7 @@ function NavigationUrlSync() {
           },
     );
     setWorkspace(resolved.academicYear, resolved.branch, resolved.semester);
-  }, [urlYear, urlBranch, urlSemester, setWorkspace]);
+  }, [urlYear, urlBranch, urlSemester, setWorkspace, setStudyFocus]);
 
   return null;
 }
@@ -293,10 +310,22 @@ function SidebarDock({
   const [layoutTick, setLayoutTick] = useState(0);
   const [pill, setPill] = useState<PillBox | null>(null);
   const [pillMotion, setPillMotion] = useState(false);
+  const [dueCount, setDueCount] = useState(0);
   const pillBoxRef = useRef<PillBox | null>(null);
 
   const onLayoutChange = useCallback(() => {
     setLayoutTick((n) => n + 1);
+  }, []);
+
+  useEffect(() => {
+    const read = () => setDueCount(countDueCards());
+    read();
+    const id = window.setInterval(read, 30_000);
+    window.addEventListener("focus", read);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("focus", read);
+    };
   }, []);
 
   const measure = useCallback((opts?: { animate?: boolean }) => {
@@ -500,6 +529,11 @@ function SidebarDock({
                 >
                   {link.label}
                 </span>
+                {link.href === "/srs" && dueCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-md text-3xs font-bold tabular-nums shrink-0 ml-2 bg-foreground text-background">
+                    {dueCount}
+                  </span>
+                )}
                 {link.featured && (
                   <span
                     className={`px-1.5 py-0.5 rounded-md text-3xs font-bold uppercase tracking-[0.12em] shrink-0 ml-2 transition-colors ${
@@ -659,6 +693,15 @@ function SidebarDock({
             </div>
           </div>
         </div>
+
+        {!isCollapsed && (
+          <div className="px-3 pb-2 flex flex-wrap gap-1.5">
+            <FocusTimerPill />
+            <Suspense fallback={null}>
+              <CampusMirrorPill />
+            </Suspense>
+          </div>
+        )}
 
         <DockTooltip
           label="Search"
@@ -1087,10 +1130,17 @@ function NavigationInner() {
     pathname === "/qa" ||
     pathname.startsWith("/qa");
 
+  const subject = useAcademicStore((s) => s.subject);
+  const unit = useAcademicStore((s) => s.unit);
   const scopedHref = useCallback(
-    (href: string) =>
-      `${href}?year=${encodeURIComponent(academicYear)}&branch=${branch}&semester=${semester}`,
-    [academicYear, branch, semester],
+    (href: string) => {
+      const qs = workspaceQuery(academicYear, branch, semester, {
+        subject,
+        unit,
+      });
+      return `${href}?${qs}`;
+    },
+    [academicYear, branch, semester, subject, unit],
   );
 
   const moreGroupLinks = MORE_GROUP_LINKS.filter(
@@ -1208,6 +1258,10 @@ function NavigationInner() {
         </AppLink>
 
         <div className="flex items-center gap-1 shrink-0">
+          <FocusTimerPill />
+          <Suspense fallback={null}>
+            <CampusMirrorPill />
+          </Suspense>
           <button
             type="button"
             className="hidden xs:inline-flex items-center max-w-[7.5rem] min-h-11 px-2 rounded-lg text-2xs font-semibold text-muted truncate"

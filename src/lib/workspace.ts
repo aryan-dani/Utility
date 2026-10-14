@@ -118,6 +118,13 @@ export function workspaceQuery(
   academicYear: AcademicYear,
   branch: Branch,
   semester: Semester,
+  scope?: { subject?: string; unit?: string },
 ): string {
-  return `year=${encodeURIComponent(academicYear)}&branch=${encodeURIComponent(branch)}&semester=${semester}`;
+  const params = new URLSearchParams();
+  params.set("year", academicYear);
+  params.set("branch", branch);
+  params.set("semester", String(semester));
+  if (scope?.subject) params.set("subject", scope.subject);
+  if (scope?.unit) params.set("unit", scope.unit);
+  return params.toString();
 }

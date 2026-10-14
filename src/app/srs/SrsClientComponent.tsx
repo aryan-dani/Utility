@@ -207,27 +207,25 @@ export default function SrsClient() {
   };
 
   // Grade Current Card
-  const handleGrade = useCallback((gotIt: boolean) => {
+  const handleGrade = useCallback((grade: "hard" | "good" | "easy") => {
     if (reviewQueue.length === 0) return;
     const currentCard = reviewQueue[currentIndex];
     
-    // Update store
-    gradeCard(currentCard.id, gotIt);
+    const remembered = grade !== "hard";
+    gradeCard(currentCard.id, grade);
 
-    // Track forgotten cards
-    if (!gotIt) {
+    if (!remembered) {
       setForgottenCards(prev => {
         if (prev.some(c => c.id === currentCard.id)) return prev;
         return [...prev, currentCard];
       });
     }
 
-    // Update session summary
     setReviewSummary(prev => {
       if (!prev) return null;
       return {
-        gotIt: prev.gotIt + (gotIt ? 1 : 0),
-        forgot: prev.forgot + (gotIt ? 0 : 1),
+        gotIt: prev.gotIt + (remembered ? 1 : 0),
+        forgot: prev.forgot + (remembered ? 0 : 1),
       };
     });
 
@@ -274,10 +272,13 @@ export default function SrsClient() {
         setIsFlipped(prev => !prev);
       } else if (e.key === '1') {
         e.preventDefault();
-        handleGrade(false);
+        handleGrade("hard");
       } else if (e.key === '2') {
         e.preventDefault();
-        handleGrade(true);
+        handleGrade("good");
+      } else if (e.key === '3') {
+        e.preventDefault();
+        handleGrade("easy");
       } else if (e.key === 'Escape') {
         e.preventDefault();
         setView('dashboard');
@@ -656,7 +657,7 @@ export default function SrsClient() {
                 </div>
                 
                 <span className="text-[10px] text-muted text-center font-semibold">
-                  Click card or press Space to reveal answer
+                  Click the card or press <kbd className="kbd">Space</kbd> to flip
                 </span>
               </div>
 
@@ -706,24 +707,31 @@ export default function SrsClient() {
           {/* Actions & Choices */}
           <div className="w-full flex flex-col sm:flex-row justify-center items-center gap-4">
             <button
-              onClick={() => handleGrade(false)}
+              onClick={() => handleGrade("hard")}
               className="w-full sm:w-44 flex items-center justify-center gap-2 border border-border bg-card hover:bg-surface-hover text-foreground py-3 text-xs font-bold rounded-xl shadow-xs transition-all hover:-translate-y-0.5"
             >
               <X className="w-4 h-4" />
-              <span>Forgot (Key 1)</span>
+              <span>Hard <kbd className="kbd">1</kbd></span>
             </button>
             
             <button
-              onClick={() => handleGrade(true)}
+              onClick={() => handleGrade("good")}
               className="w-full sm:w-44 flex items-center justify-center gap-2 border border-border bg-card hover:bg-surface-hover text-foreground py-3 text-xs font-bold rounded-xl shadow-xs transition-all hover:-translate-y-0.5"
             >
               <Check className="w-4 h-4" />
-              <span>Got it (Key 2)</span>
+              <span>Good <kbd className="kbd">2</kbd></span>
+            </button>
+            <button
+              onClick={() => handleGrade("easy")}
+              className="w-full sm:w-44 flex items-center justify-center gap-2 border border-border bg-card hover:bg-surface-hover text-foreground py-3 text-xs font-bold rounded-xl shadow-xs transition-all hover:-translate-y-0.5"
+            >
+              <Check className="w-4 h-4" />
+              <span>Easy <kbd className="kbd">3</kbd></span>
             </button>
           </div>
 
           <div className="mt-8 text-center text-muted/60 text-[10px] font-semibold hidden md:block">
-            Tip: Press Space/Enter to flip, 1 to flag forgot, 2 to flag easy.
+            Tip: Space flips. 1 Hard, 2 Good, 3 Easy.
           </div>
         </div>
       )}

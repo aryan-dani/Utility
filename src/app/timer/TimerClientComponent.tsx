@@ -31,6 +31,7 @@ import {
 import { useMotionSafe } from '@/lib/motion';
 import { logActivity, localDateKey } from '@/lib/activity';
 import { incrementTaskFocus } from '@/lib/plannerStorage';
+import { clearFocusRun, readFocusRun, writeFocusRun, markFocusLogged } from '@/lib/focusTimer';
 
 type TimerMode = 'work' | 'break' | 'longBreak';
 
@@ -243,12 +244,18 @@ export default function TimerClient() {
   };
 
   useEffect(() => {
+    queueMicrotask(() => {
+      const existing = readFocusRun();
+      if (!existing || existing.endsAt <= Date.now() || startParam) return;
+      setMode(existing.mode);
+      deadlineRef.current = existing.endsAt;
+      setTimeLeft(Math.max(1, Math.ceil((existing.endsAt - Date.now()) / 1000)));
+      setIsActive(true);
+    });
     return () => {
-      if (soundAudioRef.current) {
-        soundAudioRef.current.pause();
-      }
+      soundAudioRef.current?.pause();
     };
-  }, []);
+  }, [startParam]);
 
   const toggleSoundscapePlay = () => {
     if (!soundAudioRef.current) return;
@@ -308,6 +315,7 @@ export default function TimerClient() {
   }, [workTime, breakTime, longBreakTime]);
 
   const logFocusSession = useCallback(async (minutes: number) => {
+    markFocusLogged();
     logActivity('focus_timer_completed', 1);
 
     const today = localDateKey();
@@ -341,6 +349,8 @@ export default function TimerClient() {
   const handleTimerComplete = useCallback(() => {
     deadlineRef.current = null;
     setIsActive(false);
+    deadlineRef.current = null;
+    clearFocusRun();
     playSound();
     if (mode === 'work') {
       const newSessions = sessions + 1;
@@ -364,6 +374,19 @@ export default function TimerClient() {
       void Notification.requestPermission();
     }
   }, [mode, sessions, playSound, switchMode, logFocusSession, workTime]);
+
+  useEffect(() => {
+    if (!isActive) return;
+    const endsAt = deadlineRef.current ?? Date.now() + timeLeft * 1000;
+    deadlineRef.current = endsAt;
+    writeFocusRun({
+      mode,
+      endsAt,
+      label: taskText || (mode === "work" ? "Focus" : "Break"),
+      minutes: Math.max(1, Math.round((endsAt - Date.now()) / 60000)),
+      logged: false,
+    });
+  }, [isActive, mode, taskText, timeLeft]);
 
   useEffect(() => {
     if (isActive) {
@@ -408,11 +431,13 @@ export default function TimerClient() {
       setTimeLeft(remaining);
       deadlineRef.current = null;
     }
+    if (isActive) clearFocusRun();
     setIsActive(!isActive);
   };
   const resetTimer = () => {
     setIsActive(false);
     deadlineRef.current = null;
+    clearFocusRun();
     setTimeLeft(totalTime);
   };
 

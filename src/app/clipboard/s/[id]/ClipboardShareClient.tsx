@@ -14,6 +14,16 @@ import {
   Skeleton,
 } from "@/components/ui";
 
+function downloadShare(text: string, filename: string) {
+  const blob = new Blob([text], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function ClipboardShareClient({ shareId }: { shareId: string }) {
   const [text, setText] = useState<string | null>(null);
   const [driveFileId, setDriveFileId] = useState<string | null>(null);
@@ -124,6 +134,16 @@ export default function ClipboardShareClient({ shareId }: { shareId: string }) {
               <ClipboardCopy className="w-3.5 h-3.5" />
               Copy
             </Button>
+            {(["py", "ipynb", "cpp"] as const).map((ext) => (
+              <Button
+                key={ext}
+                size="sm"
+                variant="secondary"
+                onClick={() => downloadShare(text, `clipboard.${ext}`)}
+              >
+                .{ext}
+              </Button>
+            ))}
             <ButtonLink href="/clipboard" variant="secondary">
               Save to my clipboard
             </ButtonLink>

@@ -43,14 +43,13 @@ function isFresh(entry: CacheEntry | undefined, ttl: number): entry is CacheEntr
   return Date.now() - entry.savedAt < ttl;
 }
 
-function readSession(key: string): CacheEntry | null {
-  if (typeof window === "undefined") return null;
+function readStored(storage: Storage, key: string): CacheEntry | null {
   try {
-    const raw = sessionStorage.getItem(storageKey(key));
+    const raw = storage.getItem(storageKey(key));
     if (!raw) return null;
     const parsed = JSON.parse(raw) as CacheEntry;
     if (!isFresh(parsed, STORAGE_TTL_MS)) {
-      sessionStorage.removeItem(storageKey(key));
+      storage.removeItem(storageKey(key));
       return null;
     }
     if (!Array.isArray(parsed.resources)) return null;
@@ -60,10 +59,21 @@ function readSession(key: string): CacheEntry | null {
   }
 }
 
+function readSession(key: string): CacheEntry | null {
+  if (typeof window === "undefined") return null;
+  return readStored(sessionStorage, key) ?? readStored(localStorage, key);
+}
+
 function writeSession(key: string, entry: CacheEntry) {
   if (typeof window === "undefined") return;
+  const raw = JSON.stringify(entry);
   try {
-    sessionStorage.setItem(storageKey(key), JSON.stringify(entry));
+    sessionStorage.setItem(storageKey(key), raw);
+  } catch {
+    // quota / private mode — ignore
+  }
+  try {
+    localStorage.setItem(storageKey(key), raw);
   } catch {
     // quota / private mode — ignore
   }
@@ -166,6 +176,7 @@ export function clearWorkspaceResourcesCache(
   if (typeof window !== "undefined") {
     try {
       sessionStorage.removeItem(storageKey(key));
+      localStorage.removeItem(storageKey(key));
     } catch {
       // ignore
     }

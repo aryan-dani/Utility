@@ -46,6 +46,7 @@ import { useWorkspaceResources } from '@/lib/useWorkspaceResources';
 import { generateId } from '@/lib/id';
 import PageSkeleton from '@/components/PageSkeleton';
 import type { Task } from '@/app/planner/PlannerClient';
+import { SyllabusUnitActions } from '@/components/syllabus/SyllabusUnitActions';
 
 interface ResourceItemExt extends ResourceItem {
   subject_name: string;
@@ -860,6 +861,14 @@ export default function SyllabusClient() {
                                       <Layers className="w-3.5 h-3.5 text-foreground/80 shrink-0" />
                                       Cards
                                     </Button>
+                                    <SyllabusUnitActions
+                                      subject={subject.name}
+                                      unit={mod.title}
+                                      description={mod.desc}
+                                      academicYear={academicYear}
+                                      branch={branch}
+                                      semester={semester}
+                                    />
                                     <Button
                                       variant="secondary"
                                       size="sm"

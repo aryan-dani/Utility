@@ -19,22 +19,24 @@ export interface GradeResult {
   nextReview: string;
 }
 
-/** Apply a pass/fail grade to a card and return the updated box and next review date. */
+export type GradeChoice = "hard" | "good" | "easy";
+
+/** Apply a Leitner grade. `true` is Good, `false` is Hard. Easy jumps two boxes. */
 export function applyGrade(
   card: GradeableCard,
-  gotIt: boolean,
+  grade: boolean | GradeChoice,
   today?: Date,
 ): GradeResult {
   const todayKey = localDateKey(today ?? new Date());
-  if (gotIt) {
-    const nextBox = Math.min(card.box + 1, 5);
-    return {
-      box: nextBox,
-      nextReview: computeNextReview(nextBox, today),
-    };
+  const choice: GradeChoice =
+    grade === true ? "good" : grade === false ? "hard" : grade;
+  if (choice === "hard") {
+    return { box: 1, nextReview: todayKey };
   }
+  const jump = choice === "easy" ? 2 : 1;
+  const nextBox = Math.min(card.box + jump, 5);
   return {
-    box: 1,
-    nextReview: todayKey,
+    box: nextBox,
+    nextReview: computeNextReview(nextBox, today),
   };
 }

@@ -526,6 +526,33 @@ export function gpaDataFromSyllabus(
   return { name: displayName, totalCredits, semester, completed, finals };
 }
 
+export function searchSyllabusTopics(
+  branch: string,
+  semester: number,
+  query: string,
+): Array<{ subject: string; title: string }> {
+  if (branch.toUpperCase() !== "AIDS" || query.trim().length < 2) return [];
+  const list =
+    semester === 5
+      ? AIDS_SEM_5_SUBJECTS
+      : semester === 4
+        ? AIDS_SEM_4_SUBJECTS
+        : semester === 3
+          ? AIDS_SEM_3_SUBJECTS_2026
+          : [];
+  const q = query.trim().toLowerCase();
+  const hits: Array<{ subject: string; title: string }> = [];
+  for (const subject of list) {
+    for (const mod of subject.modules) {
+      const hay = `${subject.name} ${mod.title} ${mod.desc}`.toLowerCase();
+      if (!hay.includes(q)) continue;
+      hits.push({ subject: subject.name, title: mod.title });
+      if (hits.length >= 6) return hits;
+    }
+  }
+  return hits;
+}
+
 export function getAidsGpaData(semester: number): GpaBranchData | null {
   if (semester === 5) {
     return gpaDataFromSyllabus(

@@ -32,9 +32,9 @@ describe("applyGrade", () => {
     expect(result.nextReview).toBe("2026-09-19");
   });
 
-  it("fail resets to box 1 and due today", () => {
-    const result = applyGrade({ box: 4 }, false, today);
-    expect(result.box).toBe(1);
-    expect(result.nextReview).toBe("2026-09-05");
+  it("easy jumps two boxes", () => {
+    const result = applyGrade({ box: 2 }, "easy", today);
+    expect(result.box).toBe(4);
+    expect(result.nextReview).toBe("2026-09-12");
   });
 });

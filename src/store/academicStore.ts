@@ -6,6 +6,7 @@ import {
   DEFAULT_SEMESTER,
   writeStoredWorkspace,
 } from "@/lib/workspace";
+import { writeStudyScope } from "@/lib/studyScope";
 
 export type { AcademicYear, Branch, Semester };
 
@@ -15,6 +16,8 @@ interface AcademicState {
   semester: Semester;
   searchQuery: string;
   aiSearchQuery: string;
+  subject: string;
+  unit: string;
   isCommandPaletteOpen: boolean;
   setAcademicYear: (year: AcademicYear) => void;
   setBranch: (branch: Branch) => void;
@@ -27,6 +30,7 @@ interface AcademicState {
   resetWorkspace: () => void;
   setSearchQuery: (query: string) => void;
   setAiSearchQuery: (query: string) => void;
+  setStudyFocus: (subject: string, unit: string) => void;
   setCommandPaletteOpen: (open: boolean) => void;
 }
 
@@ -36,6 +40,8 @@ export const useAcademicStore = create<AcademicState>((set) => ({
   semester: DEFAULT_SEMESTER,
   searchQuery: "",
   aiSearchQuery: "",
+  subject: "",
+  unit: "",
   isCommandPaletteOpen: false,
   setAcademicYear: (academicYear) =>
     set((state) => {
@@ -82,6 +88,11 @@ export const useAcademicStore = create<AcademicState>((set) => ({
       aiSearchQuery: searchQuery.trim() === "" ? "" : state.aiSearchQuery,
     })),
   setAiSearchQuery: (aiSearchQuery) => set({ aiSearchQuery }),
+  setStudyFocus: (subject, unit) =>
+    set(() => {
+      writeStudyScope(subject, unit);
+      return { subject, unit };
+    }),
   setCommandPaletteOpen: (isCommandPaletteOpen) =>
     set({ isCommandPaletteOpen }),
 }));

@@ -1,119 +1,15 @@
 import type { Metadata } from "next";
-import AppLink from "@/components/ui/AppLink";
-import {
-  CalendarCheck,
-  BookOpen,
-  FileText,
-  ArrowRight,
-  Brain,
-  ShieldCheck,
-  Layers,
-  Building2,
-  Waypoints,
-  HelpCircle,
-  ClipboardCopy,
-} from "lucide-react";
-import { CAMPUS_ORIGIN } from "@/lib/siteOrigins";
 import AuthButtons from "./AuthButtons";
 import HomeHeatmap from "./HomeHeatmap";
 import HomeStats from "./HomeStats";
 import HomeExamCountdown from "@/components/HomeExamCountdown";
+import { HomeCockpit } from "@/components/home/HomeCockpit";
 import { getHomeStats } from "@/lib/dataFetcher";
 import { BRANCHES, SEMESTERS } from "@/lib/academic/scope";
 import { homeJsonLd, indexableMeta, jsonLdScript } from "@/lib/seo";
 
 export const revalidate = 86400;
 export const metadata: Metadata = indexableMeta("/");
-
-const FLOW = [
-  { href: "/syllabus", title: "Syllabus", hint: "Units & topics" },
-  { href: "/resources", title: "Vault", hint: "Notes & files" },
-  { href: "/ask", title: "Ask AI", hint: "Grounded answers" },
-  { href: "/planner", title: "Planner", hint: "Deadlines" },
-] as const;
-
-const FEATURES = [
-  {
-    href: "/planner",
-    label: "Study Planner",
-    number: "01",
-    Icon: CalendarCheck,
-    description:
-      "Organize your month with natural-language prompts. Share & collaborate with peers.",
-  },
-  {
-    href: "/ask",
-    label: "Ask AI",
-    number: "02",
-    Icon: Brain,
-    description:
-      "Get instant explanations, flashcards, and study help powered by Groq.",
-  },
-  {
-    href: "/syllabus",
-    label: "Syllabus",
-    number: "03",
-    Icon: BookOpen,
-    description:
-      "Clear breakdown of every subject, unit by unit. Download full PDFs instantly.",
-  },
-  {
-    href: "/resources",
-    label: "Resources",
-    number: "04",
-    Icon: FileText,
-    description:
-      "Browse by subject → assignment folders (notebooks, datasets, writeups together). Notes are reference-only.",
-  },
-  {
-    href: "/visualize",
-    label: "Visualize",
-    number: "05",
-    Icon: Waypoints,
-    description:
-      "Watch BFS, A*, Minimax, and N-Queens decide one step at a time.",
-  },
-  {
-    href: "/gpa",
-    label: "GPA Calc",
-    number: "06",
-    Icon: ShieldCheck,
-    description:
-      "Calculate your SGPA and CGPA with auto-populated subjects from the database.",
-  },
-  {
-    href: "/srs",
-    label: "SRS Cards",
-    number: "07",
-    Icon: Layers,
-    description:
-      "Active Leitner spacing system. Review cards to lock them in long-term memory.",
-  },
-  {
-    href: "/campus",
-    label: "Campus",
-    number: "08",
-    Icon: Building2,
-    description:
-      "Faculty seating, staff directory, and lab registry. Live from campus data.",
-  },
-  {
-    href: "/qa",
-    label: "Doubt Board",
-    number: "09",
-    Icon: HelpCircle,
-    description:
-      "Ask paper-format doubts, check syllabus scope, and share handwritten solutions with peers.",
-  },
-  {
-    href: "/clipboard",
-    label: "Clipboard",
-    number: "10",
-    Icon: ClipboardCopy,
-    description:
-      "One synced pad on your account. Optional 24-hour code or Drive file link for a lab PC.",
-  },
-];
 
 export default async function Home() {
   let subjectCount = 0;
@@ -156,88 +52,10 @@ export default async function Home() {
             <AuthButtons />
           </div>
           <HomeExamCountdown />
-          <p className="text-xs text-muted max-w-md leading-relaxed">
-            On college Wi-Fi, open{" "}
-            <a
-              href={CAMPUS_ORIGIN}
-              className="text-foreground underline underline-offset-4 font-medium"
-            >
-              {CAMPUS_ORIGIN.replace("https://", "")}
-            </a>{" "}
-            first — utilityos.tech often fails the certificate check before any
-            redirect can run. Bookmark that host for campus.
-          </p>
         </div>
       </section>
 
-      <div className="w-full border-t border-border" />
-
-      {/* How it connects */}
-      <section className="w-full max-w-7xl mx-auto page-gutter py-8 sm:py-10">
-        <p className="text-center text-xs sm:text-sm text-foreground-subtle mb-4 font-medium tracking-wide uppercase">
-          How everything links
-        </p>
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-px rounded-xl overflow-hidden border border-border bg-border shadow-sm">
-          {FLOW.map(({ href, title, hint }, index) => (
-            <AppLink
-              key={href}
-              href={href}
-              className="group bg-card hover:bg-surface active:bg-surface-hover p-4 sm:p-5 min-h-[5.5rem] flex flex-col justify-between gap-3 transition-colors"
-            >
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] font-mono text-muted">
-                  {String(index + 1).padStart(2, "0")}
-                </span>
-                <ArrowRight className="w-3.5 h-3.5 text-muted group-hover:text-foreground group-hover:translate-x-0.5 transition-all" />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-foreground">{title}</p>
-                <p className="text-xs text-muted mt-0.5">{hint}</p>
-              </div>
-            </AppLink>
-          ))}
-        </div>
-      </section>
-
-      {/* Feature cards */}
-      <section className="w-full max-w-7xl mx-auto page-gutter pb-12 sm:pb-20">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-border rounded-xl overflow-hidden border border-border shadow-sm">
-          {FEATURES.map(({ href, label, number, Icon, description }) => (
-            <AppLink
-              key={href}
-              href={href}
-              className="group block bg-card hover:bg-surface card-premium-hover transition-all duration-300"
-            >
-              <div className="p-4 sm:p-5 h-full flex flex-col gap-3 relative">
-                <div className="absolute left-0 top-2.5 bottom-2.5 w-[3px] rounded-r bg-primary scale-y-0 group-hover:scale-y-100 transition-transform duration-300 origin-center" />
-
-                <div className="flex items-start justify-between">
-                  <div className="w-9 h-9 rounded-lg bg-surface border border-border flex items-center justify-center group-hover:scale-105 group-hover:border-border-strong transition-all duration-300">
-                    <Icon className="w-4 h-4 text-foreground" />
-                  </div>
-                  <span className="text-xs font-mono text-foreground-subtle group-hover:text-foreground/70 transition-colors">
-                    {number}
-                  </span>
-                </div>
-
-                <div className="flex-1">
-                  <h2 className="text-sm font-semibold text-foreground mb-1">
-                    {label}
-                  </h2>
-                  <p className="text-xs text-foreground-subtle leading-relaxed">
-                    {description}
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-1.5 text-xs font-bold text-foreground-subtle group-hover:text-foreground transition-colors">
-                  <span className="animated-underline">Open {label}</span>
-                  <ArrowRight className="w-3 h-3 translate-x-0 group-hover:translate-x-1.5 transition-transform duration-300" />
-                </div>
-              </div>
-            </AppLink>
-          ))}
-        </div>
-      </section>
+      <HomeCockpit />
 
       {/* Full-width heatmap */}
       <section className="w-full max-w-7xl mx-auto page-gutter py-4 sm:py-10 min-w-0">
