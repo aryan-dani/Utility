@@ -12,6 +12,7 @@ import {
   Waypoints,
   Building2,
   HelpCircle,
+  ArrowRight,
 } from "lucide-react";
 import AppLink from "@/components/ui/AppLink";
 import { useAcademicStore } from "@/store/academicStore";
@@ -58,6 +59,9 @@ function subscribeCockpit(onStoreChange: () => void) {
   return () => window.removeEventListener("focus", onStoreChange);
 }
 
+const TILE =
+  "bg-card px-4 flex items-center gap-2.5 text-sm font-medium h-14 hover:bg-surface transition-colors";
+
 export function HomeCockpit() {
   const router = useRouter();
   const academicYear = useAcademicStore((s) => s.academicYear);
@@ -93,14 +97,17 @@ export function HomeCockpit() {
   };
 
   return (
-    <div className="w-full max-w-7xl mx-auto page-gutter py-8 sm:py-12 space-y-px">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-border border border-border rounded-xl overflow-hidden">
-        <section className="bg-card p-4 sm:p-5 min-h-[11rem] flex flex-col gap-3">
+    <div className="w-full max-w-7xl mx-auto page-gutter pb-10 sm:pb-14">
+      <div className="rounded-xl border border-border overflow-hidden bg-border grid grid-cols-1 lg:grid-cols-12 gap-px">
+        {/* Primary row */}
+        <section className="lg:col-span-4 bg-card p-4 sm:p-5 flex flex-col gap-3 min-h-[9.5rem]">
           <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-wide text-muted">Today</p>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+              Today
+            </p>
             <button
               type="button"
-              className="inline-flex items-center gap-1.5 h-8 px-2 rounded-lg border border-border text-xs font-medium"
+              className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border border-border text-xs font-medium tabular-nums hover:bg-surface"
               onClick={() => startFocusMinutes(25, scopeLabel || "Focus")}
             >
               <Timer className="w-3.5 h-3.5" />
@@ -108,85 +115,123 @@ export function HomeCockpit() {
             </button>
           </div>
           {tasks.length === 0 ? (
-            <p className="text-sm text-muted">No open tasks for today.</p>
+            <p className="text-sm text-muted leading-relaxed">
+              Nothing scheduled. Add a task or start a focus block.
+            </p>
           ) : (
             <ul className="space-y-1.5 text-sm">
               {tasks.map((task) => (
-                <li key={task} className="truncate">{task}</li>
+                <li key={task} className="truncate text-foreground">
+                  {task}
+                </li>
               ))}
             </ul>
           )}
-          <AppLink href={`/planner?${qs}`} className="mt-auto text-xs font-medium underline underline-offset-4">
+          <AppLink
+            href={`/planner?${qs}`}
+            className="mt-auto inline-flex items-center gap-1 text-xs font-medium text-foreground hover:underline underline-offset-4"
+          >
             Open planner
+            <ArrowRight className="w-3 h-3" />
           </AppLink>
         </section>
 
-        <section className="bg-card p-4 sm:p-5 min-h-[11rem] flex flex-col gap-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Continue</p>
-          <p className="text-sm font-medium leading-snug">
-            {snap.recentTitle || scopeLabel || "Open a vault file or a syllabus unit."}
+        <section className="lg:col-span-4 bg-card p-4 sm:p-5 flex flex-col gap-3 min-h-[9.5rem]">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+            Continue
           </p>
-          <div className="mt-auto flex flex-wrap gap-2">
-            {recentHref && (
-              <AppLink href={recentHref} className="text-xs font-medium underline underline-offset-4">
+          <p className="text-sm font-medium leading-snug line-clamp-3">
+            {snap.recentTitle ||
+              scopeLabel ||
+              "Pick up a vault file or a syllabus unit."}
+          </p>
+          <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1">
+            {recentHref ? (
+              <AppLink
+                href={recentHref}
+                className="text-xs font-medium hover:underline underline-offset-4"
+              >
                 Last file
               </AppLink>
-            )}
-            <AppLink href={`/syllabus?${qs}`} className="text-xs font-medium underline underline-offset-4">
+            ) : null}
+            <AppLink
+              href={`/syllabus?${qs}`}
+              className="text-xs font-medium text-muted hover:text-foreground hover:underline underline-offset-4"
+            >
               Syllabus
             </AppLink>
           </div>
         </section>
 
-        <form onSubmit={ask} className="bg-card p-4 sm:p-5 min-h-[11rem] flex flex-col gap-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-muted">Ask AI</p>
+        <form
+          onSubmit={ask}
+          className="lg:col-span-4 bg-card p-4 sm:p-5 flex flex-col gap-3 min-h-[9.5rem]"
+        >
+          <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+            Ask AI
+          </p>
           <input
             value={prompt}
             onChange={(event) => setPrompt(event.target.value)}
             placeholder={`Ask about ${branch} sem ${semester}`}
-            className="h-10 px-3 rounded-lg border border-border bg-background text-sm outline-none"
+            className="h-10 px-3 rounded-md border border-border bg-background text-sm outline-none focus:border-border-strong"
           />
-          <button type="submit" className="mt-auto h-9 rounded-lg bg-foreground text-background text-xs font-medium">
+          <button
+            type="submit"
+            className="mt-auto h-9 rounded-md bg-foreground text-background text-xs font-medium hover:opacity-90"
+          >
             Ask
           </button>
         </form>
-      </div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-xl overflow-hidden">
-        {[
-          { href: `/syllabus?${qs}`, label: "Syllabus", Icon: BookOpen },
-          { href: `/resources?${qs}`, label: "Vault", Icon: Layers },
-          { href: `/srs?${qs}`, label: "SRS", Icon: Brain },
-          { href: `/gpa?${qs}`, label: "GPA", Icon: GraduationCap },
-        ].map(({ href, label, Icon }) => (
-          <AppLink key={label} href={href} className="bg-card p-4 flex items-center gap-2 text-sm font-medium min-h-16">
-            <Icon className="w-4 h-4" />
-            {label}
+        {/* Academic graph */}
+        {(
+          [
+            { href: `/syllabus?${qs}`, label: "Syllabus", Icon: BookOpen },
+            { href: `/resources?${qs}`, label: "Vault", Icon: Layers },
+            { href: `/srs?${qs}`, label: "SRS", Icon: Brain },
+            { href: `/gpa?${qs}`, label: "GPA", Icon: GraduationCap },
+          ] as const
+        ).map(({ href, label, Icon }) => (
+          <AppLink
+            key={label}
+            href={href}
+            className={`${TILE} lg:col-span-3`}
+          >
+            <Icon className="w-4 h-4 shrink-0 text-muted" />
+            <span>{label}</span>
           </AppLink>
         ))}
-      </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-px bg-border border border-border rounded-xl overflow-hidden">
-        <form onSubmit={openCode} className="bg-card p-4 flex flex-col gap-2">
-          <p className="text-xs font-semibold flex items-center gap-1.5">
-            <ClipboardCopy className="w-3.5 h-3.5" /> Lab clipboard
-          </p>
+        {/* Utilities dock — one height */}
+        <form
+          onSubmit={openCode}
+          className={`${TILE} lg:col-span-3 gap-2`}
+        >
+          <ClipboardCopy className="w-4 h-4 shrink-0 text-muted" />
+          <span className="sr-only">Lab clipboard</span>
           <input
             value={code}
             onChange={(event) => setCode(event.target.value)}
             placeholder="Share code"
-            className="h-9 px-2 rounded-lg border border-border bg-background text-sm font-mono"
+            className="min-w-0 flex-1 h-8 px-2 rounded-md border border-border bg-background text-xs font-mono outline-none"
             aria-label="Clipboard share code"
           />
         </form>
-        {[
-          { href: "/visualize", label: "Visualize", Icon: Waypoints },
-          { href: `/qa?${qs}`, label: "Doubt Board", Icon: HelpCircle },
-          { href: "/campus", label: "Campus", Icon: Building2 },
-        ].map(({ href, label, Icon }) => (
-          <AppLink key={label} href={href} className="bg-card p-4 flex items-center gap-2 text-sm font-medium min-h-[5.5rem]">
-            <Icon className="w-4 h-4" />
-            {label}
+        {(
+          [
+            { href: "/visualize", label: "Visualize", Icon: Waypoints },
+            { href: `/qa?${qs}`, label: "Doubt Board", Icon: HelpCircle },
+            { href: "/campus", label: "Campus", Icon: Building2 },
+          ] as const
+        ).map(({ href, label, Icon }) => (
+          <AppLink
+            key={label}
+            href={href}
+            className={`${TILE} lg:col-span-3`}
+          >
+            <Icon className="w-4 h-4 shrink-0 text-muted" />
+            <span>{label}</span>
           </AppLink>
         ))}
       </div>

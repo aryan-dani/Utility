@@ -173,10 +173,11 @@ export default function ActivityHeatmap() {
 
   const getCellColor = (count: number, inRange: boolean) => {
     if (!inRange) return 'bg-transparent border-transparent pointer-events-none';
-    if (count === 0) return 'bg-surface border-border-strong/40 hover:border-border-strong';
-    if (count <= 2) return 'bg-foreground/20 border-border';
-    if (count <= 5) return 'bg-foreground/40 border-border';
-    if (count <= 8) return 'bg-foreground/65 border-border';
+    // Empty cells need a hard edge in dark mode or the grid reads as a black void.
+    if (count === 0) return 'bg-muted/15 border-border hover:border-border-strong';
+    if (count <= 2) return 'bg-foreground/25 border-border';
+    if (count <= 5) return 'bg-foreground/45 border-border';
+    if (count <= 8) return 'bg-foreground/70 border-border';
     return 'bg-foreground border-foreground';
   };
 
@@ -205,7 +206,7 @@ export default function ActivityHeatmap() {
   if (!loading && totalContributions === 0) {
     const signedIn = Boolean(auth.currentUser);
     return (
-      <div className="w-full min-w-0 bg-card border border-border p-5 sm:p-6 rounded-2xl my-6">
+      <div className="w-full min-w-0 bg-card border border-border p-4 sm:p-5 rounded-xl">
         <p className="text-sm font-medium text-foreground">
           {signedIn ? "No study logs yet" : "Sign in to track your streak"}
         </p>
@@ -223,47 +224,44 @@ export default function ActivityHeatmap() {
   }
 
   return (
-    <div className="w-full min-w-0 bg-card border border-border p-4 sm:p-8 rounded-2xl shadow-sm my-6 sm:my-12">
-      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 mb-6 sm:mb-8 pb-6 border-b border-border">
+    <div className="w-full min-w-0 bg-card border border-border p-4 sm:p-5 rounded-xl">
+      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-4 pb-4 border-b border-border">
         <div className="min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <Calendar className="w-5 h-5 text-primary shrink-0" />
-            <h2 className="text-lg sm:text-xl font-bold text-foreground tracking-tight">
-              Academic Activity Heatmap
+          <div className="flex items-center gap-2 mb-0.5">
+            <Calendar className="w-4 h-4 text-muted shrink-0" />
+            <h2 className="text-sm font-semibold text-foreground tracking-tight">
+              Activity
             </h2>
           </div>
-          <p className="text-sm text-muted">
-            Track your daily study consistency, flashcard reviews, AI prompts, and planner tasks completed.
+          <p className="text-xs text-muted">
+            Study sessions, flashcards, Ask, and planner tasks.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 bg-surface border border-border p-4 rounded-xl shadow-xs w-full lg:w-auto">
-          <div className="flex flex-col items-center text-center px-3 border-r border-border">
-            <span className="text-xs text-muted mb-1 flex items-center gap-1 font-medium">
-              <Zap className="w-3.5 h-3.5 text-foreground" /> Total
+        <div className="grid grid-cols-4 gap-3 sm:gap-4 text-center">
+          <div>
+            <span className="text-[10px] text-muted font-medium uppercase tracking-wide flex items-center justify-center gap-1">
+              <Zap className="w-3 h-3" /> Total
             </span>
-            <span className="text-lg font-bold text-foreground">{totalContributions}</span>
+            <span className="text-sm font-semibold tabular-nums text-foreground">{totalContributions}</span>
           </div>
-
-          <div className="flex flex-col items-center text-center px-3 border-r-0 sm:border-r border-border">
-            <span className="text-xs text-muted mb-1 flex items-center gap-1 font-medium">
-              <Flame className="w-3.5 h-3.5 text-foreground" /> Streak
+          <div>
+            <span className="text-[10px] text-muted font-medium uppercase tracking-wide flex items-center justify-center gap-1">
+              <Flame className="w-3 h-3" /> Streak
             </span>
-            <span className="text-lg font-bold text-foreground">{currentStreak} days</span>
+            <span className="text-sm font-semibold tabular-nums text-foreground">{currentStreak}d</span>
           </div>
-
-          <div className="flex flex-col items-center text-center px-3 border-r border-border">
-            <span className="text-xs text-muted mb-1 flex items-center gap-1 font-medium">
-              <Trophy className="w-3.5 h-3.5 text-foreground" /> Best
+          <div>
+            <span className="text-[10px] text-muted font-medium uppercase tracking-wide flex items-center justify-center gap-1">
+              <Trophy className="w-3 h-3" /> Best
             </span>
-            <span className="text-lg font-bold text-foreground">{bestStreak} days</span>
+            <span className="text-sm font-semibold tabular-nums text-foreground">{bestStreak}d</span>
           </div>
-
-          <div className="flex flex-col items-center text-center px-3">
-            <span className="text-xs text-muted mb-1 flex items-center gap-1 font-medium">
-              <Info className="w-3.5 h-3.5 text-foreground" /> Daily Avg
+          <div>
+            <span className="text-[10px] text-muted font-medium uppercase tracking-wide flex items-center justify-center gap-1">
+              <Info className="w-3 h-3" /> Avg
             </span>
-            <span className="text-lg font-bold text-foreground">
+            <span className="text-sm font-semibold tabular-nums text-foreground">
               {(totalContributions / Math.max(daysInRange.length, 1)).toFixed(1)}
             </span>
           </div>
@@ -343,10 +341,10 @@ export default function ActivityHeatmap() {
         <div className="flex items-center gap-2 text-xs text-muted select-none">
           <span>Less</span>
           <div className="flex gap-1.5">
-            <div className="w-3.5 h-3.5 rounded-sm bg-surface border border-border-strong/40" />
-            <div className="w-3.5 h-3.5 rounded-sm bg-foreground/20 border border-border" />
-            <div className="w-3.5 h-3.5 rounded-sm bg-foreground/40 border border-border" />
-            <div className="w-3.5 h-3.5 rounded-sm bg-foreground/65 border border-border" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-muted/15 border border-border" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-foreground/25 border border-border" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-foreground/45 border border-border" />
+            <div className="w-3.5 h-3.5 rounded-sm bg-foreground/70 border border-border" />
             <div className="w-3.5 h-3.5 rounded-sm bg-foreground border border-foreground" />
           </div>
           <span>More</span>

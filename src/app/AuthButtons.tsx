@@ -43,16 +43,21 @@ export default function AuthButtons() {
 
   const primary =
     "inline-flex items-center justify-center min-h-11 gap-2 px-5 py-2.5 bg-foreground text-background rounded-lg text-sm font-medium hover:opacity-90";
-  const secondary =
-    "inline-flex items-center justify-center min-h-11 gap-2 px-5 py-2.5 border border-border text-foreground rounded-lg text-sm font-medium hover:bg-surface";
 
+  // Signed-in home already has the cockpit — keep CTAs quiet so they don't float as a second hero.
   return isLoggedIn ? (
-    <div className="flex flex-wrap gap-3">
-      <AppLink href={`/planner?${qs}`} className={primary}>
-        Open Planner <ArrowRight className="w-4 h-4" />
+    <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm">
+      <AppLink
+        href={`/planner?${qs}`}
+        className="inline-flex items-center gap-1.5 font-medium text-foreground hover:underline underline-offset-4"
+      >
+        Open planner <ArrowRight className="w-3.5 h-3.5" />
       </AppLink>
-      <AppLink href={`/resources?${qs}`} className={secondary}>
-        Browse Resources
+      <AppLink
+        href={`/resources?${qs}`}
+        className="font-medium text-muted hover:text-foreground hover:underline underline-offset-4"
+      >
+        Browse resources
       </AppLink>
     </div>
   ) : (
