@@ -11,7 +11,9 @@ RUN apk add --no-cache \
   && SUPERCRONIC_URL="https://github.com/aptible/supercronic/releases/download/v0.2.33/supercronic-linux-amd64" \
   && curl -fsSL -o /usr/local/bin/supercronic "$SUPERCRONIC_URL" \
   && chmod +x /usr/local/bin/supercronic \
-  && /usr/local/bin/supercronic -test <<< "0 0 * * * true"
+  && printf '%s\n' '0 0 * * * true' > /tmp/cron.test \
+  && /usr/local/bin/supercronic -test /tmp/cron.test \
+  && rm /tmp/cron.test
 
 COPY backup.sh restore-test.sh crontab /app/
 RUN chmod +x /app/backup.sh /app/restore-test.sh \
