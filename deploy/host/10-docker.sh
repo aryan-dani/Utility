@@ -44,10 +44,16 @@ EOF
 sudo systemctl enable --now docker
 sudo systemctl reload docker || sudo systemctl restart docker
 
-if ! groups "$USER" | grep -qw docker; then
-  echo "==> Adding $USER to docker group (re-login required)"
-  sudo usermod -aG docker "$USER"
-  echo "NOTE: docker group is equivalent to root. Log out and back in (or newgrp docker)."
+# When this script is run via `sudo bash …`, $USER is root — prefer the
+# invoking login user so we don't only add root to the docker group.
+DOCKER_USER="${SUDO_USER:-$USER}"
+if [[ "$DOCKER_USER" == "root" ]]; then
+  echo "WARNING: could not detect a non-root user to add to docker group."
+  echo "Run later:  sudo usermod -aG docker <your-username>"
+elif ! id -nG "$DOCKER_USER" | grep -qw docker; then
+  echo "==> Adding $DOCKER_USER to docker group (re-login required)"
+  sudo usermod -aG docker "$DOCKER_USER"
+  echo "NOTE: docker group is equivalent to root. Log out and back in (or: newgrp docker)."
 fi
 
 echo "==> [10-docker] done"
