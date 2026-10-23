@@ -29,5 +29,7 @@ app.onError((err, c) => {
 });
 
 const port = env().PORT;
-console.log(`utility-api listening on 127.0.0.1:${port}`);
-serve({ fetch: app.fetch, port, hostname: "127.0.0.1" });
+// Bind all interfaces inside the container. Host isolation still comes from
+// compose publishing only 127.0.0.1:18100:18100 — not from this hostname.
+console.log(`utility-api listening on 0.0.0.0:${port}`);
+serve({ fetch: app.fetch, port, hostname: "0.0.0.0" });
