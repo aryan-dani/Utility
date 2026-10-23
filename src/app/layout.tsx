@@ -9,6 +9,7 @@ import { Providers } from '@/components/Providers';
 import { AuthGate } from '@/components/AuthGate';
 import InstallPrompt from '@/components/pwa/InstallPrompt';
 import { SW_RECOVERY_SCRIPT } from '@/components/pwa/swRecoveryScript';
+import { ServerStatusBanner } from '@/components/shell/ServerStatusBanner';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import { CANONICAL_ORIGIN } from '@/lib/siteOrigins';
@@ -110,6 +111,7 @@ export default function RootLayout({
           <div className="flex min-h-dvh w-full">
             <Navigation />
             <div className="flex-1 flex flex-col min-w-0 w-full min-h-dvh">
+              <ServerStatusBanner />
               <main id="main-content" role="main" className="flex-1 min-h-0 w-full flex flex-col pt-[calc(3.5rem+env(safe-area-inset-top))] pb-[calc(3.5rem+env(safe-area-inset-bottom))] md:pt-0 md:pb-0">
                 <Suspense
                   fallback={

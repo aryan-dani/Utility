@@ -107,6 +107,24 @@ async function handleSync(request: Request) {
       );
     }
 
+    // Prefer home-server worker when configured (UTILITY_API_URL + UTILITY_API_SECRET).
+    try {
+      const { triggerServerSync } = await import("@/lib/utilityServer.server");
+      if (process.env.UTILITY_API_SECRET && process.env.UTILITY_API_URL) {
+        const ok = await triggerServerSync("incremental");
+        if (ok) {
+          return NextResponse.json({
+            success: true,
+            mode: "home-server",
+            message:
+              "Home-server Drive sync+index queued. Catalog snapshot will revalidate Vercel after it finishes.",
+          });
+        }
+      }
+    } catch {
+      /* fall through to Actions / in-process */
+    }
+
     const dispatchActions = canDispatchActions();
     const runInProcess = canRunInProcess();
 

@@ -1,0 +1,14 @@
+[Unit]
+Description=Utility OS deploy pull (CI-gated)
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=kuro
+Group=kuro
+WorkingDirectory=/srv/utility/app
+Environment=COMPOSE_FILE=/srv/utility/app/deploy/utility/compose.yml
+EnvironmentFile=-/srv/utility/.env
+ExecStart=/srv/utility/app/deploy/scripts/deploy.sh
+Nice=10

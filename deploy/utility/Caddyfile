@@ -1,0 +1,43 @@
+{
+	admin off
+	auto_https off
+}
+
+:80 {
+	encode gzip
+
+	handle /healthz {
+		respond "ok" 200
+	}
+
+	@cors_preflight method OPTIONS
+	handle @cors_preflight {
+		header Access-Control-Allow-Origin "{http.request.header.Origin}"
+		header Access-Control-Allow-Methods "GET, HEAD, OPTIONS"
+		header Access-Control-Allow-Headers "Range, Content-Type"
+		header Access-Control-Max-Age "600"
+		header Access-Control-Expose-Headers "Accept-Ranges, Content-Range, Content-Length, Content-Type"
+		header Vary Origin
+		respond 204
+	}
+
+	@allowed_origin {
+		header_regexp Origin (?i)^https://(utilityos\.tech|www\.utilityos\.tech|planner-flax-six\.vercel\.app)$
+	}
+
+	handle /r/* {
+		root * /srv/files
+		file_server {
+			precompressed
+		}
+		header @allowed_origin Access-Control-Allow-Origin "{http.request.header.Origin}"
+		header @allowed_origin Access-Control-Expose-Headers "Accept-Ranges, Content-Range, Content-Length, Content-Type"
+		header @allowed_origin Vary Origin
+		header Cache-Control "public, max-age=604800, s-maxage=2592000, immutable"
+		header Accept-Ranges bytes
+	}
+
+	handle {
+		respond "Not found" 404
+	}
+}

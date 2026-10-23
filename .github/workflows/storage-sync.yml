@@ -1,11 +1,11 @@
 name: Scheduled Storage Sync
 
 on:
-  schedule:
-    # Daily: incremental Drive changes only (Spark-friendly).
-    - cron: "0 0 * * *"
-    # Weekly Sunday 03:00 UTC: full reconcile + prune.
-    - cron: "0 3 * * 0"
+  # Schedule disabled after home-server cutover (scheduler runs on kuro).
+  # Keep workflow_dispatch as a manual fallback.
+  # schedule:
+  #   - cron: "0 0 * * *"
+  #   - cron: "0 3 * * 0"
   workflow_dispatch:
     inputs:
       mode:

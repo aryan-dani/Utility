@@ -9,12 +9,12 @@ Hobby includes **10 GB Fast Origin Transfer** (CDN ↔ Functions) and **100 GB F
 
 ## Hard rules
 
-1. **Never proxy file bytes through a Vercel Function.** PDFs, images, notebooks, and code files are fetched by the browser directly from Google Drive (`drive.usercontent.google.com`) via [`src/lib/driveFileCache.ts`](src/lib/driveFileCache.ts). Do not recreate `/api/resources/preview` or `/api/resources/code`.
+1. **Never proxy file bytes through a Vercel Function.** PDFs, images, notebooks, and code files are fetched by the browser directly from Google Drive (`drive.usercontent.google.com`) via [`src/lib/driveFileCache.ts`](src/lib/driveFileCache.ts), or from the home-server files hosts (`files.utilityos.tech` / `utility-files.aryandani.com`) when a native mirror exists. Do not recreate `/api/resources/preview` or `/api/resources/code`.
 2. **API routes return JSON/text only**, typically under ~100 KB. No `alt: "media"`, `responseType: "stream"`, `Readable.toWeb`, or `application/pdf` responses.
-3. **No hover/background prefetch of large files.** Client fetches to `/api/*` and Drive downloads must be user-initiated (open, submit, explicit action). No polling loops for live updates unless the payload is tiny and cached.
+3. **No hover/background prefetch of large files.** Client fetches to `/api/*`, Drive, and files-host downloads must be user-initiated (open, submit, explicit action). No polling loops for live updates unless the payload is tiny and cached.
 4. **Do not add `src/middleware.ts` / `src/proxy.ts`** unless strictly necessary with a narrow matcher — Middleware can double Fast Origin Transfer for Function requests.
 5. **PWA precache must not include files over ~200 KB.** Keep `pdf.worker.min.mjs` and large logos out of `publicExcludes` / Workbox precache; fetch them on demand.
-6. **Heavy binary always comes from Google or another third-party origin with CORS**, never through Vercel. Cache hits live in the browser Cache API (`utility-pdf-v2`), not on Vercel.
+6. **Heavy binary always comes from Google Drive or the Cloudflare-tunneled files host**, never through Vercel. Cache hits live in the browser Cache API (`utility-pdf-v2`), not on Vercel.
 
 ## When adding features
 

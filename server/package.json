@@ -1,0 +1,42 @@
+{
+  "name": "@utility/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "tsx watch src/api/index.ts",
+    "dev:worker": "tsx watch src/worker/index.ts",
+    "dev:scheduler": "tsx watch src/scheduler/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start:api": "node dist/api/index.js",
+    "start:worker": "node dist/worker/index.js",
+    "start:scheduler": "node dist/scheduler/index.js",
+    "migrate": "tsx src/db/migrate.ts",
+    "lint": "tsc -p tsconfig.json --noEmit",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@ai-sdk/groq": "^3.0.72",
+    "@hono/node-server": "^1.14.4",
+    "ai": "^6.0.301",
+    "drizzle-orm": "^0.44.2",
+    "firebase-admin": "^13.10.0",
+    "googleapis": "^173.0.0",
+    "hono": "^4.8.3",
+    "pg": "^8.16.3",
+    "pg-boss": "^10.1.6",
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24",
+    "@types/pg": "^8.15.4",
+    "drizzle-kit": "^0.31.4",
+    "tsx": "^4.20.3",
+    "typescript": "^5",
+    "vitest": "^5.0.3"
+  }
+}

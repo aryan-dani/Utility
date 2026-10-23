@@ -35,6 +35,7 @@ import {
   getDirectDownloadUrl,
   matchCachedDriveFile,
 } from "@/lib/driveFileCache";
+import { nativeFileUrl } from "@/lib/utilityServer";
 import { authFetch } from "@/lib/authFetch";
 import { useIsClient } from "@/lib/clientHooks";
 import { WindowChrome, IconButton } from "@/components/ui";
@@ -191,7 +192,18 @@ export default function ResourceViewer({
   const [codeContent, setCodeContent] = useState<string | null>(null);
   const [pdfDirectFailed, setPdfDirectFailed] = useState(false);
   const [hasCachedPdf, setHasCachedPdf] = useState(false);
-  const usePdfJs = isPdf && !!driveId && hasCachedPdf && !pdfDirectFailed;
+  const nativeMeta = resource.native;
+  const nativePdfUrl =
+    nativeMeta &&
+    (nativeMeta.kind === "pdf" ||
+      nativeMeta.ext === "pdf" ||
+      !!nativeMeta.convertedFrom)
+      ? nativeFileUrl(resource.id, nativeMeta.hash, "pdf")
+      : null;
+  const usePdfJs =
+    isPdf &&
+    !pdfDirectFailed &&
+    (!!nativePdfUrl || (!!driveId && hasCachedPdf));
   // Notebooks, source, and CSVs render in-app. Drive's embed cannot preview
   // them and shows "No preview available".
   const usesIframePreview =
@@ -211,7 +223,8 @@ export default function ResourceViewer({
   }
 
   useEffect(() => {
-    if (!isPdf || !driveId) return;
+    // Native mirror skips the Cache API probe — usePdfJs already keys off nativePdfUrl.
+    if (!isPdf || !driveId || nativePdfUrl) return;
     let cancelled = false;
     matchCachedDriveFile(driveId)
       .then((blob) => {
@@ -223,7 +236,7 @@ export default function ResourceViewer({
     return () => {
       cancelled = true;
     };
-  }, [isPdf, driveId, resource.id]);
+  }, [isPdf, driveId, resource.id, nativePdfUrl]);
 
   useEffect(() => {
     if (!isTextFetch) return;
@@ -677,14 +690,15 @@ export default function ResourceViewer({
                 </div>
               )}
             </div>
-          ) : usePdfJs && driveId ? (
+          ) : usePdfJs && (driveId || nativePdfUrl) ? (
             <PdfPreview
               ref={pdfRef}
-              driveId={driveId}
+              driveId={driveId || resource.id}
               ext={extension || "pdf"}
               title={cleanResourceTitle(resource.title)}
               fallbackUrl={driveViewUrl}
               resourceId={resource.id}
+              sourceUrl={nativePdfUrl}
               onReady={() => {
                 setIsLoading(false);
                 setLoadError(false);

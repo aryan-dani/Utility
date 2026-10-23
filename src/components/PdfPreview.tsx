@@ -38,6 +38,8 @@ interface PdfPreviewProps {
   fallbackUrl: string;
   /** When set, page changes are persisted to localStorage for resume. */
   resourceId?: string;
+  /** Prefer this URL (home-server mirror) over Cache API / Drive. */
+  sourceUrl?: string | null;
   onReady?: () => void;
   onFail?: () => void;
 }
@@ -173,7 +175,16 @@ function PdfPage({
 
 const PdfPreview = forwardRef<PdfPreviewHandle, PdfPreviewProps>(
   function PdfPreview(
-    { driveId, ext = "pdf", title, fallbackUrl, resourceId, onReady, onFail },
+    {
+      driveId,
+      ext = "pdf",
+      title,
+      fallbackUrl,
+      resourceId,
+      sourceUrl,
+      onReady,
+      onFail,
+    },
     ref,
   ) {
     const scrollRef = useRef<HTMLDivElement>(null);
@@ -276,12 +287,24 @@ const PdfPreview = forwardRef<PdfPreviewHandle, PdfPreviewProps>(
         try {
           const mod = await import("pdfjs-dist");
           mod.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-          // Only render with pdf.js when bytes are already in the Cache API.
-          // Cross-origin fetch to drive.usercontent.google.com is 403/CORS.
-          const blob = await matchCachedDriveFile(driveId);
-          if (!blob) throw new Error("not cached");
-          if (cancelled || gen !== genRef.current) return;
-          const data = await blob.arrayBuffer();
+          let data: ArrayBuffer | null = null;
+          // Prefer home-server mirror (range-friendly, CORS allowlisted).
+          if (sourceUrl) {
+            const res = await fetch(sourceUrl, {
+              mode: "cors",
+              credentials: "omit",
+              cache: "force-cache",
+            });
+            if (res.ok) {
+              data = await res.arrayBuffer();
+            }
+          }
+          if (!data) {
+            // Cache API hit from a prior native/Drive fetch.
+            const blob = await matchCachedDriveFile(driveId);
+            if (!blob) throw new Error("not cached");
+            data = await blob.arrayBuffer();
+          }
           if (cancelled || gen !== genRef.current) return;
           const doc = await mod.getDocument({ data }).promise;
           if (cancelled || gen !== genRef.current) {
@@ -330,7 +353,7 @@ const PdfPreview = forwardRef<PdfPreviewHandle, PdfPreviewProps>(
           docRef.current = null;
         }
       };
-    }, [driveId, ext]);
+    }, [driveId, ext, sourceUrl]);
 
     const onHeight = useCallback((pageNum: number, height: number) => {
       setHeights((prev) =>

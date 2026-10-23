@@ -102,7 +102,36 @@ async function flushPending() {
   }));
   const opens = [...openBatch.values()].slice(0, 15);
 
+  const today = localDateKey();
+  const events: Array<{
+    actionType: string;
+    loggedDate: string;
+    count: number;
+    resourceId?: string;
+  }> = actions.map(({ actionType, count }) => ({
+    actionType,
+    loggedDate: today,
+    count,
+  }));
+  for (const open of opens) {
+    events.push({
+      actionType: "resource_open",
+      loggedDate: today,
+      count: open.count,
+      resourceId: open.id,
+    });
+  }
+
   try {
+    // Prefer home server when reachable; fall back to Vercel /api/activity.
+    const { utilityFetch } = await import("@/lib/utilityServer");
+    const home = await utilityFetch("/v1/activity", {
+      method: "POST",
+      body: { events },
+      timeoutMs: 4000,
+    });
+    if (home?.ok) return;
+
     const res = await fetch("/api/activity", {
       method: "POST",
       headers: {

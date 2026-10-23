@@ -23,6 +23,14 @@ export async function DELETE(request: Request) {
     await deleteUserFirestoreData(db, user.uid, user.email);
     await adminAuth().deleteUser(user.uid);
 
+    // Best-effort purge of home-server Postgres rows (nightly reconcile catches misses).
+    try {
+      const { purgeServerUser } = await import("@/lib/utilityServer.server");
+      await purgeServerUser(user.uid);
+    } catch {
+      /* ignore — server may be offline */
+    }
+
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("account DELETE", error);

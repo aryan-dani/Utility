@@ -1,0 +1,15 @@
+[Unit]
+Description=Cloudflare Tunnel (%i)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=root
+ExecStart=/usr/bin/cloudflared --no-autoupdate --config /etc/cloudflared/%i.yml tunnel run %i
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=1048576
+
+[Install]
+WantedBy=multi-user.target

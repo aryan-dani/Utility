@@ -17,6 +17,14 @@ export interface SubjectItem {
   semester: number;
 }
 
+export type ResourceNativeMeta = {
+  kind: "pdf" | "image" | "text" | "notebook" | "other";
+  hash: string;
+  bytes: number;
+  ext: string;
+  convertedFrom?: string;
+};
+
 export interface ResourceItem {
   id: string;
   title: string;
@@ -24,6 +32,9 @@ export interface ResourceItem {
   created_at: string;
   subject_name: string;
   category: ResourceCategory;
+  /** Present when the home-server mirror has published a native file. */
+  native?: ResourceNativeMeta | null;
+  drive_file_id?: string | null;
 }
 
 export type ResourceCategory =
@@ -261,6 +272,8 @@ async function fetchResourcesFromDBRaw(
         created_at: createdAtStr,
         subject_name: subName,
         category: d.category || getResourceCategory(d.title || "", url),
+        native: d.native ?? null,
+        drive_file_id: d.drive_file_id ?? null,
       });
     });
   }

@@ -1,0 +1,208 @@
+name: utility
+
+x-logging: &default-logging
+  driver: local
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-app-image: &app-image
+  image: utility-app:${UTILITY_TAG:-latest}
+  build:
+    context: ../..
+    dockerfile: server/Dockerfile
+  env_file:
+    - /srv/utility/.env
+  restart: unless-stopped
+  logging: *default-logging
+  networks:
+    - utility_egress
+    - utility_internal
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg17
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: utility
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: utility
+      TZ: Asia/Kolkata
+    command:
+      - postgres
+      - -c
+      - shared_buffers=512MB
+      - -c
+      - statement_timeout=5000
+    volumes:
+      - /srv/utility/data/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U utility -d utility"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 2G
+    networks:
+      - utility_internal
+    logging: *default-logging
+
+  migrate:
+    <<: *app-image
+    profiles: ["migrate"]
+    command: ["node", "dist/db/migrate.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - utility_internal
+      - utility_egress
+    environment:
+      DATABASE_URL: postgres://utility:${POSTGRES_PASSWORD}@postgres:5432/utility
+
+  api:
+    <<: *app-image
+    command: ["node", "dist/api/index.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:18100:18100"
+    environment:
+      PORT: "18100"
+      DATABASE_URL: postgres://utility:${POSTGRES_PASSWORD}@postgres:5432/utility
+      FILES_ROOT: /data/files
+      GOTENBERG_URL: http://gotenberg:3000
+      TZ: Asia/Kolkata
+    volumes:
+      - /srv/utility/data/files:/data/files:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:18100/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 1536M
+
+  worker:
+    <<: *app-image
+    command: ["node", "dist/worker/index.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gotenberg:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgres://utility:${POSTGRES_PASSWORD}@postgres:5432/utility
+      FILES_ROOT: /data/files
+      GOTENBERG_URL: http://gotenberg:3000
+      TZ: Asia/Kolkata
+    volumes:
+      - /srv/utility/data/files:/data/files
+    deploy:
+      resources:
+        limits:
+          cpus: "2.5"
+          memory: 2G
+
+  scheduler:
+    <<: *app-image
+    command: ["node", "dist/scheduler/index.js"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://utility:${POSTGRES_PASSWORD}@postgres:5432/utility
+      TZ: Asia/Kolkata
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 256M
+
+  files:
+    image: caddy:2.9-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:18101:80"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - /srv/utility/data/files:/srv/files:ro
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:80/healthz"]
+      interval: 15s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 256M
+    networks:
+      - utility_egress
+    logging: *default-logging
+
+  gotenberg:
+    image: gotenberg/gotenberg:8
+    restart: unless-stopped
+    command:
+      - gotenberg
+      - --api-timeout=120s
+      - --chromium-disable-routes
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1G
+    networks:
+      - utility_internal
+    logging: *default-logging
+
+  backup:
+    build:
+      context: ./backup
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - /srv/utility/.env
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_USER: utility
+      POSTGRES_DB: utility
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      FILES_ROOT: /data/files
+      TZ: Asia/Kolkata
+    volumes:
+      - /srv/utility/data/files:/data/files:ro
+      - /srv/utility/data/backup:/backup
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+    networks:
+      - utility_internal
+      - utility_egress
+    logging: *default-logging
+
+networks:
+  utility_internal:
+    name: utility_internal
+    internal: true
+  utility_egress:
+    name: utility_egress

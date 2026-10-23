@@ -1,0 +1,15 @@
+# Installed to /etc/cloudflared/utility.yml
+# credentials-file is created by: cloudflared tunnel create utility
+tunnel: utility
+credentials-file: /etc/cloudflared/utility.json
+
+ingress:
+  - hostname: api.utilityos.tech
+    service: http://127.0.0.1:18100
+  - hostname: utility-api.aryandani.com
+    service: http://127.0.0.1:18100
+  - hostname: files.utilityos.tech
+    service: http://127.0.0.1:18101
+  - hostname: utility-files.aryandani.com
+    service: http://127.0.0.1:18101
+  - service: http_status:404

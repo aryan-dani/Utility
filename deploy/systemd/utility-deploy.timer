@@ -1,0 +1,12 @@
+[Unit]
+Description=Poll Utility OS main for deploys every 2 minutes
+
+[Timer]
+OnBootSec=2min
+OnUnitActiveSec=2min
+AccuracySec=30s
+Persistent=true
+Unit=utility-deploy.service
+
+[Install]
+WantedBy=timers.target
