@@ -29,6 +29,10 @@ fi
 
 echo "[deploy] new sha=$TARGET (was ${CURRENT:-none})"
 
+# Move working tree to the verified tip (fetch alone does not update files).
+git checkout -q main 2>/dev/null || git checkout -q -B main "$TARGET"
+git reset -q --hard "$TARGET"
+
 # Unauthenticated GitHub checks API (public repo)
 CHECKS_JSON=$(curl -fsS \
   -H "Accept: application/vnd.github+json" \

@@ -29,6 +29,11 @@ fi
 sudo chown -R "${OWNER}:${OWNER}" /srv/utility
 sudo chmod 755 /srv /srv/utility
 sudo chmod 700 /srv/utility/data /srv/utility/state
+# Worker container runs as uid 10001 (USER utility in server/Dockerfile).
+# Postgres volume stays owned by the postgres image user after first start.
+sudo mkdir -p /srv/utility/data/files
+sudo chown -R 10001:10001 /srv/utility/data/files
+sudo chmod 755 /srv/utility/data/files
 
 if [[ ! -f /srv/utility/.env ]]; then
   echo "Creating empty /srv/utility/.env (mode 600). Fill secrets yourself."
