@@ -21,7 +21,14 @@ internalRoutes.post("/sync", async (c) => {
   const body = (await c.req.json().catch(() => ({}))) as { mode?: string };
   const mode = body.mode === "full" ? "full" : "incremental";
   const boss = await getBoss();
-  const id = await boss.send("drive.sync", { mode });
+  const id = await boss.send(
+    "drive.sync",
+    { mode },
+    {
+      // Full vault mirrors exceed the 15m default; keep incremental shorter.
+      expireInSeconds: mode === "full" ? 6 * 60 * 60 : 2 * 60 * 60,
+    },
+  );
   return c.json({ ok: true, jobId: id, mode });
 });
 

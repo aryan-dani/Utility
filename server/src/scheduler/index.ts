@@ -12,6 +12,11 @@ async function main() {
   const boss = await getBoss();
 
   await boss.createQueue("drive.sync");
+  await boss.updateQueue("drive.sync", {
+    name: "drive.sync",
+    expireInSeconds: 6 * 60 * 60,
+    retryLimit: 1,
+  });
   await boss.createQueue("cache.purge");
   await boss.createQueue("users.reconcile");
 
@@ -19,7 +24,10 @@ async function main() {
     "drive.sync",
     "*/15 * * * *",
     { mode: "incremental" },
-    { tz: "Asia/Kolkata" },
+    {
+      tz: "Asia/Kolkata",
+      expireInSeconds: 2 * 60 * 60,
+    },
   );
 
   // Separate cron string for full reconcile (pg-boss ScheduleOptions has no `key`)
@@ -27,7 +35,10 @@ async function main() {
     "drive.sync",
     "0 3 * * 0",
     { mode: "full" },
-    { tz: "Asia/Kolkata" },
+    {
+      tz: "Asia/Kolkata",
+      expireInSeconds: 6 * 60 * 60,
+    },
   );
 
   await boss.schedule("cache.purge", "0 4 * * *", {}, { tz: "Asia/Kolkata" });

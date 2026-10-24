@@ -7,7 +7,13 @@ import { closeDb } from "../db/client.js";
 async function main() {
   const boss = await getBoss();
 
+  // Full Drive mirrors can run for hours; default expireInSeconds is only 15m.
   await boss.createQueue("drive.sync");
+  await boss.updateQueue("drive.sync", {
+    name: "drive.sync",
+    expireInSeconds: 6 * 60 * 60,
+    retryLimit: 1,
+  });
   await boss.createQueue("cache.purge");
   await boss.createQueue("users.reconcile");
   await boss.createQueue("catalog.publish");
