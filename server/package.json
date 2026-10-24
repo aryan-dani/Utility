@@ -46,6 +46,9 @@
     "ip-address": "^10.7.4",
     "glob": "^13.0.6",
     "node-domexception": "file:../scripts/domexception-shim",
-    "cron-parser": "^5.10.2"
+    "cron-parser": "^5.10.2",
+    "jwks-rsa": {
+      "jose": "5.10.0"
+    }
   }
 }

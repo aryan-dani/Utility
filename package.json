@@ -103,7 +103,10 @@
     "fast-uri": "^4.2.3",
     "ip-address": "^10.7.4",
     "esbuild": "^0.25.4",
-    "glob": "^13.0.6"
+    "glob": "^13.0.6",
+    "jwks-rsa": {
+      "jose": "5.10.0"
+    }
   },
   "allowScripts": {
     "@firebase/util": true,
