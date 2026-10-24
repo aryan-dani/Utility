@@ -121,10 +121,9 @@ export default function ResourceViewer({
   const isNotebook = isNotebookExtension(extension);
   const isCsv = isCsvExtension(extension);
   const isImage = isImageExtension(extension);
-  const isCode =
-    !isCsv &&
-    !isImage &&
-    (isCodeExtension(extension) || resource.category === "codes");
+  // Extension decides the code path. category "codes" alone can include
+  // PDFs or archives that must stay on pdf.js / download, not text fetch.
+  const isCode = !isCsv && !isImage && isCodeExtension(extension);
   const isTextFetch = isCode || isCsv || isNotebook;
   const embedUrl = useMemo(
     () => getViewerUrl(resource, initialPage),

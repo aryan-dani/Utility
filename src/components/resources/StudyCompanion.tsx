@@ -43,32 +43,36 @@ async function readGroundedReply(res: Response): Promise<Turn> {
   let buffer = "";
   let text = "";
   let sources: RetrievalSource[] = [];
+  const applyLine = (line: string) => {
+    const trimmed = line.trim();
+    if (!trimmed.startsWith("data:")) return;
+    const payload = trimmed.slice(5).trim();
+    if (!payload || payload === "[DONE]") return;
+    try {
+      const event = JSON.parse(payload) as {
+        type?: string;
+        delta?: string;
+        data?: RetrievalSource[];
+      };
+      if (event.type === "text-delta" && event.delta) text += event.delta;
+      if (event.type === "data-sources" && Array.isArray(event.data)) {
+        sources = event.data;
+      }
+    } catch {
+      /* partial frame */
+    }
+  };
+
   for (;;) {
     const { done, value } = await reader.read();
     if (done) break;
     buffer += decoder.decode(value, { stream: true });
     const lines = buffer.split("\n");
     buffer = lines.pop() || "";
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed.startsWith("data:")) continue;
-      const payload = trimmed.slice(5).trim();
-      if (!payload || payload === "[DONE]") continue;
-      try {
-        const event = JSON.parse(payload) as {
-          type?: string;
-          delta?: string;
-          data?: RetrievalSource[];
-        };
-        if (event.type === "text-delta" && event.delta) text += event.delta;
-        if (event.type === "data-sources" && Array.isArray(event.data)) {
-          sources = event.data;
-        }
-      } catch {
-        /* partial frame */
-      }
-    }
+    for (const line of lines) applyLine(line);
   }
+  // Flush a final frame that arrived without a trailing newline.
+  if (buffer.trim()) applyLine(buffer);
   return { role: "assistant", text, sources };
 }
 

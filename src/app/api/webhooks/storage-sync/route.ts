@@ -46,11 +46,7 @@ async function isAuthorized(request: Request): Promise<boolean> {
     }
   }
 
-  // Local next dev only: allow when CRON_SECRET is unset and not on Vercel
-  if (!cronSecret && !process.env.VERCEL) {
-    return true;
-  }
-
+  // Fail closed when CRON_SECRET is missing (including local hosts).
   return false;
 }
 

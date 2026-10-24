@@ -96,6 +96,7 @@ export async function utilityFetch(
   if (!opts.public && !token) return null;
 
   const timeoutMs = opts.timeoutMs ?? JSON_TIMEOUT_MS;
+  let lastResponse: Response | null = null;
   for (const origin of apiOrigins()) {
     try {
       const headers: Record<string, string> = {};
@@ -108,11 +109,20 @@ export async function utilityFetch(
         signal: AbortSignal.timeout(timeoutMs),
         cache: "no-store",
       });
+      // Try the campus fallback when the primary host is sick.
+      if (res.status >= 500) {
+        lastResponse = res;
+        continue;
+      }
       clearBreaker();
       return res;
     } catch {
       /* try next origin */
     }
+  }
+  if (lastResponse) {
+    clearBreaker();
+    return lastResponse;
   }
   tripBreaker();
   return null;

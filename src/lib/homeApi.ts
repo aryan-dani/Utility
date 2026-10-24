@@ -11,6 +11,27 @@ function stripJsonFence(text: string): string {
   return text.replace(/```json|```/g, "").trim();
 }
 
+function nonEmptyArray(value: unknown): value is unknown[] {
+  return Array.isArray(value) && value.length > 0;
+}
+
+function quizCorrectIndex(
+  item: Record<string, unknown>,
+  options: string[],
+): number {
+  const raw = item.correctIndex ?? item.correct_index;
+  const n = typeof raw === "number" ? raw : Number(raw);
+  if (Number.isFinite(n) && n >= 0 && n < options.length) return n;
+  const answer = String(item.a || item.answer || "").trim();
+  if (answer) {
+    const match = options.findIndex(
+      (opt) => opt.trim().toLowerCase() === answer.toLowerCase(),
+    );
+    if (match >= 0) return match;
+  }
+  return 0;
+}
+
 export async function homeOrVercelSearch(params: {
   q: string;
   year: string;
@@ -38,10 +59,10 @@ export async function homeOrVercelSearch(params: {
         sectionLabel?: string | null;
       }>;
     };
-    if (Array.isArray(data.results) && data.results.length > 0) {
-      return data.results;
+    if (nonEmptyArray(data.results)) {
+      return data.results as RAGSearchResult[];
     }
-    if (Array.isArray(data.sources)) {
+    if (nonEmptyArray(data.sources)) {
       return data.sources.map((s) => ({
         resource_id: s.resourceId,
         title: s.title || "Resource",
@@ -50,7 +71,7 @@ export async function homeOrVercelSearch(params: {
         section_label: s.sectionLabel ?? undefined,
       }));
     }
-    return [];
+    // Empty home index — fall through to Vercel (still has PDF text).
   }
 
   const res = await authFetch(`/api/search?${qs.toString()}`, {
@@ -97,33 +118,33 @@ export async function homeOrVercelStudy(
       text?: string;
       error?: string;
     };
-    if (data.flashcards || data.quiz) {
+    if (nonEmptyArray(data.flashcards) || nonEmptyArray(data.quiz)) {
       return data as Record<string, unknown>;
     }
     if (typeof data.text === "string" && data.text.trim()) {
       try {
         const parsed = JSON.parse(stripJsonFence(data.text)) as {
-          items?: Array<Record<string, string>>;
+          items?: Array<Record<string, unknown>>;
           flashcards?: unknown;
           quiz?: unknown;
         };
-        if (parsed.flashcards || parsed.quiz) {
+        if (nonEmptyArray(parsed.flashcards) || nonEmptyArray(parsed.quiz)) {
           return parsed as Record<string, unknown>;
         }
-        if (Array.isArray(parsed.items)) {
+        if (nonEmptyArray(parsed.items)) {
           if (body.type === "quiz") {
             return {
               quiz: parsed.items.map((item, i) => {
-                const rawOpts = (item as { options?: unknown }).options;
+                const rawOpts = item.options;
                 const options = Array.isArray(rawOpts)
                   ? rawOpts.map(String)
-                  : [item.a || item.answer || "—"];
+                  : [String(item.a || item.answer || "—")];
                 return {
                   id: String(i + 1),
-                  question: item.q || item.question || "",
+                  question: String(item.q || item.question || ""),
                   options,
-                  correctIndex: 0,
-                  explanation: item.a || item.answer || "",
+                  correctIndex: quizCorrectIndex(item, options),
+                  explanation: String(item.a || item.answer || ""),
                   citations: [],
                 };
               }),
@@ -132,8 +153,8 @@ export async function homeOrVercelStudy(
           return {
             flashcards: parsed.items.map((item, i) => ({
               id: String(i + 1),
-              question: item.front || item.q || item.question || "",
-              answer: item.back || item.a || item.answer || "",
+              question: String(item.front || item.q || item.question || ""),
+              answer: String(item.back || item.a || item.answer || ""),
             })),
           };
         }
@@ -148,7 +169,16 @@ export async function homeOrVercelStudy(
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
   });
-  return (await res.json()) as Record<string, unknown>;
+  const data = (await res.json()) as Record<string, unknown>;
+  if (!res.ok) {
+    return {
+      error:
+        typeof data.error === "string"
+          ? data.error
+          : "Failed to generate study material",
+    };
+  }
+  return data;
 }
 
 export async function homeOrVercelSummarize(
