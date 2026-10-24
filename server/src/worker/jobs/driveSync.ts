@@ -70,39 +70,96 @@ function chunkText(text: string): Array<{ text: string; tokens: string[] }> {
   return chunks;
 }
 
-function resourceIdFromPath(path: string): string {
-  const hash = createHash("sha256").update(path).digest("hex");
-  return [
-    hash.slice(0, 8),
-    hash.slice(8, 12),
-    "4" + hash.slice(13, 16),
-    ((parseInt(hash.slice(16, 18), 16) & 0x3f) | 0x80)
-      .toString(16)
-      .padStart(2, "0") + hash.slice(18, 20),
-    hash.slice(20, 32),
-  ].join("-");
+/** Must match runtime/lib/driveCatalog.mjs generateId (existing Firestore IDs). */
+function generateId(input: string): string {
+  const hash = createHash("sha256").update(input).digest("hex");
+  return `${hash.substring(0, 8)}-${hash.substring(8, 12)}-4${hash.substring(12, 15)}-a${hash.substring(15, 18)}-${hash.substring(18, 30)}`;
 }
 
+function resourceIdFromPath(path: string): string {
+  return generateId(path);
+}
+
+function subjectIdFromParts(
+  academicYear: string,
+  branch: string,
+  semester: number,
+  subjectName: string,
+): string {
+  return generateId(
+    `subject-${academicYear}-${branch}-${semester}-${String(subjectName).toLowerCase()}`,
+  );
+}
+
+function titleCaseSubject(name: string): string {
+  return String(name)
+    .replace(/_/g, " ")
+    .split(" ")
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
+function categoryFromSegment(catSegment: string, fileName = ""): string {
+  const cat = String(catSegment || "").toLowerCase();
+  if (cat.includes("notes")) return "notes";
+  if (cat.includes("ppt") || cat.includes("presentation")) return "ppt";
+  if (cat.includes("pyq")) return "pyq";
+  if (cat.includes("qb") || cat.includes("question_bank")) {
+    return String(fileName).toLowerCase().includes("solved")
+      ? "solved-question-bank"
+      : "question-bank";
+  }
+  if (cat.includes("writeup")) return "writeup";
+  if (cat.includes("code")) return "codes";
+  return "other";
+}
+
+/**
+ * Real Drive layout (same as runtime parseDrivePath):
+ *   [YYYY-YYYY/]<BRANCH>/Sem_<N>_<BRANCH>/Sem_<N>_{Notes|PPT|…}/<Subject>/<File>
+ */
 function parseAcademicPath(path: string): {
   academicYear: string;
   branch: string;
   semester: number;
   subject: string;
   title: string;
+  category: string;
 } | null {
-  // Expect: Year/Branch/Sem_N/Subject/file.ext
-  const parts = path.split("/").filter(Boolean);
-  if (parts.length < 5) return null;
-  const [academicYear, branch, semFolder, subject, ...rest] = parts;
-  const semMatch = /^Sem[_\s-]?(\d+)$/i.exec(semFolder || "");
+  const parts = path.replace(/\\/g, "/").split("/").filter(Boolean);
+  if (parts.length < 1) return null;
+
+  const academicYear =
+    parts[0] && /^\d{4}-\d{4}$/.test(parts[0]) ? parts[0] : "2025-2026";
+
+  const semIndex = parts.findIndex((p) => /Sem_(\d+)_(\w+)/i.test(p));
+  if (semIndex === -1) return null;
+
+  const semMatch = parts[semIndex].match(/Sem_(\d+)_(\w+)/i);
   if (!semMatch) return null;
-  const title = rest.join("/") || subject;
+  const semester = parseInt(semMatch[1], 10);
+  const branch = semMatch[2].toUpperCase();
+  const fileName = parts[parts.length - 1] || "";
+
+  let subject = "General";
+  if (fileName.toLowerCase().includes("syllabus")) {
+    subject = "Syllabus";
+  } else if (parts.length >= semIndex + 4) {
+    subject = parts[semIndex + 2];
+  }
+
+  const category =
+    parts.length >= semIndex + 2
+      ? categoryFromSegment(parts[semIndex + 1], fileName)
+      : "other";
+
   return {
     academicYear,
     branch,
-    semester: Number(semMatch[1]),
-    subject,
-    title,
+    semester,
+    subject: titleCaseSubject(subject),
+    title: fileName,
+    category,
   };
 }
 
@@ -242,21 +299,32 @@ async function publishCatalogSnapshot(): Promise<void> {
   const batchSize = 400;
   for (const [key, list] of byScope) {
     const [academicYear, branch, semester] = key.split("__");
-    const payload = {
+    const subjectRows = await db.select().from(subjects);
+  const subjectNames = new Map(subjectRows.map((s) => [s.id, s.name]));
+  const payload = {
       academic_year: academicYear,
       branch,
       semester: Number(semester),
       updated_at: new Date().toISOString(),
+      resource_count: list.length,
+      syllabusUrl: null as string | null,
       resources: list.map((r) => ({
         id: r.id,
         title: r.title,
-        category: r.category,
+        category: r.category || "other",
         subject_id: r.subjectId,
-        file_url: r.fileUrl,
+        subject_name: (r.subjectId && subjectNames.get(r.subjectId)) || "Unknown",
+        file_url: r.fileUrl || "",
+        created_at: r.updatedAt?.toISOString?.() || new Date().toISOString(),
         drive_file_id: r.driveFileId,
         native: r.native,
       })),
     };
+    const syllabus = list.find(
+      (r) =>
+        /syllabus/i.test(r.title || "") || /syllabus/i.test(r.drivePath || ""),
+    );
+    if (syllabus?.fileUrl) payload.syllabusUrl = syllabus.fileUrl;
     await firestore.collection("workspace_catalogs").doc(key).set(payload);
   }
   // Touch global stats
@@ -301,12 +369,20 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
   const db = getDb();
 
   let mirrored = 0;
+  let pathSkipped = 0;
+  let downloadFailed = 0;
   for (const file of files) {
     const parsed = parseAcademicPath(file.path);
-    if (!parsed) continue;
+    if (!parsed) {
+      pathSkipped += 1;
+      continue;
+    }
     const rid = resourceIdFromPath(file.path);
-    const subjectId = resourceIdFromPath(
-      `${parsed.academicYear}/${parsed.branch}/Sem_${parsed.semester}/${parsed.subject}`,
+    const subjectId = subjectIdFromParts(
+      parsed.academicYear,
+      parsed.branch,
+      parsed.semester,
+      parsed.subject,
     );
 
     await db
@@ -331,6 +407,7 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
         buf = await downloadFile(drive, file.id);
       }
     } catch (err) {
+      downloadFailed += 1;
       console.warn("download failed", file.path, err);
       continue;
     }
@@ -386,6 +463,7 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
         id: rid,
         subjectId,
         title: parsed.title,
+        category: parsed.category,
         academicYear: parsed.academicYear,
         branch: parsed.branch,
         semester: parsed.semester,
@@ -402,6 +480,8 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
         target: resources.id,
         set: {
           title: parsed.title,
+          category: parsed.category,
+          subjectId,
           driveFileId: file.id,
           drivePath: file.path,
           driveModifiedAt: file.modifiedTime
@@ -413,6 +493,30 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
           updatedAt: new Date(),
         },
       });
+
+    // Attach native meta on the live Firestore resource doc (viewer cold path).
+    try {
+      await adminDb()
+        .collection("resources")
+        .doc(rid)
+        .set(
+          {
+            native,
+            drive_file_id: file.id,
+            drive_path: file.path,
+            file_url: previewUrl,
+            category: parsed.category,
+            subject_id: subjectId,
+            title: parsed.title,
+            academic_year: parsed.academicYear,
+            branch: parsed.branch,
+            semester: parsed.semester,
+          },
+          { merge: true },
+        );
+    } catch (err) {
+      console.warn("firestore resource native update failed", rid, err);
+    }
 
     // Index text for RAG when we can extract something cheap
     let text = "";
@@ -495,5 +599,7 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
     }
   }
 
-  console.log(`drive.sync ${payload.mode}: mirrored=${mirrored}`);
+  console.log(
+    `drive.sync ${payload.mode}: listed=${files.length} mirrored=${mirrored} pathSkipped=${pathSkipped} downloadFailed=${downloadFailed}`,
+  );
 }
