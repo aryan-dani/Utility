@@ -16,10 +16,8 @@ import {
   Folder,
   Layers,
   Search,
-  PenTool,
   Brain,
   CheckCircle2,
-  Code2,
   Loader2,
   ChevronRight,
   ClipboardList,
@@ -87,8 +85,9 @@ const RESOURCE_FILTERS: { value: ResourceFilter; label: string; Icon: LucideIcon
     { value: "question-bank", label: "Question Banks", Icon: BookOpenCheck },
     { value: "ppt", label: "Presentations", Icon: FileSpreadsheet },
     { value: "pyq", label: "PYQ", Icon: FileText },
-    { value: "writeup", label: "Writeups", Icon: PenTool },
-    { value: "codes", label: "Codes", Icon: Code2 },
+    // One chip: writeups, notebooks, and datasets are one assignment bundle.
+    // Older links may still use ?filter=codes; that alias is handled below.
+    { value: "writeup", label: "Assignments", Icon: ClipboardList },
     { value: "social", label: "Social", Icon: MessageCircle },
   ];
 
@@ -667,7 +666,7 @@ export default function ResourcesClient() {
     );
   }, [selectedSubject, subjectsMap, searchQuery]);
 
-  /** For Codes/Writeups filters, include sibling assignment files so notebooks keep datasets. */
+  /** Assignments filter (and the legacy codes alias) keeps each folder complete. */
   const filteredResources = useMemo(() => {
     if (selectedFilter === "all") return searchedResources;
     if (selectedFilter === "question-bank") {
@@ -1170,7 +1169,11 @@ export default function ResourcesClient() {
                   >
                     {RESOURCE_FILTERS.map(({ value, label, Icon }) => {
                       const count = filterCounts[value] ?? 0;
-                      const active = selectedFilter === value;
+                      const active =
+                        value === "writeup"
+                          ? selectedFilter === "writeup" ||
+                            selectedFilter === "codes"
+                          : selectedFilter === value;
                       if (value !== "all" && value !== "social" && count === 0) return null;
                       return (
                         <Button
