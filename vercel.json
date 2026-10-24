@@ -1,1 +1,4 @@
-{"ignoreCommand":"if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 1; else exit 0; fi"}
+{
+  "ignoreCommand": "if [ \"$VERCEL_ENV\" = \"production\" ]; then exit 1; else exit 0; fi",
+  "installCommand": "unset npm_config_cache_dir && npm install"
+}
