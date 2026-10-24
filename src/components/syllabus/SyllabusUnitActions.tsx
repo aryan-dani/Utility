@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { authFetch } from "@/lib/authFetch";
+import { homeOrVercelStudy } from "@/lib/homeApi";
 import { notify } from "@/lib/toast";
 import { useSRSStore } from "@/store/srsStore";
 import { useAcademicStore } from "@/store/academicStore";
@@ -42,24 +42,15 @@ export function SyllabusUnitActions({
     if (saving) return;
     setSaving(true);
     try {
-      const res = await authFetch("/api/study", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: "flashcards",
-          topic: `${subject} — ${unit}. ${description}`.slice(0, 500),
-          context: { academicYear, branch, semester, subjects: [subject] },
-        }),
+      const data = await homeOrVercelStudy({
+        type: "flashcards",
+        topic: `${subject} — ${unit}. ${description}`.slice(0, 500),
+        context: { academicYear, branch, semester, subjects: [subject] },
       });
-      if (res.status === 401) {
-        notify.error("Sign in to save flashcards.");
-        return;
-      }
-      const data = (await res.json()) as {
-        flashcards?: Array<{ question?: string; answer?: string }>;
-        error?: string;
-      };
-      const cards = (data.flashcards || [])
+      const flashcards = Array.isArray(data.flashcards)
+        ? (data.flashcards as Array<{ question?: string; answer?: string }>)
+        : [];
+      const cards = flashcards
         .map((card) => ({
           question: (card.question || "").trim(),
           answer: (card.answer || "").trim(),
@@ -67,7 +58,9 @@ export function SyllabusUnitActions({
         .filter((card) => card.question && card.answer)
         .slice(0, 10);
       if (cards.length === 0) {
-        notify.error(data.error || "No cards came back.");
+        notify.error(
+          typeof data.error === "string" ? data.error : "No cards came back.",
+        );
         return;
       }
       const store = useSRSStore.getState();

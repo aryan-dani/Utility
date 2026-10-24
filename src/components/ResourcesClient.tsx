@@ -67,7 +67,7 @@ import {
 } from "@/lib/favoriteResources";
 import { getReadingProgress } from "@/lib/readingProgress";
 import { logResourceOpen } from "@/lib/activity";
-import { authFetch } from "@/lib/authFetch";
+import { homeOrVercelSearch } from "@/lib/homeApi";
 import { useWorkspaceResources } from "@/lib/useWorkspaceResources";
 import { Button, Card, Badge, PageHeader, Input, IconButton, EmptyState, ErrorState, PageShell } from "@/components/ui";
 import { NeedsConnection, useOnline } from "@/components/NeedsConnection";
@@ -619,22 +619,15 @@ export default function ResourcesClient() {
           }
           return;
         }
-        const params = new URLSearchParams({
+        const results = await homeOrVercelSearch({
           q: aiSearchQuery,
           year: academicYear,
           branch,
-          semester: String(semester),
-        });
-        const res = await authFetch(`/api/search?${params.toString()}`, {
+          semester,
           signal: abortController.signal,
         });
-        if (!res.ok) {
-          if (searchRequestId.current === requestId) setContentResults([]);
-          return;
-        }
-        const data = await res.json();
         if (searchRequestId.current === requestId) {
-          setContentResults(data.results || []);
+          setContentResults(results);
         }
       } catch (err: unknown) {
         const name = err instanceof Error ? err.name : "";

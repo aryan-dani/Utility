@@ -48,6 +48,7 @@ import { SourceCardList, renderWithCitations } from '@/components/ask/SourceCard
 import type { RetrievalSource } from '@/lib/rag/types';
 import { stripInvalidCitations, validMarkerSet } from '@/lib/agent/router';
 import { authFetch, getAuthHeaders } from '@/lib/authFetch';
+import { homeOrVercelStudy } from '@/lib/homeApi';
 import { useWorkspaceResources } from '@/lib/useWorkspaceResources';
 import { generateId } from '@/lib/id';
 import { titleFromFirstMessage } from '@/lib/ask/chatTitle';
@@ -946,22 +947,13 @@ export default function AskClient() {
         notify.error('Please sign in to generate flashcards.');
         return;
       }
-      const res = await authFetch('/api/study', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'flashcards',
-          topic: flashcardTopic,
-          context: { academicYear, branch, semester, subjects }
-        }),
+      const data = await homeOrVercelStudy({
+        type: 'flashcards',
+        topic: flashcardTopic,
+        context: { academicYear, branch, semester, subjects },
       });
-      if (res.status === 401) {
-        notify.error('Please sign in to generate flashcards.');
-        return;
-      }
-      const data = await res.json();
-      if (data.flashcards) {
-        setFlashcards(data.flashcards);
+      if (Array.isArray(data.flashcards)) {
+        setFlashcards(data.flashcards as Flashcard[]);
         logActivity('flashcard_generated', data.flashcards.length);
       }
     } catch (err) {
@@ -1031,22 +1023,13 @@ export default function AskClient() {
         notify.error('Please sign in to generate a quiz.');
         return;
       }
-      const res = await authFetch('/api/study', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'quiz',
-          topic: quizTopic,
-          context: { academicYear, branch, semester, subjects }
-        }),
+      const data = await homeOrVercelStudy({
+        type: 'quiz',
+        topic: quizTopic,
+        context: { academicYear, branch, semester, subjects },
       });
-      if (res.status === 401) {
-        notify.error('Please sign in to generate a quiz.');
-        return;
-      }
-      const data = await res.json();
-      if (data.quiz) {
-        setQuizQuestions(data.quiz);
+      if (Array.isArray(data.quiz)) {
+        setQuizQuestions(data.quiz as QuizQuestion[]);
         logActivity('quiz_generated', data.quiz.length);
       }
     } catch (err) {

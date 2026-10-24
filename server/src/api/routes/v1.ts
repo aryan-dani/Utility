@@ -64,7 +64,14 @@ v1Routes.get("/search", async (c) => {
     semester,
     resourceId,
   });
-  return c.json({ sources, context });
+  const results = sources.map((s) => ({
+    resource_id: s.resourceId,
+    title: s.title,
+    subject_name: "",
+    snippet: s.text.slice(0, 400),
+    section_label: s.sectionLabel ?? undefined,
+  }));
+  return c.json({ sources, context, results });
 });
 
 v1Routes.post("/chat", async (c) => {
@@ -141,23 +148,35 @@ v1Routes.post("/study", async (c) => {
   const body = (await c.req.json().catch(() => null)) as {
     mode?: string;
     query?: string;
+    type?: string;
+    topic?: string;
     academicYear?: string;
     branch?: string;
     semester?: number;
+    context?: {
+      academicYear?: string;
+      branch?: string;
+      semester?: number;
+    };
   } | null;
-  if (!body?.query) return c.json({ error: "query required" }, 400);
+  const topic = (body?.topic || body?.query || "").trim();
+  if (!topic) return c.json({ error: "query required" }, 400);
+  const academicYear = body?.context?.academicYear || body?.academicYear;
+  const branch = body?.context?.branch || body?.branch;
+  const semester = body?.context?.semester ?? body?.semester;
   const { sources, context } = await retrieve({
-    query: body.query,
-    academicYear: body.academicYear,
-    branch: body.branch,
-    semester: body.semester,
+    query: topic,
+    academicYear,
+    branch,
+    semester,
   });
   const groq = createGroq({ apiKey: env().GROQ_API_KEY });
-  const mode = body.mode === "quiz" ? "quiz" : "flashcards";
+  const mode =
+    body?.type === "quiz" || body?.mode === "quiz" ? "quiz" : "flashcards";
   const prompt =
     mode === "quiz"
-      ? `Create 5 short quiz Q&As from the notes. Return JSON {items:[{q,a}]}.\n${context}`
-      : `Create 8 flashcards from the notes. Return JSON {items:[{front,back}]}.\n${context}`;
+      ? `Create a 5-question multiple-choice quiz from the notes. Return ONLY JSON {quiz:[{id,question,options:[A,B,C,D],correctIndex,explanation,citations:[]}]}.\n${context}`
+      : `Create 8 flashcards from the notes. Return ONLY JSON {flashcards:[{id,question,answer}]}.\n${context}`;
   const { generateText } = await import("ai");
   const out = await generateText({
     model: groq("openai/gpt-oss-20b"),
@@ -165,6 +184,16 @@ v1Routes.post("/study", async (c) => {
     temperature: 0.3,
     abortSignal: AbortSignal.timeout(45_000),
   });
+  try {
+    const parsed = JSON.parse(
+      out.text.replace(/```json|```/g, "").trim(),
+    ) as Record<string, unknown>;
+    if (parsed.flashcards || parsed.quiz) {
+      return c.json({ ...parsed, sources });
+    }
+  } catch {
+    /* return raw text for client-side parse */
+  }
   return c.json({ text: out.text, sources });
 });
 
@@ -206,7 +235,14 @@ v1Routes.get("/activity", async (c) => {
     .where(eq(activityLogs.userId, uid))
     .orderBy(desc(activityLogs.loggedDate))
     .limit(120);
+  const counts: Record<string, number> = {};
+  for (const r of rows) {
+    const n = Number(r.count) || 0;
+    if (!r.loggedDate || n <= 0) continue;
+    counts[r.loggedDate] = (counts[r.loggedDate] || 0) + n;
+  }
   return c.json({
+    counts,
     logs: rows.map((r) => ({
       id: r.id,
       actionType: r.actionType,

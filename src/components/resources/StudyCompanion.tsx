@@ -75,9 +75,11 @@ async function readGroundedReply(res: Response): Promise<Turn> {
 export function StudyCompanion({
   resource,
   onJump,
+  onCollapse,
 }: {
   resource: ResourceItem;
   onJump?: (page: number) => void;
+  onCollapse?: () => void;
 }) {
   const academicYear = useAcademicStore((s) => s.academicYear);
   const branch = useAcademicStore((s) => s.branch);
@@ -163,8 +165,8 @@ export function StudyCompanion({
   };
 
   return (
-    <aside className="hidden lg:flex w-80 shrink-0 flex-col border-l border-border bg-background min-h-0">
-      <div className="flex border-b border-border">
+    <aside className="hidden lg:flex w-80 shrink-0 flex-col border-l border-border bg-background h-full min-h-0 self-stretch">
+      <div className="flex border-b border-border shrink-0">
         {(
           [
             ["ask", "Ask"],
@@ -181,6 +183,17 @@ export function StudyCompanion({
             {label}
           </button>
         ))}
+        {onCollapse ? (
+          <button
+            type="button"
+            className="h-10 px-3 text-xs font-medium text-muted hover:text-foreground"
+            onClick={onCollapse}
+            aria-label="Collapse study panel"
+            title="Collapse"
+          >
+            Hide
+          </button>
+        ) : null}
       </div>
       <div className="p-3 flex-1 min-h-0 overflow-y-auto space-y-3">
         {tab === "ask" && (

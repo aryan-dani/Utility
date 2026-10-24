@@ -13,6 +13,7 @@ import {
   Table2,
   Play,
   ImageIcon,
+  PanelRight,
 } from "lucide-react";
 import { ResourceItem } from "@/lib/dataFetcher";
 import {
@@ -192,6 +193,7 @@ export default function ResourceViewer({
   const [codeContent, setCodeContent] = useState<string | null>(null);
   const [pdfDirectFailed, setPdfDirectFailed] = useState(false);
   const [hasCachedPdf, setHasCachedPdf] = useState(false);
+  const [companionOpen, setCompanionOpen] = useState(false);
   const nativeMeta = resource.native;
   const nativePdfUrl =
     nativeMeta &&
@@ -200,10 +202,11 @@ export default function ResourceViewer({
       !!nativeMeta.convertedFrom)
       ? nativeFileUrl(resource.id, nativeMeta.hash, "pdf")
       : null;
+  // Prefer pdf.js whenever a native PDF exists (including Gotenberg-converted
+  // Office). Extension may still be .docx/.pptx after conversion.
   const usePdfJs =
-    isPdf &&
     !pdfDirectFailed &&
-    (!!nativePdfUrl || (!!driveId && hasCachedPdf));
+    (!!nativePdfUrl || (isPdf && !!driveId && hasCachedPdf));
   // Notebooks, source, and CSVs render in-app. Drive's embed cannot preview
   // them and shows "No preview available".
   const usesIframePreview =
@@ -224,7 +227,8 @@ export default function ResourceViewer({
 
   useEffect(() => {
     // Native mirror skips the Cache API probe — usePdfJs already keys off nativePdfUrl.
-    if (!isPdf || !driveId || nativePdfUrl) return;
+    if (nativePdfUrl || !driveId) return;
+    if (!isPdf && !nativeMeta?.convertedFrom) return;
     let cancelled = false;
     matchCachedDriveFile(driveId)
       .then((blob) => {
@@ -236,7 +240,7 @@ export default function ResourceViewer({
     return () => {
       cancelled = true;
     };
-  }, [isPdf, driveId, resource.id, nativePdfUrl]);
+  }, [isPdf, driveId, resource.id, nativePdfUrl, nativeMeta?.convertedFrom]);
 
   useEffect(() => {
     if (!isTextFetch) return;
@@ -520,6 +524,14 @@ export default function ResourceViewer({
                 <ExternalLink className="h-4 w-4" />
               </a>
               <IconButton
+                label={companionOpen ? "Hide study panel" : "Study panel"}
+                title={companionOpen ? "Hide Ask / Card / Pad" : "Ask / Card / Pad"}
+                className="hidden lg:inline-flex"
+                onClick={() => setCompanionOpen((open) => !open)}
+              >
+                <PanelRight className="h-4 w-4" />
+              </IconButton>
+              <IconButton
                 label="Fullscreen"
                 title="Fullscreen (F)"
                 className="hidden sm:inline-flex"
@@ -555,7 +567,7 @@ export default function ResourceViewer({
           }
         />
 
-        <div className="relative flex-1 min-h-0 overflow-hidden bg-card flex">
+        <div className="relative flex-1 min-h-0 overflow-hidden bg-card flex items-stretch">
           <div className="relative flex-1 min-h-0 overflow-hidden">
           {isLoading && (
             <div className="absolute inset-0 flex flex-col items-between justify-between p-8 bg-background z-20">
@@ -756,10 +768,13 @@ export default function ResourceViewer({
             </div>
           )}
           </div>
-          <StudyCompanion
-            resource={resource}
-            onJump={(page) => pdfRef.current?.scrollToPage(page)}
-          />
+          {companionOpen ? (
+            <StudyCompanion
+              resource={resource}
+              onJump={(page) => pdfRef.current?.scrollToPage(page)}
+              onCollapse={() => setCompanionOpen(false)}
+            />
+          ) : null}
         </div>
       </div>
 

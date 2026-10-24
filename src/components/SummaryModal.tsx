@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown';
 import { X, Brain, Copy, Check, Info, Layers } from 'lucide-react';
 import { auth } from '@/lib/firebase/auth';
 import { NotesDisclaimer } from './NotesDisclaimer';
-import { authFetch } from '@/lib/authFetch';
+import { homeOrVercelSummarize } from '@/lib/homeApi';
 import { useMotionSafe } from '@/lib/motion';
 
 interface SummaryModalProps {
@@ -37,16 +37,13 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
         if (!user) {
           throw new Error('Please sign in to generate AI summaries.');
         }
-        const res = await authFetch(`/api/resources/summarize?id=${resourceId}`, {
-          signal: abortController.signal,
-        });
+        const data = await homeOrVercelSummarize(
+          resourceId,
+          abortController.signal,
+        );
         if (!active) return;
-        const data = await res.json();
-
-        if (!res.ok) throw new Error(data.error || 'Failed to generate summary');
-
-        if (!active) return;
-        setSummary(data.summary);
+        if (!data.ok) throw new Error(data.error || 'Failed to generate summary');
+        setSummary(data.summary ?? null);
       } catch (err: unknown) {
         if (!active || abortController.signal.aborted) return;
         const message = err instanceof Error ? err.message : 'Failed to generate summary';

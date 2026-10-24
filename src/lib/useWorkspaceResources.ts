@@ -24,14 +24,14 @@ type CacheEntry = {
 
 const MEMORY_TTL_MS = 1000 * 60 * 60; // 1h in-tab
 const STORAGE_TTL_MS = 1000 * 60 * 60 * 12; // 12h across reloads
-const STORAGE_PREFIX = "utility.workspace.v2:";
+const STORAGE_PREFIX = "utility.workspace.v3:";
 
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<CacheEntry>>();
 
 function cacheKey(year: string, branch: string, semester: number): string {
-  // v2: list API returns dedicated syllabusUrl (Syllabus subject is excluded from vault files)
-  return `v2:${year}:${branch}:${semester}`;
+  // v3: catalog includes native PDF stamps from home-server Drive sync
+  return `v3:${year}:${branch}:${semester}`;
 }
 
 function storageKey(key: string): string {

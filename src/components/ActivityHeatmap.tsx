@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { auth } from '@/lib/firebase/auth';
 import { Flame, Trophy, Calendar, Zap, Info } from 'lucide-react';
 import { ACTIVITY_STORAGE_KEY, localDateKey } from '@/lib/activity';
+import { homeOrVercelActivityCounts } from '@/lib/homeApi';
 
 const STORAGE_KEY = ACTIVITY_STORAGE_KEY;
 const WEEK_COUNT = 53;
@@ -53,15 +54,7 @@ export default function ActivityHeatmap() {
     if (user) {
       try {
         const idToken = await user.getIdToken();
-        const res = await fetch('/api/activity', {
-          headers: {
-            Authorization: `Bearer ${idToken}`,
-          },
-        });
-        if (!res.ok) throw new Error(await res.text());
-        const data = await res.json();
-        const cloudMap: Record<string, number> =
-          data.counts && typeof data.counts === "object" ? data.counts : {};
+        const cloudMap = await homeOrVercelActivityCounts(idToken);
 
         setActivityMap((prev) => {
           const merged = { ...prev };
