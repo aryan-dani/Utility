@@ -13,7 +13,6 @@ async function main() {
 
   await boss.createQueue("drive.sync");
   await boss.updateQueue("drive.sync", {
-    name: "drive.sync",
     expireInSeconds: 6 * 60 * 60,
     retryLimit: 1,
   });

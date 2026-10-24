@@ -1,4 +1,6 @@
-import admin from "firebase-admin";
+import { cert, getApps, initializeApp } from "firebase-admin/app";
+import { getFirestore } from "firebase-admin/firestore";
+import { getStorage } from "firebase-admin/storage";
 import { getEnv, cleanPrivateKey } from "./env.mjs";
 
 function resolveFirebaseConfig() {
@@ -13,10 +15,15 @@ function resolveFirebaseConfig() {
 const { projectId, clientEmail, privateKey, storageBucket } =
   resolveFirebaseConfig();
 
-if (admin.apps.length === 0) {
-  if (projectId && clientEmail && privateKey && !privateKey.includes("YOUR_PRIVATE_KEY_HERE")) {
-    admin.initializeApp({
-      credential: admin.credential.cert({
+if (getApps().length === 0) {
+  if (
+    projectId &&
+    clientEmail &&
+    privateKey &&
+    !privateKey.includes("YOUR_PRIVATE_KEY_HERE")
+  ) {
+    initializeApp({
+      credential: cert({
         projectId,
         clientEmail,
         privateKey,
@@ -24,13 +31,12 @@ if (admin.apps.length === 0) {
       storageBucket,
     });
   } else {
-    admin.initializeApp({
+    initializeApp({
       projectId: projectId || "placeholder-project-id",
       storageBucket,
     });
   }
 }
 
-export const db = admin.firestore();
-export const bucket = storageBucket ? admin.storage().bucket() : null;
-export { admin };
+export const db = getFirestore();
+export const bucket = storageBucket ? getStorage().bucket() : null;

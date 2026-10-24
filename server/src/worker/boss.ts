@@ -1,4 +1,4 @@
-import PgBoss from "pg-boss";
+import { PgBoss } from "pg-boss";
 import { env } from "../lib/env.js";
 
 let boss: PgBoss | null = null;
@@ -9,7 +9,7 @@ export async function getBoss(): Promise<PgBoss> {
     connectionString: env().DATABASE_URL,
     application_name: "utility-worker",
   });
-  boss.on("error", (err) => console.error("pg-boss error", err));
+  boss.on("error", (err: Error) => console.error("pg-boss error", err));
   await boss.start();
   return boss;
 }

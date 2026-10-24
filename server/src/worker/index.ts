@@ -1,3 +1,4 @@
+import type { Job } from "pg-boss";
 import { getBoss, stopBoss } from "./boss.js";
 import { runDriveSync, type DriveSyncPayload } from "./jobs/driveSync.js";
 import { runCachePurge } from "./jobs/cachePurge.js";
@@ -10,7 +11,6 @@ async function main() {
   // Full Drive mirrors can run for hours; default expireInSeconds is only 15m.
   await boss.createQueue("drive.sync");
   await boss.updateQueue("drive.sync", {
-    name: "drive.sync",
     expireInSeconds: 6 * 60 * 60,
     retryLimit: 1,
   });
@@ -18,17 +18,17 @@ async function main() {
   await boss.createQueue("users.reconcile");
   await boss.createQueue("catalog.publish");
 
-  await boss.work<DriveSyncPayload>("drive.sync", async (jobs) => {
+  await boss.work("drive.sync", async (jobs: Job<DriveSyncPayload>[]) => {
     for (const job of jobs) {
       await runDriveSync(job.data);
     }
   });
 
-  await boss.work("cache.purge", async () => {
+  await boss.work("cache.purge", async (_jobs: Job[]) => {
     await runCachePurge();
   });
 
-  await boss.work("users.reconcile", async () => {
+  await boss.work("users.reconcile", async (_jobs: Job[]) => {
     await runUsersReconcile();
   });
 
