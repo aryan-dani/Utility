@@ -29,7 +29,13 @@ export function adminAuth() {
 }
 
 export function adminDb() {
-  return getFirestore(getApp());
+  const db = getFirestore(getApp());
+  try {
+    db.settings({ ignoreUndefinedProperties: true });
+  } catch {
+    // settings() throws if already configured on this app instance
+  }
+  return db;
 }
 
 export type AuthedUser = {

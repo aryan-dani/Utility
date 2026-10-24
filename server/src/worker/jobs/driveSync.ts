@@ -448,13 +448,22 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
         .set({ text: preview.slice(0, 900 * 1024), updated_at: new Date() });
     }
 
-    const native = {
+    const native: {
+      kind: typeof kind;
+      hash: string;
+      bytes: number;
+      ext: string;
+      convertedFrom?: string;
+    } = {
       kind,
       hash,
       bytes: buf.length,
       ext: ext.replace(/^\./, ""),
-      convertedFrom: convertedFrom?.replace(/^\./, ""),
     };
+    // Firestore rejects explicit `undefined` fields — only set when converted.
+    if (convertedFrom) {
+      native.convertedFrom = convertedFrom.replace(/^\./, "");
+    }
 
     const previewUrl = `https://drive.google.com/file/d/${file.id}/preview`;
     await db
