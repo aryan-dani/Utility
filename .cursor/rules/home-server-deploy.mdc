@@ -15,7 +15,8 @@ Do the rollout yourself. Do not tell the user to pull, migrate, or rebuild.
 
 1. `npm run lint`, `npm run typecheck`, and `npm run test` must exit 0.
 2. Commit and push to `main` (this rule is the standing ask to ship those changes).
-3. `ssh kuro 'systemctl start utility-deploy.service'` and read the journal until the log says `success` or names a CI/health failure.
+3. `deploy/scripts/deploy.sh` must stay executable in git (`100755`). systemd runs that path directly, and a `644` file fails the timer with status 203.
+4. `ssh kuro 'systemctl start utility-deploy.service'` and read the journal until the log says `success` or names a CI/health failure. If the unit cannot start, run `bash /srv/utility/app/deploy/scripts/deploy.sh` as `kuro`.
 4. If checks are still pending, wait and start the unit again. Do not bypass the CI gate in `deploy.sh`.
 
 Vercel still publishes the Next.js app from the GitHub push. The SSH step is only for the home-server image, migration, and file host.

@@ -21,22 +21,25 @@ async function main() {
   await boss.createQueue("study.pack");
   await boss.createQueue("rag.eval");
 
+  // Same queue name with an empty key overwrites the previous row. Keep both crons.
+  await boss.unschedule("drive.sync");
   await boss.schedule(
     "drive.sync",
     "*/15 * * * *",
     { mode: "incremental" },
     {
+      key: "incremental",
       tz: "Asia/Kolkata",
       expireInSeconds: 2 * 60 * 60,
     },
   );
 
-  // Separate cron string for full reconcile (pg-boss ScheduleOptions has no `key`)
   await boss.schedule(
     "drive.sync",
     "0 3 * * 0",
     { mode: "full" },
     {
+      key: "full",
       tz: "Asia/Kolkata",
       expireInSeconds: 6 * 60 * 60,
     },

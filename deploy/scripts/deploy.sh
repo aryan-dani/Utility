@@ -7,7 +7,8 @@ STATE_DIR="${STATE_DIR:-/srv/utility/state}"
 COMPOSE_FILE="${COMPOSE_FILE:-$APP_DIR/deploy/utility/compose.yml}"
 ENV_FILE="${ENV_FILE:-/srv/utility/.env}"
 REPO_SLUG="${REPO_SLUG:-aryan-dani/Utility}"
-HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:18100/health/ready}"
+# Liveness only. /health/ready also fails when Drive sync is older than 2h, which must not roll back a code deploy.
+HEALTH_URL="${HEALTH_URL:-http://127.0.0.1:18100/health}"
 
 mkdir -p "$STATE_DIR"
 cd "$APP_DIR"
