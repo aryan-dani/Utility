@@ -26,6 +26,7 @@ import {
   Waypoints,
   HelpCircle,
   ClipboardCopy,
+  StickyNote,
   type LucideIcon,
 } from 'lucide-react';
 import { useAcademicStore } from '../store/academicStore';
@@ -517,6 +518,16 @@ export default function CommandPalette() {
         icon: FileText,
         action: () => {
           navigate(`/resources?${qs}`);
+          setCommandPaletteOpen(false);
+        },
+      },
+      {
+        id: 'nav-notes',
+        title: 'Open private notes',
+        category: 'Navigation',
+        icon: StickyNote,
+        action: () => {
+          navigate('/notes');
           setCommandPaletteOpen(false);
         },
       },

@@ -12,6 +12,7 @@ export type RecentResource = {
   academic_year?: string;
   branch?: string;
   semester?: number;
+  page?: number;
   viewedAt: number;
 };
 
@@ -41,8 +42,10 @@ export function getRecentResources(): RecentResource[] {
 
 export function pushRecentResource(
   item: Pick<ResourceItem, "id" | "title" | "subject_name" | "category" | "file_url">,
-  scope?: { academicYear?: string; branch?: string; semester?: number },
+  scope?: { academicYear?: string; branch?: string; semester?: number; page?: number | null },
 ): RecentResource[] {
+  const prev = readAll().find((r) => r.id === item.id);
+  const page = scope?.page && scope.page > 0 ? Math.floor(scope.page) : prev?.page;
   const next: RecentResource = {
     id: item.id,
     title: item.title,
@@ -52,12 +55,23 @@ export function pushRecentResource(
     academic_year: scope?.academicYear,
     branch: scope?.branch,
     semester: scope?.semester,
+    page,
     viewedAt: Date.now(),
   };
   const filtered = readAll().filter((r) => r.id !== item.id);
   const list = [next, ...filtered].slice(0, MAX_RECENT);
   writeAll(list);
   return list;
+}
+
+/** Keep the last PDF page on the most recent open of this file. */
+export function updateRecentPage(id: string, page: number): void {
+  if (!id || !(page > 0)) return;
+  const all = readAll();
+  const idx = all.findIndex((r) => r.id === id);
+  if (idx < 0) return;
+  all[idx] = { ...all[idx], page: Math.floor(page) };
+  writeAll(all);
 }
 
 export { STORAGE_KEY as RECENT_RESOURCES_KEY };

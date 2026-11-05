@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { matchCachedDriveFile, type DriveFetchProgress } from "@/lib/driveFileCache";
 import { setReadingProgress } from "@/lib/readingProgress";
+import { updateRecentPage } from "@/lib/recentResources";
 import { cn } from "@/lib/cn";
 import { IconButton, Input, Kbd, Toolbar, ToolbarGroup } from "@/components/ui";
 
@@ -441,6 +442,7 @@ const PdfPreview = forwardRef<PdfPreviewHandle, PdfPreviewProps>(
       if (!resourceId || page < 1) return;
       const timer = window.setTimeout(() => {
         setReadingProgress(resourceId, page);
+        updateRecentPage(resourceId, page);
       }, 400);
       return () => window.clearTimeout(timer);
     }, [resourceId, page]);

@@ -30,6 +30,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { notify } from '@/lib/toast';
 import { localDateKey } from '@/lib/dateLocal';
 import { PageHeader, PageShell } from '@/components/ui';
+import { StudyPackPanel } from '@/components/srs/StudyPackPanel';
 
 function getTodayString() {
   return localDateKey();
@@ -357,6 +358,7 @@ export default function SrsClient() {
               </>
             }
           />
+          <StudyPackPanel />
 
           {decks.length > 0 && (
             <div className="relative max-w-md">

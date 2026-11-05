@@ -420,9 +420,16 @@ export default function ResourcesClient() {
       setViewerResource(match);
       const pageRaw = searchParams.get("page");
       const pageNum = pageRaw ? Number(pageRaw) : NaN;
-      setViewerPage(Number.isFinite(pageNum) && pageNum > 0 ? pageNum : null);
+      const fromQuery = Number.isFinite(pageNum) && pageNum > 0 ? pageNum : null;
+      const resumePage = fromQuery ?? getReadingProgress(match.id);
+      setViewerPage(resumePage);
       setRecentResources(
-        pushRecentResource(match, { academicYear, branch, semester }),
+        pushRecentResource(match, {
+          academicYear,
+          branch,
+          semester,
+          page: resumePage,
+        }),
       );
       logResourceOpen({
         id: match.id,
@@ -524,7 +531,12 @@ export default function ResourcesClient() {
       const saved = explicit ? null : getReadingProgress(item.id);
       setViewerPage(explicit ?? saved);
       setRecentResources(
-        pushRecentResource(item, { academicYear, branch, semester }),
+        pushRecentResource(item, {
+          academicYear,
+          branch,
+          semester,
+          page: explicit ?? saved,
+        }),
       );
       logResourceOpen({
         id: item.id,

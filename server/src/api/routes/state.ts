@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { and, desc, eq, gt, sql } from "drizzle-orm";
 import { randomBytes, randomUUID } from "node:crypto";
-import { mkdir, writeFile } from "node:fs/promises";
+import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { getDb } from "../../db/client.js";
 import {
@@ -525,6 +525,86 @@ stateRoutes.post("/notes", async (c) => {
   const bytes = Buffer.byteLength(text);
   await getDb().insert(userNotes).values({ id, userId: uid, title, bytes });
   return c.json({ id, path: `/notes/${uid}/${id}.md` }, 201);
+});
+
+function noteFile(uid: string, id: string): string | null {
+  if (!id || id.includes("/") || id.includes("\\") || id.includes("..")) return null;
+  return join(env().FILES_ROOT, "notes", uid, `${id}.md`);
+}
+
+function noteBody(raw: string, title: string): string {
+  const prefix = `# ${title}\n\n`;
+  if (raw.startsWith(prefix)) return raw.slice(prefix.length);
+  return raw.replace(/^# .*\r?\n\r?\n/, "");
+}
+
+stateRoutes.get("/notes/:id", async (c) => {
+  const uid = c.get("user").uid;
+  const id = c.req.param("id");
+  const file = noteFile(uid, id);
+  if (!file) return c.json({ error: "Not found" }, 404);
+  const rows = await getDb()
+    .select()
+    .from(userNotes)
+    .where(and(eq(userNotes.id, id), eq(userNotes.userId, uid)))
+    .limit(1);
+  const row = rows[0];
+  if (!row) return c.json({ error: "Not found" }, 404);
+  let body = "";
+  try {
+    body = noteBody(await readFile(file, "utf8"), row.title);
+  } catch {
+    body = "";
+  }
+  return c.json({
+    id: row.id,
+    title: row.title,
+    body,
+    created_at: row.createdAt.toISOString(),
+  });
+});
+
+stateRoutes.patch("/notes/:id", async (c) => {
+  const hit = limited(c, "notes", 20);
+  if (hit) return hit;
+  const uid = c.get("user").uid;
+  const id = c.req.param("id");
+  const file = noteFile(uid, id);
+  if (!file) return c.json({ error: "Not found" }, 404);
+  const rows = await getDb()
+    .select()
+    .from(userNotes)
+    .where(and(eq(userNotes.id, id), eq(userNotes.userId, uid)))
+    .limit(1);
+  if (!rows[0]) return c.json({ error: "Not found" }, 404);
+  const body = (await c.req.json().catch(() => null)) as { title?: string; body?: string } | null;
+  const text = body?.body?.trim() || "";
+  const title = (body?.title || rows[0].title || "Note").trim().slice(0, 120);
+  if (!text || Buffer.byteLength(text) > NOTE_MAX) {
+    return c.json({ error: "Note is empty or too large" }, 400);
+  }
+  await writeFile(file, `# ${title}\n\n${text}`, "utf8");
+  await getDb()
+    .update(userNotes)
+    .set({ title, bytes: Buffer.byteLength(text) })
+    .where(and(eq(userNotes.id, id), eq(userNotes.userId, uid)));
+  return c.json({ id, title, path: `/notes/${uid}/${id}.md` });
+});
+
+stateRoutes.delete("/notes/:id", async (c) => {
+  const uid = c.get("user").uid;
+  const id = c.req.param("id");
+  const file = noteFile(uid, id);
+  if (!file) return c.json({ error: "Not found" }, 404);
+  const rows = await getDb()
+    .select()
+    .from(userNotes)
+    .where(and(eq(userNotes.id, id), eq(userNotes.userId, uid)))
+    .limit(1);
+  if (!rows[0]) return c.json({ error: "Not found" }, 404);
+  await unlink(file).catch(() => undefined);
+  await getDb().delete(userNotes).where(and(eq(userNotes.id, id), eq(userNotes.userId, uid)));
+  return c.json({ ok: true });
 });
 
 stateRoutes.get("/study-pack", async (c) => {

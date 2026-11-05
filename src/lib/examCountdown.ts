@@ -17,11 +17,6 @@ function parseISODate(date: string): Date | null {
   return Number.isNaN(d.getTime()) ? null : d;
 }
 
-function startOfToday(): Date {
-  const now = new Date();
-  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
 function daysBetween(from: Date, to: Date): number {
   return Math.round((to.getTime() - from.getTime()) / (24 * 60 * 60 * 1000));
 }
@@ -52,28 +47,18 @@ function listStoredMonthKeys(): Array<{ year: number; month: number }> {
   return out;
 }
 
-/** Soonest future planner task whose category (or text) matches /exam/i. */
-export function getSoonestUpcomingExam(
+/** Soonest open exam task across the given planner month maps. */
+export function soonestExamFromRecords(
+  records: Array<Record<string, PlannerTask[]> | null | undefined>,
   now: Date = new Date(),
 ): UpcomingExam | null {
-  if (typeof window === "undefined") return null;
-
-  const today = startOfToday();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const todayMs = today.getTime();
   let best: UpcomingExam | null = null;
 
-  const keys = listStoredMonthKeys();
-  // Always include current month even if empty key set
-  const curY = now.getFullYear();
-  const curM = now.getMonth() + 1;
-  if (!keys.some((k) => k.year === curY && k.month === curM)) {
-    keys.push({ year: curY, month: curM });
-  }
-
-  for (const { year, month } of keys) {
-    const stored = readPlannerMonth(year, month);
-    if (!stored?.data) continue;
-    for (const [date, tasks] of Object.entries(stored.data)) {
+  for (const data of records) {
+    if (!data) continue;
+    for (const [date, tasks] of Object.entries(data)) {
       if (!Array.isArray(tasks)) continue;
       const day = parseISODate(date);
       if (!day || day.getTime() < todayMs) continue;
@@ -92,4 +77,23 @@ export function getSoonestUpcomingExam(
   }
 
   return best;
+}
+
+/** Soonest future planner task whose category (or text) matches /exam/i. */
+export function getSoonestUpcomingExam(
+  now: Date = new Date(),
+): UpcomingExam | null {
+  if (typeof window === "undefined") return null;
+
+  const keys = listStoredMonthKeys();
+  const curY = now.getFullYear();
+  const curM = now.getMonth() + 1;
+  if (!keys.some((k) => k.year === curY && k.month === curM)) {
+    keys.push({ year: curY, month: curM });
+  }
+
+  return soonestExamFromRecords(
+    keys.map(({ year, month }) => readPlannerMonth(year, month)?.data),
+    now,
+  );
 }

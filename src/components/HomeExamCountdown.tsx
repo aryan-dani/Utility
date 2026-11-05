@@ -1,17 +1,38 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useState } from "react";
+import { onAuthStateChanged } from "firebase/auth";
 import AppLink from "@/components/ui/AppLink";
 import { CalendarCheck } from "lucide-react";
-import { getSoonestUpcomingExam } from "@/lib/examCountdown";
-import { useIsClient } from "@/lib/clientHooks";
+import { auth } from "@/lib/firebase/auth";
+import { getSoonestUpcomingExam, type UpcomingExam } from "@/lib/examCountdown";
+import { loadPlannerMonth } from "@/lib/plannerLive";
 
 export default function HomeExamCountdown() {
-  const mounted = useIsClient();
-  const exam = useMemo(
-    () => (mounted ? getSoonestUpcomingExam() : null),
-    [mounted],
-  );
+  const [exam, setExam] = useState<UpcomingExam | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        if (!cancelled) setExam(getSoonestUpcomingExam());
+        return;
+      }
+      void (async () => {
+        const now = new Date();
+        const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        await Promise.all([
+          loadPlannerMonth(now.getFullYear(), now.getMonth() + 1),
+          loadPlannerMonth(next.getFullYear(), next.getMonth() + 1),
+        ]);
+        if (!cancelled) setExam(getSoonestUpcomingExam());
+      })();
+    });
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, []);
 
   if (!exam) return null;
 

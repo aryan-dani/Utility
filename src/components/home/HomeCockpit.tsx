@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useState, useSyncExternalStore } from "react";
+import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -13,39 +15,40 @@ import {
   Building2,
   HelpCircle,
   ArrowRight,
+  StickyNote,
 } from "lucide-react";
 import AppLink from "@/components/ui/AppLink";
 import { useAcademicStore } from "@/store/academicStore";
 import { workspaceQuery } from "@/lib/workspace";
 import { getRecentResources } from "@/lib/recentResources";
-import { readPlannerMonth } from "@/lib/plannerStorage";
+import { getReadingProgress } from "@/lib/readingProgress";
+import { loadPlannerMonth, savePlannerMonth, type LivePlan } from "@/lib/plannerLive";
+import { readPlannerMonth, type PlannerTask } from "@/lib/plannerStorage";
+import { getSoonestUpcomingExam, type UpcomingExam } from "@/lib/examCountdown";
 import { localDateKey } from "@/lib/dateLocal";
 import { startFocusMinutes } from "@/lib/focusTimer";
 import { readStudyScope } from "@/lib/studyScope";
-
-function todayTasks(): string[] {
-  const key = localDateKey();
-  const [year, month] = key.split("-").map(Number);
-  const stored = readPlannerMonth(year, month);
-  const day = stored?.data[key];
-  if (!Array.isArray(day)) return [];
-  return day.filter((task) => !task.done).slice(0, 3).map((task) => task.text);
-}
+import { utilityFetch } from "@/lib/utilityServer";
+import { EmptyState } from "@/components/ui";
 
 const EMPTY_SNAP = JSON.stringify({
-  tasks: [] as string[],
   recentTitle: "",
   recentId: "",
+  recentPage: 0,
   scope: "",
 });
 
 function cockpitSnapshot(): string {
   const recent = getRecentResources()[0];
   const scope = readStudyScope();
+  const page =
+    (recent?.page && recent.page > 0 ? recent.page : null) ??
+    (recent ? getReadingProgress(recent.id) : null) ??
+    0;
   return JSON.stringify({
-    tasks: todayTasks(),
     recentTitle: recent?.title || "",
     recentId: recent?.id || "",
+    recentPage: page,
     scope: scope.subject
       ? scope.unit
         ? `${scope.subject} · ${scope.unit}`
@@ -72,12 +75,101 @@ export function HomeCockpit() {
   const [code, setCode] = useState("");
   const snap = JSON.parse(
     useSyncExternalStore(subscribeCockpit, cockpitSnapshot, () => EMPTY_SNAP),
-  ) as { tasks: string[]; recentTitle: string; recentId: string; scope: string };
-  const tasks = snap.tasks;
+  ) as { recentTitle: string; recentId: string; recentPage: number; scope: string };
   const scopeLabel = snap.scope;
+  const todayKey = localDateKey();
+  const [year, month] = todayKey.split("-").map(Number);
+  const [plan, setPlan] = useState<LivePlan | null>(null);
+  const [exam, setExam] = useState<UpcomingExam | null>(null);
+  const [syncStale, setSyncStale] = useState(false);
+  const [savingId, setSavingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    const unsub = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        const local = readPlannerMonth(year, month);
+        if (!cancelled) {
+          setPlan(
+            local
+              ? {
+                  id: local.meta.id,
+                  title: local.meta.title,
+                  isPublic: Boolean(local.meta.is_public),
+                  data: local.data,
+                  source: "local",
+                }
+              : {
+                  title: "Study Plan",
+                  isPublic: false,
+                  data: {},
+                  source: "local",
+                },
+          );
+          setExam(getSoonestUpcomingExam());
+        }
+        return;
+      }
+      void (async () => {
+        const now = new Date();
+        const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+        const [current] = await Promise.all([
+          loadPlannerMonth(year, month),
+          loadPlannerMonth(next.getFullYear(), next.getMonth() + 1),
+        ]);
+        if (cancelled) return;
+        setPlan(current);
+        setExam(getSoonestUpcomingExam());
+      })();
+    });
+    void utilityFetch("/health/ready", { public: true, timeoutMs: 4_000 }).then(
+      async (res) => {
+        if (cancelled || !res) return;
+        const body = (await res.json().catch(() => null)) as {
+          checks?: { sync?: string };
+        } | null;
+        if (!cancelled && body?.checks?.sync === "stale") setSyncStale(true);
+      },
+    );
+    return () => {
+      cancelled = true;
+      unsub();
+    };
+  }, [year, month]);
+
+  const openTasks = (plan?.data[todayKey] || []).filter((task) => !task.done).slice(0, 5);
+
+  const completeTask = async (task: PlannerTask) => {
+    if (!plan || savingId) return;
+    const day = plan.data[todayKey] || [];
+    const data = {
+      ...plan.data,
+      [todayKey]: day.map((row) =>
+        row.id === task.id ? { ...row, done: true } : row,
+      ),
+    };
+    const next = { ...plan, data };
+    setPlan(next);
+    setSavingId(task.id);
+    const saved = await savePlannerMonth(year, month, next);
+    setPlan(saved);
+    setExam(getSoonestUpcomingExam());
+    setSavingId(null);
+  };
+
   const recentHref = snap.recentId
-    ? `/resources?${qs}&view=${encodeURIComponent(snap.recentId)}`
+    ? `/resources?${qs}&view=${encodeURIComponent(snap.recentId)}${
+        snap.recentPage > 0 ? `&page=${snap.recentPage}` : ""
+      }`
     : "";
+  const examLabel =
+    exam == null
+      ? ""
+      : exam.daysUntil === 0
+        ? "Exam today"
+        : exam.daysUntil === 1
+          ? "Exam tomorrow"
+          : `Exam in ${exam.daysUntil} days`;
 
   const ask = (event: FormEvent) => {
     event.preventDefault();
@@ -105,24 +197,55 @@ export function HomeCockpit() {
             <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
               Today
             </p>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border border-border text-xs font-medium tabular-nums hover:bg-surface"
-              onClick={() => startFocusMinutes(25, scopeLabel || "Focus")}
-            >
-              <Timer className="w-3.5 h-3.5" />
-              25m
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                type="button"
+                className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border border-border text-xs font-medium tabular-nums hover:bg-surface"
+                onClick={() => startFocusMinutes(25, scopeLabel || "Focus")}
+              >
+                <Timer className="w-3.5 h-3.5" />
+                25m
+              </button>
+              <AppLink
+                href="/notes"
+                className="inline-flex items-center gap-1.5 h-7 px-2 rounded-md border border-border text-xs font-medium hover:bg-surface"
+              >
+                <StickyNote className="w-3.5 h-3.5" />
+                Notes
+              </AppLink>
+            </div>
           </div>
-          {tasks.length === 0 ? (
-            <p className="text-sm text-muted leading-relaxed">
-              Nothing scheduled. Add a task or start a focus block.
+          {syncStale ? (
+            <p className="text-xs text-muted leading-relaxed">
+              Drive sync is behind. Search may miss new files.
             </p>
+          ) : null}
+          {openTasks.length === 0 ? (
+            <EmptyState
+              className="py-4 px-3"
+              title="Nothing scheduled"
+              description="Add a task for today, or start a 25 minute block."
+              action={
+                <AppLink
+                  href={`/planner?${qs}`}
+                  className="text-xs font-medium hover:underline underline-offset-4"
+                >
+                  Add today’s task
+                </AppLink>
+              }
+            />
           ) : (
             <ul className="space-y-1.5 text-sm">
-              {tasks.map((task) => (
-                <li key={task} className="truncate text-foreground">
-                  {task}
+              {openTasks.map((task) => (
+                <li key={task.id} className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5"
+                    aria-label={`Mark done: ${task.text}`}
+                    disabled={savingId === task.id}
+                    onChange={() => void completeTask(task)}
+                  />
+                  <span className="truncate text-foreground">{task.text}</span>
                 </li>
               ))}
             </ul>
@@ -145,6 +268,19 @@ export function HomeCockpit() {
               scopeLabel ||
               "Pick up a vault file or a syllabus unit."}
           </p>
+          {snap.recentPage > 0 ? (
+            <p className="text-xs text-muted">Page {snap.recentPage}</p>
+          ) : null}
+          {exam ? (
+            <AppLink
+              href={`/planner?${qs}`}
+              className="text-xs font-medium hover:underline underline-offset-4"
+              title={exam.text}
+            >
+              {examLabel}
+              <span className="text-muted"> · {exam.text}</span>
+            </AppLink>
+          ) : null}
           <div className="mt-auto flex flex-wrap gap-x-3 gap-y-1">
             {recentHref ? (
               <AppLink
