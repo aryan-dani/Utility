@@ -25,6 +25,14 @@
 		header_regexp Origin (?i)^https://(utilityos\.tech|www\.utilityos\.tech|planner-flax-six\.vercel\.app)$
 	}
 
+	handle /notes/* {
+		root * /srv/files
+		file_server
+		header @allowed_origin Access-Control-Allow-Origin "{http.request.header.Origin}"
+		header @allowed_origin Vary Origin
+		header Cache-Control "private, max-age=60"
+	}
+
 	handle /r/* {
 		root * /srv/files
 		file_server {

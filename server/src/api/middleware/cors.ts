@@ -11,7 +11,7 @@ export function corsMiddleware() {
     origin: (origin) => (origin && allowed.has(origin) ? origin : null),
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowHeaders: ["Authorization", "Content-Type", "X-Utility-Key"],
-    exposeHeaders: ["Retry-After"],
+    exposeHeaders: ["Retry-After", "X-Utility-Source-Count", "X-Utility-Sources"],
     maxAge: 600,
   });
 }

@@ -1,6 +1,6 @@
 /**
  * Prefer home-server /v1 routes; fall back to current Vercel /api routes.
- * Ask and QA stay on Firestore/Vercel for this pass (PDF grounding).
+ * An empty home index or an unreachable box falls through to Vercel.
  */
 
 import { authFetch } from "@/lib/authFetch";
@@ -83,7 +83,7 @@ export async function homeOrVercelSearch(params: {
 }
 
 export type StudyRequest = {
-  type: "flashcards" | "quiz";
+  type: "flashcards" | "quiz" | "pyq";
   topic: string;
   context?: {
     academicYear?: string;
@@ -99,7 +99,7 @@ export async function homeOrVercelStudy(
   const home = await utilityFetch("/v1/study", {
     method: "POST",
     body: {
-      mode: body.type === "quiz" ? "quiz" : "flashcards",
+      mode: body.type === "pyq" ? "pyq" : body.type === "quiz" ? "quiz" : "flashcards",
       query: body.topic,
       academicYear: body.context?.academicYear,
       branch: body.context?.branch,
@@ -209,6 +209,70 @@ export async function homeOrVercelSummarize(
     return { error: data.error || "Failed to generate summary", ok: false };
   }
   return { summary: data.summary, ok: true };
+}
+
+export function homePayloadIsEmpty(path: string, data: unknown): boolean {
+  if (!data || typeof data !== "object") return true;
+  const row = data as Record<string, unknown>;
+  if (path.startsWith("/v1/qa/questions") && Array.isArray(row.questions)) {
+    return row.questions.length === 0;
+  }
+  if (path === "/v1/qa/saved" && Array.isArray(row.questions)) {
+    return row.questions.length === 0;
+  }
+  if (path === "/v1/clipboard") return row.updated_at == null;
+  if (path.startsWith("/v1/planner") && !path.includes("presence")) {
+    return row.plan == null;
+  }
+  if (path === "/v1/community-decks" && Array.isArray(row.decks)) {
+    return row.decks.length === 0;
+  }
+  if (path === "/v1/srs") return row.updated_at == null;
+  return false;
+}
+
+/**
+ * JSON call that tries the home server, then the matching Vercel route.
+ * `vercelPath` is the current `/api/...` path.
+ */
+export async function homeOrVercelJson(
+  vercelPath: string,
+  init: { method?: string; body?: unknown; timeoutMs?: number } = {},
+): Promise<Response> {
+  const method = init.method || (init.body !== undefined ? "POST" : "GET");
+  const homePath = vercelPath.replace(/^\/api/, "/v1");
+  const home = await utilityFetch(homePath, {
+    method,
+    body: init.body,
+    timeoutMs: init.timeoutMs ?? 20_000,
+  });
+  if (home && (home.ok || home.status === 400 || home.status === 401 || home.status === 403 || home.status === 413 || home.status === 429)) {
+    if (home.ok && method === "GET") {
+      const data = await home.clone().json().catch(() => null);
+      if (!homePayloadIsEmpty(homePath.split("?")[0] || homePath, data)) return home;
+    } else if (home.ok || home.status === 400 || home.status === 413 || home.status === 429) {
+      return home;
+    }
+  }
+  return authFetch(vercelPath, {
+    method,
+    headers: init.body !== undefined ? { "Content-Type": "application/json" } : undefined,
+    body: init.body !== undefined ? JSON.stringify(init.body) : undefined,
+  });
+}
+
+/** Doubt board: home when it has rows, otherwise the Firestore API. */
+export async function qaFetch(vercelPath: string, init?: RequestInit): Promise<Response> {
+  const method = init?.method || "GET";
+  let body: unknown;
+  if (typeof init?.body === "string") {
+    try {
+      body = JSON.parse(init.body);
+    } catch {
+      body = undefined;
+    }
+  }
+  return homeOrVercelJson(vercelPath, { method, body });
 }
 
 /** Heatmap counts: home logs → date→count, else Vercel /api/activity. */

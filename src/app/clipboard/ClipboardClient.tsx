@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { onAuthStateChanged } from "firebase/auth";
 import { FileText, GraduationCap, Hash, Link2, Link2Off, X } from "lucide-react";
 import { auth } from "@/lib/firebase/auth";
-import { authFetch } from "@/lib/authFetch";
+import { homeOrVercelJson } from "@/lib/homeApi";
 import { notify } from "@/lib/toast";
 import { getDriveEmbedUrl, getDriveFileId } from "@/lib/fileUtils";
 import {
@@ -168,7 +168,7 @@ export default function ClipboardClient() {
     setLoading(true);
     setError(null);
     try {
-      const res = await authFetch("/api/clipboard");
+      const res = await homeOrVercelJson("/api/clipboard");
       if (!res.ok) throw new Error("load");
       const data = (await res.json()) as ClipboardPayload;
       if (dirtyRef.current) {
@@ -230,14 +230,13 @@ export default function ClipboardClient() {
       });
 
       try {
-        const res = await authFetch("/api/clipboard", {
+        const res = await homeOrVercelJson("/api/clipboard", {
           method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+          body: {
             text: payload,
             drive_file_id: driveIdRef.current,
             drive_file_name: driveNameRef.current,
-          }),
+          },
         });
         if (res.status === 400) {
           notify.error("Text is too long.");
@@ -334,7 +333,7 @@ export default function ClipboardClient() {
           return;
         }
       }
-      const res = await authFetch("/api/clipboard/share", { method: "POST" });
+      const res = await homeOrVercelJson("/api/clipboard/share", { method: "POST" });
       if (!res.ok) throw new Error("share");
       const data = (await res.json()) as {
         share_id: string;
@@ -363,7 +362,7 @@ export default function ClipboardClient() {
   const revokeShare = async () => {
     setSharing(true);
     try {
-      const res = await authFetch("/api/clipboard/share", { method: "DELETE" });
+      const res = await homeOrVercelJson("/api/clipboard/share", { method: "DELETE" });
       if (!res.ok) throw new Error("revoke");
       setShareId(null);
       setShareExpiresAt(null);

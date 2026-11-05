@@ -201,6 +201,10 @@ export default function ResourceViewer({
       !!nativeMeta.convertedFrom)
       ? nativeFileUrl(resource.id, nativeMeta.hash, "pdf")
       : null;
+  const nativePdfWithPage =
+    nativePdfUrl && initialPage && initialPage > 0
+      ? `${nativePdfUrl}#page=${initialPage}`
+      : nativePdfUrl;
   // Prefer pdf.js whenever a native PDF exists (including Gotenberg-converted
   // Office). Extension may still be .docx/.pptx after conversion.
   const usePdfJs =
@@ -709,7 +713,7 @@ export default function ResourceViewer({
               title={cleanResourceTitle(resource.title)}
               fallbackUrl={driveViewUrl}
               resourceId={resource.id}
-              sourceUrl={nativePdfUrl}
+              sourceUrl={nativePdfWithPage}
               onReady={() => {
                 setIsLoading(false);
                 setLoadError(false);

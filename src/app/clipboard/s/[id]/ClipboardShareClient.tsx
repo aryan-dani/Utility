@@ -39,9 +39,8 @@ export default function ClipboardShareClient({ shareId }: { shareId: string }) {
       setLoading(true);
       setError(null);
       try {
-        const res = await fetch(`/api/clipboard/share/${encodeURIComponent(shareId)}`, {
-          cache: "no-store",
-        });
+        const { fetchPublicClipboard } = await import("@/lib/utilityServer");
+        const res = await fetchPublicClipboard(shareId);
         if (cancelled) return;
         if (res.status === 410 || res.status === 404) {
           setGone(true);

@@ -19,7 +19,7 @@ import {
   ExternalLink,
   Hash,
 } from "lucide-react";
-import { authFetch } from "@/lib/authFetch";
+import { qaFetch as authFetch } from "@/lib/homeApi";
 import { notify } from "@/lib/toast";
 import { auth } from "@/lib/firebase/auth";
 import { useAdminStatus } from "@/lib/adminStatus";

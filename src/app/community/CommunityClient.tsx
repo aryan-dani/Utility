@@ -26,7 +26,7 @@ import { logActivity } from "@/lib/activity";
 import { notify } from "@/lib/toast";
 import { Button, Badge, Card, Modal, Segmented, PageHeader, PageShell } from "@/components/ui";
 import { NeedsConnection, useOnline } from "@/components/NeedsConnection";
-import { authFetch } from "@/lib/authFetch";
+import { homeOrVercelJson } from "@/lib/homeApi";
 
 import { WHATSAPP_COMMUNITY_URL, WHATSAPP_GROUPS } from "@/lib/communityLinks";
 
@@ -86,7 +86,7 @@ export default function CommunityClient({
     let cancelled = false;
     (async () => {
       try {
-        const res = await authFetch("/api/community-decks");
+        const res = await homeOrVercelJson("/api/community-decks");
         if (!res.ok) throw new Error("decks");
         const json = (await res.json()) as { decks?: CommunityDeck[] };
         if (!cancelled && Array.isArray(json.decks)) {
@@ -132,12 +132,9 @@ export default function CommunityClient({
     );
 
     try {
-      const res = await authFetch(`/api/community-decks/${deckId}`, {
+      const res = await homeOrVercelJson(`/api/community-decks/${deckId}`, {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ action: "upvote" }),
+        body: { action: "upvote" },
       });
       if (!res.ok) {
         throw new Error("Failed to upvote");
@@ -179,7 +176,7 @@ export default function CommunityClient({
     try {
       await notify.promise(
         (async () => {
-          const res = await authFetch(`/api/community-decks/${deckId}`, {
+          const res = await homeOrVercelJson(`/api/community-decks/${deckId}`, {
             method: "DELETE",
           });
           if (!res.ok) {
@@ -206,7 +203,7 @@ export default function CommunityClient({
     if (Array.isArray(deck.flashcards) && deck.flashcards.length > 0) {
       return deck;
     }
-    const res = await authFetch(`/api/community-decks/${deck.id}`);
+    const res = await homeOrVercelJson(`/api/community-decks/${deck.id}`);
     if (!res.ok) {
       throw new Error("Failed to load deck cards");
     }

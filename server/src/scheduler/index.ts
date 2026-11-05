@@ -18,6 +18,8 @@ async function main() {
   });
   await boss.createQueue("cache.purge");
   await boss.createQueue("users.reconcile");
+  await boss.createQueue("study.pack");
+  await boss.createQueue("rag.eval");
 
   await boss.schedule(
     "drive.sync",
@@ -47,6 +49,8 @@ async function main() {
     {},
     { tz: "Asia/Kolkata" },
   );
+  await boss.schedule("rag.eval", "15 4 * * *", {}, { tz: "Asia/Kolkata" });
+  await boss.schedule("study.pack", "45 4 * * *", {}, { tz: "Asia/Kolkata" });
 
   console.log("utility-scheduler schedules registered");
 

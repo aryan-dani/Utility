@@ -48,7 +48,8 @@ import { SourceCardList, renderWithCitations } from '@/components/ask/SourceCard
 import type { RetrievalSource } from '@/lib/rag/types';
 import { stripInvalidCitations, validMarkerSet } from '@/lib/agent/router';
 import { authFetch, getAuthHeaders } from '@/lib/authFetch';
-import { homeOrVercelStudy } from '@/lib/homeApi';
+import { homeOrVercelStudy, homeOrVercelJson } from '@/lib/homeApi';
+import { groundedChatFetch } from '@/lib/utilityServer';
 import { useWorkspaceResources } from '@/lib/useWorkspaceResources';
 import { generateId } from '@/lib/id';
 import { titleFromFirstMessage } from '@/lib/ask/chatTitle';
@@ -575,6 +576,7 @@ export default function AskClient() {
         api: '/api/chat',
         headers: async (): Promise<Record<string, string>> => getAuthHeaders(),
         body: chatBody,
+        fetch: groundedChatFetch,
       }),
     [chatBody],
   );
@@ -978,16 +980,15 @@ export default function AskClient() {
 
       await notify.promise(
         (async () => {
-          const res = await authFetch('/api/community-decks', {
+          const res = await homeOrVercelJson('/api/community-decks', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
+            body: {
               title: flashcardTopic || 'Academic Flashcards',
               branch,
               semester,
               author_name: authorName,
               flashcards,
-            }),
+            },
           });
           if (!res.ok) throw new Error(await res.text());
           setPublishedDeck(true);

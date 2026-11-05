@@ -4,6 +4,8 @@ import { bodyLimit } from "hono/body-limit";
 import { corsMiddleware } from "./middleware/cors.js";
 import { healthRoutes } from "./routes/health.js";
 import { v1Routes } from "./routes/v1.js";
+import { stateRoutes } from "./routes/state.js";
+import { publicRoutes } from "./routes/public.js";
 import { internalRoutes } from "./routes/internal.js";
 import { env } from "../lib/env.js";
 
@@ -13,13 +15,15 @@ app.use("*", corsMiddleware());
 app.use(
   "*",
   bodyLimit({
-    maxSize: 64 * 1024,
+    maxSize: 512 * 1024,
     onError: (c) => c.json({ error: "Payload too large" }, 413),
   }),
 );
 
 app.route("/", healthRoutes);
 app.route("/v1", v1Routes);
+app.route("/v1", stateRoutes);
+app.route("/public", publicRoutes);
 app.route("/internal", internalRoutes);
 
 app.notFound((c) => c.json({ error: "Not found" }, 404));

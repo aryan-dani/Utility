@@ -90,12 +90,19 @@ async function writeSrsToCloud(): Promise<void> {
       updated_at: updatedAt,
     };
 
-    const docRef = doc(db, 'srs_data', user.uid);
-    await setDoc(docRef, {
-      user_id: user.uid,
-      data: payload,
-      updated_at: updatedAt,
-    }, { merge: true });
+    const { homeOrVercelJson } = await import('@/lib/homeApi');
+    const home = await homeOrVercelJson('/api/srs', {
+      method: 'PUT',
+      body: payload,
+    });
+    if (!home.ok) {
+      const docRef = doc(db, 'srs_data', user.uid);
+      await setDoc(docRef, {
+        user_id: user.uid,
+        data: payload,
+        updated_at: updatedAt,
+      }, { merge: true });
+    }
     writeLocalMeta(updatedAt);
   } catch (e) {
     console.error('Firebase SRS sync error:', e);
@@ -278,11 +285,26 @@ export const useSRSStore = create<SRSState>((set, get) => ({
     cloudHydrating = true;
     set({ syncing: true });
     try {
-      const docRef = doc(db, 'srs_data', user.uid);
-      const docSnap = await getDoc(docRef);
-      
-      if (docSnap.exists()) {
-        const cloudData = docSnap.data()?.data;
+      const { homeOrVercelJson } = await import('@/lib/homeApi');
+      const home = await homeOrVercelJson('/api/srs');
+      let cloudData: { decks?: Deck[]; cards?: Flashcard[]; updated_at?: string } | null = null;
+      if (home.ok) {
+        const body = (await home.json()) as {
+          decks?: Deck[];
+          cards?: Flashcard[];
+          updated_at?: string | null;
+        };
+        if (body.updated_at) {
+          cloudData = { ...body, updated_at: body.updated_at };
+        }
+      }
+      if (!cloudData) {
+        const docRef = doc(db, 'srs_data', user.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) cloudData = docSnap.data()?.data ?? null;
+      }
+
+      if (cloudData) {
         if (cloudData) {
           const cloudDecks = cloudData.decks || [];
           const cloudCards = cloudData.cards || [];

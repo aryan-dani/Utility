@@ -44,6 +44,7 @@ import {
 } from "@/components/admin/AdminCharts";
 import { fetchAdminStatus } from "@/lib/adminStatus";
 import { authFetch } from "@/lib/authFetch";
+import { utilityFetch } from "@/lib/utilityServer";
 
 interface Subject {
   id: string;
@@ -167,6 +168,7 @@ export default function AdminClient({
   driveFolderUrl?: string | null;
 }) {
   const [tab, setTab] = useState<AdminTab>("overview");
+  const [homeHealth, setHomeHealth] = useState<string>("");
   const [usersList, setUsersList] = useState<AdminUser[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -213,6 +215,30 @@ export default function AdminClient({
       return hay.includes(q);
     });
   }, [usersList, userSearch, userActiveFilter]);
+
+  useEffect(() => {
+    if (tab !== "overview") return;
+    let cancelled = false;
+    void utilityFetch("/v1/admin/status").then(async (res) => {
+      if (cancelled) return;
+      if (!res?.ok) {
+        setHomeHealth("Home server offline");
+        return;
+      }
+      const data = (await res.json()) as {
+        lastSyncAt?: string | null;
+        ragChunkCount?: string | null;
+        diskFreeRatio?: number | null;
+        lastBackupAt?: string | null;
+      };
+      setHomeHealth(
+        `Last sync ${data.lastSyncAt ?? "never"} · chunks ${data.ragChunkCount ?? "—"} · backup ${data.lastBackupAt ?? "—"} · disk free ${data.diskFreeRatio ?? "—"}`,
+      );
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [tab]);
 
   const fetchUsers = useCallback(async () => {
     await Promise.resolve();
@@ -568,6 +594,9 @@ export default function AdminClient({
 
       {tab === "overview" && (
         <div className="flex flex-col gap-5 sm:gap-6 animate-fade-in">
+          {homeHealth ? (
+            <p className="text-sm text-muted">{homeHealth}</p>
+          ) : null}
           {loadingStats && !overview ? (
             <div className="py-16 flex items-center justify-center">
               <Loader2 className="w-5 h-5 animate-spin text-muted" />

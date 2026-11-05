@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Loader2, Bookmark } from "lucide-react";
-import { authFetch } from "@/lib/authFetch";
+import { qaFetch as authFetch } from "@/lib/homeApi";
 import { notify } from "@/lib/toast";
 import { auth } from "@/lib/firebase/auth";
 import { EmptyState } from "@/components/ui";

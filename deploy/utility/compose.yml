@@ -78,7 +78,7 @@ services:
       GOTENBERG_URL: http://gotenberg:3000
       TZ: Asia/Kolkata
     volumes:
-      - /srv/utility/data/files:/data/files:ro
+      - /srv/utility/data/files:/data/files
     healthcheck:
       test:
         [

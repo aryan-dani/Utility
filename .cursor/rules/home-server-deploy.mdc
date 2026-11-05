@@ -1,0 +1,21 @@
+---
+description: Ship Utility home-server changes over ssh kuro. Do not leave a manual deploy checklist.
+alwaysApply: true
+---
+
+# Home server deploys
+
+The always-on box is `ssh kuro`. Utility lives in `/srv/utility`. Compose project `utility`, ports `18100–18199`. Kuro (the voice/n8n project) stays out of this stack.
+
+`utility-deploy.timer` already runs `deploy/scripts/deploy.sh` every 2 minutes. That script fetches `origin/main`, waits until GitHub checks are green, migrates, rebuilds, and health-gates. It resets the checkout to `origin/main`, so uncommitted files on the server are wiped.
+
+## When server or deploy code changes
+
+Do the rollout yourself. Do not tell the user to pull, migrate, or rebuild.
+
+1. `npm run lint`, `npm run typecheck`, and `npm run test` must exit 0.
+2. Commit and push to `main` (this rule is the standing ask to ship those changes).
+3. `ssh kuro 'systemctl start utility-deploy.service'` and read the journal until the log says `success` or names a CI/health failure.
+4. If checks are still pending, wait and start the unit again. Do not bypass the CI gate in `deploy.sh`.
+
+Vercel still publishes the Next.js app from the GitHub push. The SSH step is only for the home-server image, migration, and file host.

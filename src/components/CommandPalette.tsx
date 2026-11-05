@@ -629,7 +629,9 @@ export default function CommandPalette() {
             }
             setGpaOpen(false);
             setClip({ code, status: 'loading', text: '' });
-            void fetch(`/api/clipboard/share/${encodeURIComponent(code)}`, { cache: 'no-store' })
+            void import('@/lib/utilityServer').then(({ fetchPublicClipboard }) =>
+              fetchPublicClipboard(code),
+            )
               .then(async (res) => {
                 if (!res.ok) {
                   setClip({ code, status: 'error', text: 'That code is missing or expired.' });

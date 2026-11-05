@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { streamText } from "ai";
+import { createUIMessageStream, createUIMessageStreamResponse, streamText } from "ai";
 import { createGroq } from "@ai-sdk/groq";
 import { and, desc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
@@ -74,6 +74,15 @@ v1Routes.get("/search", async (c) => {
   return c.json({ sources, context, results });
 });
 
+function messageText(m: {
+  content?: string;
+  parts?: Array<{ text?: string }>;
+}): string {
+  if (typeof m.content === "string" && m.content.trim()) return m.content;
+  if (Array.isArray(m.parts)) return m.parts.map((p) => p.text || "").join("\n").trim();
+  return "";
+}
+
 v1Routes.post("/chat", async (c) => {
   const limited = rateOr429(c, "chat", 30);
   if (limited) return limited;
@@ -84,59 +93,80 @@ v1Routes.post("/chat", async (c) => {
   if (!body || typeof body !== "object") {
     return c.json({ error: "Invalid JSON" }, 400);
   }
-  const messages = (body as { messages?: Array<{ role: string; content: string }> })
-    .messages;
-  const scope = (body as {
+  const raw = body as {
+    messages?: Array<{ role?: string; content?: string; parts?: Array<{ text?: string }> }>;
     academicYear?: string;
     branch?: string;
     semester?: number;
-  }) || {};
+    context?: {
+      academicYear?: string;
+      branch?: string;
+      semester?: number;
+      resourceId?: string;
+    };
+  };
+  const messages = raw.messages;
   if (!Array.isArray(messages) || messages.length === 0) {
     return c.json({ error: "messages required" }, 400);
   }
   const lastUser = [...messages].reverse().find((m) => m.role === "user");
-  const query = lastUser?.content || "";
+  const query = lastUser ? messageText(lastUser) : "";
   const { sources, context } = await retrieve({
     query,
-    academicYear: scope.academicYear,
-    branch: scope.branch,
-    semester: scope.semester,
+    academicYear: raw.context?.academicYear || raw.academicYear,
+    branch: raw.context?.branch || raw.branch,
+    semester: raw.context?.semester ?? raw.semester,
+    resourceId: raw.context?.resourceId,
   });
+
+  // Empty home index: client falls back to Vercel, which still has PDF text.
+  if (sources.length === 0) {
+    return c.json({ fallback: true, sources: [] }, 200, {
+      "X-Utility-Source-Count": "0",
+    });
+  }
 
   const groq = createGroq({ apiKey: env().GROQ_API_KEY });
   const system = [
     "You are Utility OS study assistant for MIT-WPU students.",
-    "Answer using the provided notes context when relevant. Cite sources as [n].",
-    "If context is empty, say you lack notes and answer from general knowledge carefully.",
-    context ? `\nNotes context:\n${context}` : "\n(No notes retrieved.)",
+    "Answer using the provided notes context. Cite sources as [S1], [S2].",
+    `\nNotes context:\n${context}`,
   ].join("\n");
 
-  const result = streamText({
-    model: groq("openai/gpt-oss-120b"),
-    system,
-    messages: messages.map((m) => ({
-      role: m.role as "user" | "assistant" | "system",
-      content: m.content,
-    })),
-    temperature: CHAT_TEMPERATURE,
-    abortSignal: AbortSignal.timeout(45_000),
+  const uiSources = sources.map((s, i) => ({
+    marker: `S${i + 1}`,
+    resource_id: s.resourceId,
+    title: s.title,
+    subject_name: "",
+    section_label: s.sectionLabel ?? undefined,
+    snippet: s.text.slice(0, 400),
+  }));
+
+  const stream = createUIMessageStream({
+    execute({ writer }) {
+      writer.write({ type: "data-sources", data: uiSources } as never);
+      const result = streamText({
+        model: groq("openai/gpt-oss-120b"),
+        system,
+        messages: messages
+          .map((m) => ({
+            role: (m.role === "assistant" ? "assistant" : "user") as "user" | "assistant",
+            content: messageText(m),
+          }))
+          .filter((m) => m.content),
+        temperature: CHAT_TEMPERATURE,
+        abortSignal: AbortSignal.timeout(45_000),
+      });
+      writer.merge(result.toUIMessageStream());
+    },
   });
 
-  // Attach sources as a header for clients that want them without parsing the stream.
-  const headers = new Headers({
-    "Content-Type": "text/plain; charset=utf-8",
-    "X-Utility-Sources": Buffer.from(
-      JSON.stringify(
-        sources.map((s) => ({
-          resourceId: s.resourceId,
-          title: s.title,
-          chunkIndex: s.chunkIndex,
-        })),
-      ),
-    ).toString("base64url"),
+  return createUIMessageStreamResponse({
+    stream,
+    headers: {
+      "X-Utility-Source-Count": String(sources.length),
+    },
   });
-
-  return result.toTextStreamResponse({ headers });
 });
 
 v1Routes.post("/study", async (c) => {
@@ -172,9 +202,15 @@ v1Routes.post("/study", async (c) => {
   });
   const groq = createGroq({ apiKey: env().GROQ_API_KEY });
   const mode =
-    body?.type === "quiz" || body?.mode === "quiz" ? "quiz" : "flashcards";
+    body?.type === "pyq" || body?.mode === "pyq"
+      ? "pyq"
+      : body?.type === "quiz" || body?.mode === "quiz"
+        ? "quiz"
+        : "flashcards";
   const prompt =
-    mode === "quiz"
+    mode === "pyq"
+      ? `Write 5 university exam questions (PYQ style) from the notes. Return ONLY JSON {quiz:[{id,question,options:[A,B,C,D],correctIndex,explanation,citations:[]}]}.\n${context}`
+      : mode === "quiz"
       ? `Create a 5-question multiple-choice quiz from the notes. Return ONLY JSON {quiz:[{id,question,options:[A,B,C,D],correctIndex,explanation,citations:[]}]}.\n${context}`
       : `Create 8 flashcards from the notes. Return ONLY JSON {flashcards:[{id,question,answer}]}.\n${context}`;
   const { generateText } = await import("ai");
@@ -316,21 +352,46 @@ v1Routes.post("/activity", async (c) => {
   return c.json({ ok: true });
 });
 
+function questionDto(row: typeof qaQuestions.$inferSelect) {
+  return {
+    id: row.id,
+    academic_year: row.academicYear,
+    branch: row.branch,
+    semester: row.semester,
+    subject_name: row.subjectName || "",
+    category: "doubt" as const,
+    author_uid: row.userId,
+    author_name: row.authorName || "Student",
+    body: row.body,
+    attachments: [] as string[],
+    status: "open" as const,
+    upvotes: row.upvotes,
+    answer_count: row.answerCount,
+    ai_auto_answered: false,
+    needs_human: false,
+    created_at: row.createdAt.toISOString(),
+    last_activity_at: row.updatedAt.toISOString(),
+    title: row.title,
+  };
+}
+
 v1Routes.get("/qa/questions", async (c) => {
-  const academicYear = c.req.query("year");
+  const academicYear = c.req.query("academic_year") || c.req.query("year");
   const branch = c.req.query("branch");
   const semester = c.req.query("semester");
+  const subject = c.req.query("subject_name");
   const conditions = [];
   if (academicYear) conditions.push(eq(qaQuestions.academicYear, academicYear));
   if (branch) conditions.push(eq(qaQuestions.branch, branch));
   if (semester) conditions.push(eq(qaQuestions.semester, Number(semester)));
+  if (subject) conditions.push(eq(qaQuestions.subjectName, subject));
   const rows = await getDb()
     .select()
     .from(qaQuestions)
     .where(conditions.length ? and(...conditions) : undefined)
     .orderBy(desc(qaQuestions.createdAt))
     .limit(50);
-  return c.json({ questions: rows });
+  return c.json({ questions: rows.map(questionDto) });
 });
 
 v1Routes.post("/qa/questions", async (c) => {
@@ -341,27 +402,33 @@ v1Routes.post("/qa/questions", async (c) => {
     title?: string;
     body?: string;
     academicYear?: string;
+    academic_year?: string;
     branch?: string;
     semester?: number;
     subjectName?: string;
+    subject_name?: string;
     authorName?: string;
+    author_name?: string;
   } | null;
-  if (!body?.title || !body?.body || !body.academicYear || !body.branch || body.semester == null) {
+  const academicYear = body?.academicYear || body?.academic_year;
+  const text = body?.body || "";
+  const title = body?.title || text.slice(0, 80);
+  if (!title || !text || !academicYear || !body?.branch || body.semester == null) {
     return c.json({ error: "missing fields" }, 400);
   }
   const id = randomUUID();
   await getDb().insert(qaQuestions).values({
     id,
     userId: uid,
-    authorName: body.authorName ?? null,
-    academicYear: body.academicYear,
+    authorName: body.authorName || body.author_name || null,
+    academicYear,
     branch: body.branch,
     semester: body.semester,
-    subjectName: body.subjectName ?? null,
-    title: body.title.slice(0, 200),
-    body: body.body.slice(0, 8000),
+    subjectName: body.subjectName || body.subject_name || null,
+    title: title.slice(0, 200),
+    body: text.slice(0, 8000),
   });
-  return c.json({ id }, 201);
+  return c.json({ id, success: true }, 201);
 });
 
 v1Routes.get("/qa/questions/:id", async (c) => {
@@ -378,7 +445,42 @@ v1Routes.get("/qa/questions/:id", async (c) => {
     .where(eq(qaAnswers.questionId, id))
     .orderBy(desc(qaAnswers.upvotes))
     .limit(100);
-  return c.json({ question: q[0], answers });
+  const answerDtos = answers.map((a) => ({
+    id: a.id,
+    question_id: a.questionId,
+    author_uid: a.userId,
+    author_name: a.authorName || "Student",
+    body: a.body,
+    attachments: [] as string[],
+    upvotes: a.upvotes,
+    downvotes: a.downvotes,
+    is_accepted: false,
+    created_at: a.createdAt.toISOString(),
+  }));
+  return c.json({
+    question: { ...questionDto(q[0]), answers: answerDtos },
+    answers: answerDtos,
+  });
+});
+
+v1Routes.delete("/qa/questions/:id", async (c) => {
+  const uid = c.get("user").uid;
+  const id = c.req.param("id");
+  const rows = await getDb().select().from(qaQuestions).where(eq(qaQuestions.id, id)).limit(1);
+  if (!rows[0]) return c.json({ error: "Not found" }, 404);
+  if (rows[0].userId !== uid) return c.json({ error: "Forbidden" }, 403);
+  await getDb().delete(qaQuestions).where(eq(qaQuestions.id, id));
+  return c.json({ ok: true });
+});
+
+v1Routes.delete("/qa/answers/:id", async (c) => {
+  const uid = c.get("user").uid;
+  const id = c.req.param("id");
+  const rows = await getDb().select().from(qaAnswers).where(eq(qaAnswers.id, id)).limit(1);
+  if (!rows[0]) return c.json({ error: "Not found" }, 404);
+  if (rows[0].userId !== uid) return c.json({ error: "Forbidden" }, 403);
+  await getDb().delete(qaAnswers).where(eq(qaAnswers.id, id));
+  return c.json({ ok: true });
 });
 
 v1Routes.post("/qa/questions/:id/answers", async (c) => {
@@ -415,13 +517,17 @@ v1Routes.post("/qa/vote", async (c) => {
   const uid = c.get("user").uid;
   const body = (await c.req.json().catch(() => null)) as {
     targetType?: "question" | "answer";
+    target_type?: "question" | "answer";
     targetId?: string;
+    target_id?: string;
     value?: 1 | -1 | 0;
   } | null;
-  if (!body?.targetType || !body.targetId || body.value == null) {
+  const targetType = body?.targetType || body?.target_type;
+  const targetId = body?.targetId || body?.target_id;
+  if (!targetType || !targetId || body?.value == null) {
     return c.json({ error: "missing fields" }, 400);
   }
-  const id = `${uid}_${body.targetType}_${body.targetId}`;
+  const id = `${uid}_${targetType}_${targetId}`;
   if (body.value === 0) {
     await getDb().delete(qaVotes).where(eq(qaVotes.id, id));
   } else {
@@ -430,8 +536,8 @@ v1Routes.post("/qa/vote", async (c) => {
       .values({
         id,
         userId: uid,
-        targetType: body.targetType,
-        targetId: body.targetId,
+        targetType,
+        targetId,
         value: body.value,
       })
       .onConflictDoUpdate({
@@ -442,23 +548,35 @@ v1Routes.post("/qa/vote", async (c) => {
   return c.json({ ok: true });
 });
 
+v1Routes.get("/qa/saved", async (c) => {
+  const uid = c.get("user").uid;
+  const saved = await getDb().select().from(qaSaved).where(eq(qaSaved.userId, uid)).limit(200);
+  if (saved.length === 0) return c.json({ questions: [] });
+  const questions = [];
+  for (const row of saved) {
+    const q = await getDb().select().from(qaQuestions).where(eq(qaQuestions.id, row.questionId)).limit(1);
+    if (q[0]) questions.push(questionDto(q[0]));
+  }
+  return c.json({ questions });
+});
+
 v1Routes.post("/qa/save", async (c) => {
   const uid = c.get("user").uid;
   const body = (await c.req.json().catch(() => null)) as {
     questionId?: string;
+    question_id?: string;
     saved?: boolean;
   } | null;
-  if (!body?.questionId) return c.json({ error: "questionId required" }, 400);
-  const id = `${uid}_${body.questionId}`;
-  if (body.saved === false) {
+  const questionId = body?.questionId || body?.question_id;
+  if (!questionId) return c.json({ error: "questionId required" }, 400);
+  const id = `${uid}_${questionId}`;
+  const existing = await getDb().select().from(qaSaved).where(eq(qaSaved.id, id)).limit(1);
+  if (body.saved === false || existing[0]) {
     await getDb().delete(qaSaved).where(eq(qaSaved.id, id));
-  } else {
-    await getDb()
-      .insert(qaSaved)
-      .values({ id, userId: uid, questionId: body.questionId })
-      .onConflictDoNothing();
+    return c.json({ ok: true, saved: false });
   }
-  return c.json({ ok: true });
+  await getDb().insert(qaSaved).values({ id, userId: uid, questionId });
+  return c.json({ ok: true, saved: true });
 });
 
 v1Routes.post("/visualize/telemetry", async (c) => {

@@ -3,6 +3,8 @@ import { getBoss, stopBoss } from "./boss.js";
 import { runDriveSync, type DriveSyncPayload } from "./jobs/driveSync.js";
 import { runCachePurge } from "./jobs/cachePurge.js";
 import { runUsersReconcile } from "./jobs/usersReconcile.js";
+import { runStudyPack } from "./jobs/studyPack.js";
+import { runRagEval } from "./jobs/ragEval.js";
 import { closeDb } from "../db/client.js";
 
 async function main() {
@@ -17,6 +19,8 @@ async function main() {
   await boss.createQueue("cache.purge");
   await boss.createQueue("users.reconcile");
   await boss.createQueue("catalog.publish");
+  await boss.createQueue("study.pack");
+  await boss.createQueue("rag.eval");
 
   await boss.work("drive.sync", async (jobs: Job<DriveSyncPayload>[]) => {
     for (const job of jobs) {
@@ -30,6 +34,14 @@ async function main() {
 
   await boss.work("users.reconcile", async (_jobs: Job[]) => {
     await runUsersReconcile();
+  });
+
+  await boss.work("study.pack", async (_jobs: Job[]) => {
+    await runStudyPack();
+  });
+
+  await boss.work("rag.eval", async (_jobs: Job[]) => {
+    await runRagEval();
   });
 
   console.log("utility-worker listening");

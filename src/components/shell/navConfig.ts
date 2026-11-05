@@ -15,6 +15,7 @@ import {
   Home,
   HelpCircle,
   ClipboardCopy,
+  StickyNote,
 } from "lucide-react";
 
 export interface NavLinkItem {
@@ -61,6 +62,7 @@ export const TOOL_LINKS: NavLinkItem[] = [
   { href: "/gpa", label: "GPA Calculator", Icon: GraduationCap, desc: "Track and project your grades" },
   { href: "/srs", label: "SRS Flashcards", Icon: Layers, desc: "Spaced repetition reviewer" },
   CLIPBOARD_LINK,
+  { href: "/notes", label: "Notes", Icon: StickyNote, desc: "Markdown stored on the home server" },
 ];
 
 /** @deprecated Prefer PINNED_LINKS + TOOL_LINKS */

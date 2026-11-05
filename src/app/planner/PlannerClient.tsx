@@ -18,6 +18,8 @@ import { notify } from '@/lib/toast';
 import { Button, Modal, PageHeader, Card, Segmented, Switch, PageShell } from '@/components/ui';
 import AppLink from '@/components/ui/AppLink';
 import { authFetch } from '@/lib/authFetch';
+import { homeOrVercelJson } from '@/lib/homeApi';
+import { utilityFetch } from '@/lib/utilityServer';
 import { getSoonestUpcomingExam } from '@/lib/examCountdown';
 import { useIsClient } from '@/lib/clientHooks';
 import { toggleTaskRecurring as applyRecurringToggle } from '@/lib/planner/recurrence';
@@ -886,6 +888,35 @@ export default function PlannerClient() {
     is_public: false,
   });
   const [collaborators, setCollaborators] = useState<Collaborator[]>([]);
+  const [present, setPresent] = useState<string[]>([]);
+  useEffect(() => {
+    const planId = planMeta.id;
+    if (!planId) return;
+    let stop = false;
+    const beat = async () => {
+      await utilityFetch("/v1/planner/presence", {
+        method: "POST",
+        body: {
+          planId,
+          displayName: auth.currentUser?.email?.split("@")[0],
+        },
+      });
+      const res = await utilityFetch(`/v1/planner/presence?planId=${encodeURIComponent(planId)}`);
+      if (!res?.ok || stop) return;
+      const data = (await res.json()) as { people?: Array<{ displayName?: string | null; userId: string }> };
+      setPresent(
+        (data.people || [])
+          .map((p) => p.displayName || p.userId.slice(0, 6))
+          .filter((name) => name !== auth.currentUser?.email?.split("@")[0]),
+      );
+    };
+    void beat();
+    const timer = setInterval(() => void beat(), 20_000);
+    return () => {
+      stop = true;
+      clearInterval(timer);
+    };
+  }, [planMeta.id]);
   const mounted = useIsClient();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -959,7 +990,7 @@ export default function PlannerClient() {
     try {
       if (!auth.currentUser) return;
 
-      const res = await authFetch(`/api/planner?month=${month}&year=${year}`);
+      const res = await homeOrVercelJson(`/api/planner?month=${month}&year=${year}`);
 
       if (signal?.cancelled) return;
       if (!res.ok) throw new Error(await res.text());
@@ -1087,19 +1118,16 @@ export default function PlannerClient() {
     try {
       if (!auth.currentUser) return;
 
-      const res = await authFetch('/api/planner', {
+      const res = await homeOrVercelJson('/api/planner', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+        body: {
           month,
           year,
           data: planData,
           title: planMeta.title,
           is_public: planMeta.is_public,
           ...(planMeta.id ? { planId: planMeta.id } : {}),
-        })
+        },
       });
 
       if (!res.ok) throw new Error(await res.text());
@@ -1280,16 +1308,13 @@ export default function PlannerClient() {
     try {
       await notify.promise(
         (async () => {
-          const res = await authFetch('/api/planner/collaborators', {
+          const res = await homeOrVercelJson('/api/planner/collaborators', {
             method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
+            body: {
               planId: planMeta.id,
               email,
-              role
-            })
+              role,
+            },
           });
 
           if (!res.ok) {
@@ -1320,7 +1345,7 @@ export default function PlannerClient() {
     try {
       await notify.promise(
         (async () => {
-          const res = await authFetch(`/api/planner/collaborators?id=${id}`, {
+          const res = await homeOrVercelJson(`/api/planner/collaborators?id=${id}`, {
             method: 'DELETE',
           });
 
@@ -1503,7 +1528,10 @@ export default function PlannerClient() {
                 ) : lastSynced ? (
                   <>
                     <Cloud className="w-3.5 h-3.5 text-foreground" />
-                    <span>Synced {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span>
+                      Synced {lastSynced.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {present.length > 0 ? ` · here: ${present.join(", ")}` : ""}
+                    </span>
                   </>
                 ) : (
                   <>

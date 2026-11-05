@@ -13,8 +13,8 @@ export async function appendTodayTask(text: string, date = localDateKey()): Prom
   if (!auth.currentUser) return;
 
   const [year, month] = date.split("-").map(Number);
-  const { authFetch } = await import("@/lib/authFetch");
-  const existing = await authFetch(`/api/planner?month=${month}&year=${year}`);
+  const { homeOrVercelJson } = await import("@/lib/homeApi");
+  const existing = await homeOrVercelJson(`/api/planner?month=${month}&year=${year}`);
   if (!existing.ok) return;
   const body = (await existing.json()) as {
     plan?: {
@@ -27,15 +27,14 @@ export async function appendTodayTask(text: string, date = localDateKey()): Prom
   const day = Array.isArray(planData[date]) ? planData[date] : [];
   if (day.some((task) => task.id === id)) return;
   planData[date] = [...day, { id, text: trimmed, done: false }];
-  await authFetch("/api/planner", {
+  await homeOrVercelJson("/api/planner", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
+    body: {
       month,
       year,
       title: body.plan?.title || "Study Plan",
       is_public: !!body.plan?.is_public,
       data: planData,
-    }),
+    },
   });
 }

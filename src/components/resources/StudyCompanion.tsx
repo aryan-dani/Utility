@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
-import { authFetch } from "@/lib/authFetch";
+import { groundedChatFetch } from "@/lib/utilityServer";
 import { notify } from "@/lib/toast";
 import { useSRSStore } from "@/store/srsStore";
 import { readLocalClipboardPad, writeLocalClipboardPad } from "@/lib/clipboardLocal";
@@ -105,7 +105,7 @@ export function StudyCompanion({
     setTurns((prev) => [...prev, { role: "user", text }]);
     setPrompt("");
     try {
-      const res = await authFetch("/api/chat", {
+      const res = await groundedChatFetch("/api/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -1,8 +1,8 @@
 name: Scheduled Storage Sync
 
 on:
-  # Schedule disabled after home-server cutover (scheduler runs on kuro).
-  # Keep workflow_dispatch as a manual fallback.
+  # Schedule stays off. Drive sync, chunking, and embed run on the Utility
+  # worker (pg-boss). This workflow is a manual fallback only.
   # schedule:
   #   - cron: "0 0 * * *"
   #   - cron: "0 3 * * 0"

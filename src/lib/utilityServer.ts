@@ -8,7 +8,7 @@ const BREAKER_MS = 5 * 60 * 1000;
 const HEALTH_TIMEOUT_MS = 2500;
 const JSON_TIMEOUT_MS = 8000;
 
-function apiOrigins(): string[] {
+export function apiOrigins(): string[] {
   const raw =
     process.env.NEXT_PUBLIC_UTILITY_API_ORIGINS ||
     "https://api.utilityos.tech,https://utility-api.aryandani.com";
@@ -18,7 +18,7 @@ function apiOrigins(): string[] {
     .filter(Boolean);
 }
 
-function filesOrigins(): string[] {
+export function filesOrigins(): string[] {
   const raw =
     process.env.NEXT_PUBLIC_UTILITY_FILES_ORIGINS ||
     "https://files.utilityos.tech,https://utility-files.aryandani.com";
@@ -126,6 +126,60 @@ export async function utilityFetch(
   }
   tripBreaker();
   return null;
+}
+
+/**
+ * Ask stream: home /v1/chat when the index has sources, otherwise the same
+ * request against Vercel /api/chat.
+ */
+export async function groundedChatFetch(
+  input: RequestInfo | URL,
+  init?: RequestInit,
+): Promise<Response> {
+  const token = await getIdToken();
+  const headers = new Headers(init?.headers);
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+  const body = init?.body;
+  if (!breakerOpen() && token && typeof body === "string") {
+    for (const origin of apiOrigins()) {
+      try {
+        const res = await fetch(`${origin}/v1/chat`, {
+          ...init,
+          headers,
+          body,
+          signal: init?.signal ?? AbortSignal.timeout(60_000),
+        });
+        if (res.headers.get("X-Utility-Source-Count") === "0") break;
+        if (res.ok || res.status === 401 || res.status === 429) {
+          clearBreaker();
+          return res;
+        }
+      } catch {
+        /* try next origin, then Vercel */
+      }
+    }
+  }
+  return fetch(input, init);
+}
+
+export async function fetchPublicClipboard(id: string): Promise<Response> {
+  if (!breakerOpen()) {
+    for (const origin of apiOrigins()) {
+      try {
+        const res = await fetch(`${origin}/public/clipboard/${encodeURIComponent(id)}`, {
+          cache: "no-store",
+        });
+        if (res.ok || res.status === 410 || res.status === 404) {
+          if (res.ok || res.status === 410) return res;
+        }
+      } catch {
+        /* try vercel */
+      }
+    }
+  }
+  return fetch(`/api/clipboard/share/${encodeURIComponent(id)}`, { cache: "no-store" });
 }
 
 /** Build a native file URL for a mirrored resource. */

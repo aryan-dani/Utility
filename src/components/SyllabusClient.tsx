@@ -34,7 +34,7 @@ import {
   AIDS_SEM_5_SUBJECTS,
 } from '@/lib/syllabusData';
 import { auth } from '@/lib/firebase/auth';
-import { authFetch } from '@/lib/authFetch';
+import { homeOrVercelJson } from '@/lib/homeApi';
 import { plannerStorageKey } from '@/lib/plannerStorage';
 import { notify } from '@/lib/toast';
 import { parseUnitKey, unitFolderId } from '@/lib/resourceGroups';
@@ -367,7 +367,7 @@ export default function SyllabusClient() {
     }
 
     try {
-      const existing = await authFetch(`/api/planner?month=${month}&year=${year}`);
+      const existing = await homeOrVercelJson(`/api/planner?month=${month}&year=${year}`);
       if (!existing.ok) throw new Error('Could not load the cloud plan');
       const body = (await existing.json()) as {
         plan?: {
@@ -384,17 +384,16 @@ export default function SyllabusClient() {
       const title = cloud?.title || 'Study Plan';
       const isPublic = !!cloud?.is_public;
 
-      const saved = await authFetch('/api/planner', {
+      const saved = await homeOrVercelJson('/api/planner', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+        body: {
           month,
           year,
           title,
           is_public: isPublic,
           data: planData,
           ...(cloud?.id ? { planId: cloud.id } : {}),
-        }),
+        },
       });
       if (!saved.ok) throw new Error('Could not save the cloud plan');
       const savedBody = (await saved.json()) as { id?: string };

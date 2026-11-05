@@ -257,6 +257,102 @@ export const migrateCheckpoint = pgTable("migrate_checkpoint", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const clipboards = pgTable("clipboards", {
+  userId: text("user_id").primaryKey(),
+  text: text("text").notNull().default(""),
+  updatedAt: timestamp("updated_at", { withTimezone: true }),
+  shareId: text("share_id"),
+  shareExpiresAt: timestamp("share_expires_at", { withTimezone: true }),
+  driveFileId: text("drive_file_id"),
+  driveFileName: text("drive_file_name"),
+});
+
+export const clipboardShares = pgTable("clipboard_shares", {
+  id: text("id").primaryKey(),
+  ownerId: text("owner_id").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const plannerPlans = pgTable(
+  "planner_plans",
+  {
+    id: text("id").primaryKey(),
+    ownerId: text("owner_id").notNull(),
+    ownerEmail: text("owner_email"),
+    month: integer("month").notNull(),
+    year: integer("year").notNull(),
+    title: text("title").notNull(),
+    isPublic: boolean("is_public").notNull().default(false),
+    data: jsonb("data").notNull().default({}),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [uniqueIndex("planner_owner_month_idx").on(t.ownerId, t.year, t.month)],
+);
+
+export const plannerCollaborators = pgTable(
+  "planner_collaborators",
+  {
+    id: text("id").primaryKey(),
+    planId: text("plan_id")
+      .notNull()
+      .references(() => plannerPlans.id, { onDelete: "cascade" }),
+    userEmail: text("user_email").notNull(),
+    role: varchar("role", { length: 16 }).notNull(),
+    ownerId: text("owner_id").notNull(),
+  },
+  (t) => [uniqueIndex("planner_collab_unique_idx").on(t.planId, t.userEmail)],
+);
+
+export const plannerPresence = pgTable(
+  "planner_presence",
+  {
+    planId: text("plan_id").notNull(),
+    userId: text("user_id").notNull(),
+    displayName: text("display_name"),
+    seenAt: timestamp("seen_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [primaryKey({ columns: [t.planId, t.userId] })],
+);
+
+export const communityDecks = pgTable("community_decks", {
+  id: text("id").primaryKey(),
+  title: text("title").notNull(),
+  branch: varchar("branch", { length: 32 }).notNull(),
+  semester: integer("semester").notNull(),
+  authorName: text("author_name"),
+  authorUid: text("author_uid").notNull(),
+  flashcards: jsonb("flashcards").notNull().default([]),
+  upvotes: integer("upvotes").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const srsState = pgTable("srs_state", {
+  userId: text("user_id").primaryKey(),
+  decks: jsonb("decks").notNull().default([]),
+  cards: jsonb("cards").notNull().default([]),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const userNotes = pgTable("user_notes", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
+  title: text("title").notNull(),
+  bytes: integer("bytes").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const studyPacks = pgTable(
+  "study_packs",
+  {
+    id: text("id").primaryKey(),
+    scopeKey: text("scope_key").notNull(),
+    payload: jsonb("payload").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("study_packs_scope_idx").on(t.scopeKey, t.createdAt)],
+);
+
 export const healthMeta = pgTable("health_meta", {
   key: text("key").primaryKey(),
   value: text("value").notNull(),

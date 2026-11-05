@@ -11,7 +11,7 @@ import {
 } from "lucide-react";
 import { auth } from "@/lib/firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
-import { authFetch } from "@/lib/authFetch";
+import { qaFetch as authFetch } from "@/lib/homeApi";
 import { notify } from "@/lib/toast";
 import { useAcademicStore } from "@/store/academicStore";
 import {
