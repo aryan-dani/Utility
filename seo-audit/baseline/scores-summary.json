@@ -1,0 +1,82 @@
+[
+  {
+    "file": "lh-campus-desktop.report.json",
+    "perf": 88,
+    "a11y": 98,
+    "bp": 100,
+    "seo": 100,
+    "lcp": 1018.8009999999999,
+    "cls": 0.00876271780054286,
+    "error": null
+  },
+  {
+    "file": "lh-campus-labs-desktop.report.json",
+    "perf": 94,
+    "a11y": 98,
+    "bp": 100,
+    "seo": 100,
+    "lcp": 813.7009999999999,
+    "cls": 0.004698550735717224,
+    "error": null
+  },
+  {
+    "file": "lh-campus-labs-mobile.report.json",
+    "perf": 86,
+    "a11y": 98,
+    "bp": 100,
+    "seo": 100,
+    "lcp": 2404.4973999999993,
+    "cls": 0.004340032472209121,
+    "error": null
+  },
+  {
+    "file": "lh-campus-mobile.report.json",
+    "perf": 90,
+    "a11y": 98,
+    "bp": 100,
+    "seo": 100,
+    "lcp": 2038.4216000000001,
+    "cls": 0.004340032472209121,
+    "error": null
+  },
+  {
+    "file": "lh-home-desktop.report.json",
+    "perf": 94,
+    "a11y": 98,
+    "bp": 96,
+    "seo": 100,
+    "lcp": 1574.506,
+    "cls": 0.013647525486868883,
+    "error": null
+  },
+  {
+    "file": "lh-home-mobile.report.json",
+    "perf": 91,
+    "a11y": 98,
+    "bp": 96,
+    "seo": 100,
+    "lcp": 1991.79044,
+    "cls": 0.02044054935711379,
+    "error": null
+  },
+  {
+    "file": "lh-install-desktop.report.json",
+    "perf": 97,
+    "a11y": 98,
+    "bp": 100,
+    "seo": 100,
+    "lcp": 881.538,
+    "cls": 0.004698550735717224,
+    "error": null
+  },
+  {
+    "file": "lh-install-mobile.report.json",
+    "perf": 81,
+    "a11y": 98,
+    "bp": 100,
+    "seo": 100,
+    "lcp": 3314.642280000001,
+    "cls": 0.004340032472209121,
+    "error": null
+  }
+]
