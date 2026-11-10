@@ -13,7 +13,7 @@ export default function manifest(): UtilityManifest {
     start_url: '/',
     id: '/',
     scope: '/',
-    lang: 'en',
+    lang: 'en-IN',
     dir: 'ltr',
     display: 'standalone',
     // Prefer a chrome-less window. Do not list `tabbed` — that is the Store URL strip.
