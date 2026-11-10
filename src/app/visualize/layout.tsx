@@ -1,8 +1,11 @@
 import type { Metadata } from "next";
-import { PRIVATE_ROBOTS } from "@/lib/seo";
+import { indexableMeta } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  robots: PRIVATE_ROBOTS,
+  ...indexableMeta("/visualize"),
+  title: "Algorithm visualizer",
+  description:
+    "Step through BFS, DFS, A*, N-Queens, and more — free educational visualizers on Utility OS.",
 };
 
 export default function VisualizeLayout({

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import AuthButtons from "./AuthButtons";
 import HomeHeatmap from "./HomeHeatmap";
 import HomeStats from "./HomeStats";
@@ -42,10 +43,41 @@ export default async function Home() {
         <h1 className="text-base sm:text-lg md:text-xl font-medium tracking-tight leading-snug mb-5 text-foreground-subtle max-w-xl mx-auto">
           Everything for your semester. One place.
         </h1>
+        <p className="text-sm text-muted max-w-xl mx-auto mb-5 leading-relaxed">
+          MIT-WPU syllabus indexes, a free{" "}
+          <Link href="/gpa" className="text-foreground underline-offset-2 hover:underline">
+            GPA calculator
+          </Link>
+          , and an{" "}
+          <Link href="/visualize" className="text-foreground underline-offset-2 hover:underline">
+            algorithm visualizer
+          </Link>
+          — plus a signed-in vault and Ask AI for AIDS, CSE, and ECE.
+        </p>
         <div className="flex flex-col items-center gap-3">
           <AuthButtons />
           <HomeExamCountdown />
         </div>
+        <nav
+          aria-label="Public study links"
+          className="mt-6 flex flex-wrap items-center justify-center gap-x-4 gap-y-2 text-sm"
+        >
+          <Link href="/mit-wpu" className="font-medium text-foreground underline-offset-2 hover:underline">
+            MIT-WPU indexes
+          </Link>
+          <Link href="/gpa" className="font-medium text-foreground underline-offset-2 hover:underline">
+            GPA calculator
+          </Link>
+          <Link href="/visualize" className="font-medium text-foreground underline-offset-2 hover:underline">
+            Visualize
+          </Link>
+          <Link href="/campus" className="font-medium text-foreground underline-offset-2 hover:underline">
+            Campus
+          </Link>
+          <Link href="/mit-wpu/ask-ai" className="font-medium text-foreground underline-offset-2 hover:underline">
+            Ask AI
+          </Link>
+        </nav>
       </section>
 
       <HomeCockpit />

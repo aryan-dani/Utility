@@ -23,10 +23,22 @@ export default function NotFound() {
           Home
         </Link>
         <Link
-          href="/resources"
+          href="/mit-wpu"
           className="px-5 py-2.5 rounded-xl border border-border bg-card text-foreground text-sm font-semibold hover:bg-surface shadow-xs"
         >
-          Resources
+          MIT-WPU indexes
+        </Link>
+        <Link
+          href="/gpa"
+          className="px-5 py-2.5 rounded-xl border border-border bg-card text-foreground text-sm font-semibold hover:bg-surface shadow-xs"
+        >
+          GPA calculator
+        </Link>
+        <Link
+          href="/visualize"
+          className="px-5 py-2.5 rounded-xl border border-border bg-card text-foreground text-sm font-semibold hover:bg-surface shadow-xs"
+        >
+          Visualize
         </Link>
       </div>
     </div>

@@ -1,0 +1,84 @@
+{
+  "researchedAt": "2026-11-10",
+  "notes": "Honest SERP notes from web research. No fabricated volumes. Competitors include official MIT-WPU ILIP app, mitwpu.edu.in programme pages, and StudyFlow CGPA tools.",
+  "primary": [
+    {
+      "query": "MIT-WPU syllabus",
+      "intent": "informational",
+      "notes": "Official ILIP app and programme PDFs dominate. Opportunity: crawlable unit outlines + semester indexes Utility already holds for AIDS 3–5."
+    },
+    {
+      "query": "MIT-WPU notes",
+      "intent": "informational",
+      "notes": "Students want subject notes. Publish resource title indexes only; keep PDF bytes on Drive/login."
+    },
+    {
+      "query": "MIT-WPU study resources",
+      "intent": "informational",
+      "notes": "Aligns with Utility vault catalog by branch/semester."
+    },
+    {
+      "query": "MIT-WPU GPA calculator",
+      "intent": "transactional/tool",
+      "notes": "StudyFlow and similar calculators rank. Official 10-point SGPA/CGPA circular exists. /gpa should be public and indexable."
+    },
+    {
+      "query": "MIT-WPU SGPA calculator",
+      "intent": "transactional/tool",
+      "notes": "Same cluster as GPA/CGPA; use FAQ visible on /gpa."
+    },
+    {
+      "query": "MIT-WPU CGPA calculator",
+      "intent": "transactional/tool",
+      "notes": "High commercial tool intent; percentage ≈ CGPA × 10 is commonly cited."
+    }
+  ],
+  "secondary": [
+    {
+      "query": "student academic planner college",
+      "intent": "informational",
+      "notes": "Generic; Utility differentiator is MIT-WPU syllabus grounding."
+    },
+    {
+      "query": "AI study assistant syllabus",
+      "intent": "informational",
+      "notes": "Ask AI is auth-gated; public explainer only, no cloaking of chat."
+    },
+    {
+      "query": "semester planner for college students",
+      "intent": "informational",
+      "notes": "Explainer at /mit-wpu/study-planner."
+    },
+    {
+      "query": "MIT-WPU AIDS syllabus",
+      "intent": "informational",
+      "notes": "Strong long-tail; AIDS Sem 3–5 outlines exist in-repo."
+    },
+    {
+      "query": "MIT-WPU CSE syllabus",
+      "intent": "informational",
+      "notes": "Official programme pages list courses; Utility can index catalog subjects/resources without inventing units."
+    },
+    {
+      "query": "MIT-WPU ECE syllabus",
+      "intent": "informational",
+      "notes": "Same as CSE — catalog titles only unless official outlines are added later."
+    },
+    {
+      "query": "MIT-WPU Data Structures syllabus",
+      "intent": "informational",
+      "notes": "Subject-level pages for AIDS Sem 3 DS and related vault titles."
+    },
+    {
+      "query": "algorithm visualizer BFS DFS students",
+      "intent": "informational",
+      "notes": "/visualize pages already have in-repo educational copy; unlock from noindex."
+    }
+  ],
+  "avoid": [
+    {
+      "query": "campus ERP alternative for students",
+      "notes": "Do not target as ERP replacement. ILIP/ERP is official attendance/fees. Utility is a study workspace only."
+    }
+  ]
+}

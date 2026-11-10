@@ -1,0 +1,42 @@
+[
+    {
+        "file":  "lh-gpa-mobile.report.json",
+        "url":  "http://127.0.0.1:3010/gpa",
+        "perf":  70,
+        "seo":  100,
+        "a11y":  98,
+        "bp":  96,
+        "lcp":  8670,
+        "cls":  0.055
+    },
+    {
+        "file":  "lh-home-mobile.report.json",
+        "url":  "http://127.0.0.1:3010/",
+        "perf":  77,
+        "seo":  100,
+        "a11y":  98,
+        "bp":  96,
+        "lcp":  4152,
+        "cls":  0.055
+    },
+    {
+        "file":  "lh-mit-wpu-mobile.report.json",
+        "url":  "http://127.0.0.1:3010/mit-wpu",
+        "perf":  83,
+        "seo":  100,
+        "a11y":  98,
+        "bp":  96,
+        "lcp":  3940,
+        "cls":  0.055
+    },
+    {
+        "file":  "lh-visualize-mobile.report.json",
+        "url":  "http://127.0.0.1:3010/visualize",
+        "perf":  70,
+        "seo":  100,
+        "a11y":  100,
+        "bp":  96,
+        "lcp":  6996,
+        "cls":  0.055
+    }
+]

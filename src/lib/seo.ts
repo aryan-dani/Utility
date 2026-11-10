@@ -74,6 +74,11 @@ export function sitemapEntries(): MetadataRoute.Sitemap {
   }));
 }
 
+/** Static marketing/tool pages from publicPages.json (excludes dynamic /mit-wpu/[branch] trees). */
+export function staticPublicPaths(): string[] {
+  return PUBLIC_PAGES.map((page) => page.path);
+}
+
 export function homeJsonLd(): Record<string, unknown> {
   return {
     "@context": "https://schema.org",
@@ -125,7 +130,9 @@ export function llmsTxt(): string {
     "",
     "## Signed-in tools",
     "",
-    "The resource vault, Ask AI, syllabus tracker, study planner, GPA calculator, focus timer, flashcards, doubt board, clipboard, and community require a student account and are not public documents.",
+    "Public MIT-WPU indexes list subject and resource titles only. The resource vault file viewer, Ask AI chat, syllabus tracker UI, saved planner, focus timer sessions, flashcards, doubt board, clipboard, and community require a student account.",
+    "",
+    "The GPA calculator and algorithm visualizer are free without sign-in.",
     "",
   ].join("\n");
 }

@@ -347,7 +347,15 @@ async function fetchWorkspaceListRaw(
   branch: string,
   semester: number,
 ): Promise<WorkspaceListPayload> {
-  const db = adminDb();
+  const empty: WorkspaceListPayload = { resources: [], syllabusUrl: null };
+  let db: ReturnType<typeof adminDb>;
+  try {
+    db = adminDb();
+  } catch (error) {
+    console.warn("workspace catalog skipped (no Admin credentials):", error);
+    return empty;
+  }
+
   const id = workspaceCatalogId(academicYear, branch, semester);
 
   try {
@@ -368,19 +376,24 @@ async function fetchWorkspaceListRaw(
     console.warn("workspace catalog read failed, rebuilding:", error);
   }
 
-  const [resources, syllabusUrl] = await Promise.all([
-    fetchResourcesFromDBRaw(academicYear, branch, semester),
-    fetchSyllabusFile(academicYear, branch, semester),
-  ]);
-  const payload = { resources, syllabusUrl };
-
   try {
-    await writeWorkspaceCatalog(academicYear, branch, semester, payload);
-  } catch (error) {
-    console.warn("workspace catalog write-through failed:", error);
-  }
+    const [resources, syllabusUrl] = await Promise.all([
+      fetchResourcesFromDBRaw(academicYear, branch, semester),
+      fetchSyllabusFile(academicYear, branch, semester),
+    ]);
+    const payload = { resources, syllabusUrl };
 
-  return payload;
+    try {
+      await writeWorkspaceCatalog(academicYear, branch, semester, payload);
+    } catch (error) {
+      console.warn("workspace catalog write-through failed:", error);
+    }
+
+    return payload;
+  } catch (error) {
+    console.warn("workspace catalog rebuild failed:", error);
+    return empty;
+  }
 }
 
 // ─── Exported Cache-Wrapped API ───────────────────────────────────────────────

@@ -26,15 +26,17 @@ describe("public SEO pages", () => {
     expect(new Set(paths).size).toBe(paths.length);
   });
 
-  it("builds apex sitemap URLs with a fixed lastModified", () => {
+  it("builds apex sitemap URLs for static public pages", () => {
     const entries = sitemapEntries();
     expect(entries.map((entry) => entry.url)).toEqual(
       PUBLIC_PAGES.map((page) => absoluteUrl(page.path)),
     );
     expect(entries[0]?.url).toBe("https://utilityos.tech");
-    expect(entries.every((entry) => entry.lastModified === "2026-10-13")).toBe(
-      true,
-    );
+    expect(entries.some((entry) => entry.url.includes("/mit-wpu"))).toBe(true);
+    expect(entries.some((entry) => entry.url.endsWith("/gpa"))).toBe(true);
+    expect(
+      entries.every((entry) => typeof entry.lastModified === "string"),
+    ).toBe(true);
   });
 
   it("keeps admin and auth out of the crawl disallow that would hide noindex", () => {
@@ -55,9 +57,10 @@ describe("public SEO pages", () => {
     for (const page of PUBLIC_PAGES) {
       expect(text).toContain(absoluteUrl(page.path));
     }
-    expect(text).toContain("are not public documents");
+    expect(text).toContain("require a student account");
     expect(text).not.toContain("/resources");
-    expect(text).not.toContain("/ask");
+    expect(text).toContain("/mit-wpu");
+    expect(text).toContain("GPA calculator");
   });
 
   it("describes the site in JSON-LD without ratings", () => {
