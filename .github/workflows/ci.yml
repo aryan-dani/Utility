@@ -21,11 +21,5 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run server:build
-      - run: npm run build
-        env:
-          NEXT_PUBLIC_FIREBASE_API_KEY: placeholder
-          NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN: placeholder.firebaseapp.com
-          NEXT_PUBLIC_FIREBASE_PROJECT_ID: placeholder
-          NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET: placeholder.appspot.com
-          NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID: "0"
-          NEXT_PUBLIC_FIREBASE_APP_ID: "1:0:web:0"
+      # Same credential-less Next build as local `npm run ci` / husky pre-push.
+      - run: npm run ci:build

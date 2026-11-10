@@ -34,7 +34,8 @@
     "restructure-drive-years": "node runtime/tools/restructure-drive-years.mjs",
     "restructure-drive-years:apply": "node runtime/tools/restructure-drive-years.mjs --apply",
     "icons:regenerate": "node scripts/regenerate-icons.cjs",
-    "ci": "npm audit --audit-level=high && npm ci --prefix server && npm run lint && npm run typecheck && npm test && npm run server:build && cross-env NEXT_PUBLIC_FIREBASE_API_KEY=placeholder NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=placeholder.firebaseapp.com NEXT_PUBLIC_FIREBASE_PROJECT_ID=placeholder NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=placeholder.appspot.com NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=0 NEXT_PUBLIC_FIREBASE_APP_ID=1:0:web:0 npm run build",
+    "ci:build": "node scripts/ci-build.mjs",
+    "ci": "npm audit --audit-level=high && npm ci --prefix server && npm run lint && npm run typecheck && npm test && npm run server:build && npm run ci:build",
     "prepare": "husky"
   },
   "dependencies": {

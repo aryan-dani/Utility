@@ -5,7 +5,7 @@ alwaysApply: true
 
 # Pre-commit gate (hard rule)
 
-CI rejects broken lint. **Never** create a git commit or push until these all exit 0 locally:
+CI rejects broken lint and credential-less prerender. **Never** create a git commit or push until these all exit 0 locally:
 
 ```bash
 npm run lint
@@ -13,17 +13,20 @@ npm run typecheck
 npm run test
 ```
 
+Husky `pre-push` runs full `npm run ci`, whose build step is `npm run ci:build` — a Next build with **no** Firebase Admin / ADC credentials (same as GitHub Actions). Do not replace that with plain `npm run build`; local `.env.local` service-account keys would mask GitHub failures.
+
 ## Required workflow
 
 1. Finish code changes.
 2. Run `npm run lint`, `npm run typecheck`, and `npm run test`.
 3. Fix every failure before staging/committing.
-4. Only then `git commit` / `git push` when the user asks.
+4. Only then `git commit` / `git push` when the user asks (pre-push must pass `ci:build`).
 
 ## Do not
 
 - Commit “to get it up” while lint/tests are red
 - Skip or weaken ESLint/CI to land a change
 - Assume green because “it looks fine” — run the commands
+- Rely on a local `next build` that still has `FIREBASE_PRIVATE_KEY` / ADC available
 
 If the user asks to commit/push and checks are failing, fix first, then commit.
