@@ -97,15 +97,25 @@ export function publicResourceTitles(
 }
 
 export async function loadSemesterCatalog(branch: Branch, semester: Semester) {
-  const [subjects, workspace] = await Promise.all([
-    getSubjectsFromDB(MIT_WPU_YEAR, branch, semester),
-    getWorkspaceList(MIT_WPU_YEAR, branch, semester),
-  ]);
-  return {
-    subjects,
-    resources: publicResourceTitles(workspace.resources),
-    resourceCount: workspace.resources.length,
-  };
+  // CI / local builds often lack Firebase Admin credentials. Public pages must
+  // still prerender from in-repo AIDS outlines + empty resource titles.
+  try {
+    const [subjects, workspace] = await Promise.all([
+      getSubjectsFromDB(MIT_WPU_YEAR, branch, semester),
+      getWorkspaceList(MIT_WPU_YEAR, branch, semester),
+    ]);
+    return {
+      subjects,
+      resources: publicResourceTitles(workspace.resources),
+      resourceCount: workspace.resources.length,
+    };
+  } catch {
+    return {
+      subjects: [] as SubjectItem[],
+      resources: [] as PublicResourceTitle[],
+      resourceCount: 0,
+    };
+  }
 }
 
 export function matchSubjectResources(

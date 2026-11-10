@@ -1,12 +1,22 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import {
   findOfficialSubject,
+  loadSemesterCatalog,
   mitWpuHubPaths,
   parseBranchParam,
   parseSemesterParam,
   publicResourceTitles,
   slugifySubject,
 } from "./mitWpuCatalog";
+
+vi.mock("@/lib/dataFetcher", () => ({
+  getSubjectsFromDB: vi.fn(async () => {
+    throw new Error("Could not load the default credentials.");
+  }),
+  getWorkspaceList: vi.fn(async () => {
+    throw new Error("Could not load the default credentials.");
+  }),
+}));
 
 describe("mitWpuCatalog", () => {
   it("slugifies subject names stably", () => {
@@ -54,5 +64,13 @@ describe("mitWpuCatalog", () => {
     expect(paths).toContain("/mit-wpu/aids");
     expect(paths).toContain("/mit-wpu/aids/semester/5");
     expect(paths).toContain("/mit-wpu/ask-ai");
+  });
+
+  it("returns an empty catalog when Firebase Admin credentials are missing", async () => {
+    await expect(loadSemesterCatalog("AIDS", 3)).resolves.toEqual({
+      subjects: [],
+      resources: [],
+      resourceCount: 0,
+    });
   });
 });
