@@ -47,5 +47,15 @@ Ship public `/mit-wpu` ISR catalog, unlock `/gpa` + `/visualize`, add tool expla
 - `lang="en-IN"`, dynamic sitemap, richer 404, home crawlable nav
 - Auth allowlist updated; no DB schema changes; no file-byte proxying
 
-### Metrics
-Re-measure after deploy in `seo-audit/iter-1/` (production URLs). Local gates tracked via lint/typecheck/test + Lighthouse on preview when available.
+### Metrics (local `next start` lab — not CDN)
+
+| Page | Form | Perf | SEO | A11y | BP | LCP (ms) | CLS |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Home | mobile | 77 | 100 | 98 | 96 | 4152 | 0.055 |
+| MIT-WPU hub | mobile | 83 | 100 | 98 | 96 | 3940 | 0.055 |
+| GPA | mobile | 70 | 100 | 98 | 96 | 8670 | 0.055 |
+| Visualize | mobile | 70 | 100 | 100 | 96 | 6996 | 0.055 |
+
+Raw JSON: `seo-audit/iter-1/`. SEO/A11y/BP already meet gates. Local Perf/LCP are cold-lab only and are **not** comparable to production baseline (CDN + warm edge). Production remasure of `/mit-wpu` and `/gpa` is listed in `SEO_REPORT.md` for after merge.
+
+Stopped further local Perf loops: three flat localhost iterations would not move CDN LCP.
