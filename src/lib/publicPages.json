@@ -70,5 +70,61 @@
     "changeFrequency": "monthly",
     "priority": 0.3,
     "lastModified": "2026-10-13"
+  },
+  {
+    "path": "/mit-wpu",
+    "title": "MIT-WPU study workspace",
+    "description": "Browse MIT-WPU AIDS, CSE, and ECE syllabus indexes and study resource titles by semester. Free GPA calculator and algorithm visualizer.",
+    "changeFrequency": "weekly",
+    "priority": 0.95,
+    "lastModified": "2026-11-10"
+  },
+  {
+    "path": "/gpa",
+    "title": "MIT-WPU GPA calculator",
+    "description": "Free SGPA and CGPA calculator for MIT-WPU’s 10-point grading system. No sign-in required.",
+    "changeFrequency": "monthly",
+    "priority": 0.9,
+    "lastModified": "2026-11-10"
+  },
+  {
+    "path": "/visualize",
+    "title": "Algorithm visualizer",
+    "description": "Step through BFS, DFS, A*, N-Queens, and more — free educational visualizers on Utility OS.",
+    "changeFrequency": "monthly",
+    "priority": 0.75,
+    "lastModified": "2026-11-10"
+  },
+  {
+    "path": "/mit-wpu/study-planner",
+    "title": "Study planner",
+    "description": "Semester study planner for MIT-WPU students. Sign in to save tasks on Utility OS.",
+    "changeFrequency": "monthly",
+    "priority": 0.7,
+    "lastModified": "2026-11-10"
+  },
+  {
+    "path": "/mit-wpu/ask-ai",
+    "title": "Ask AI",
+    "description": "AI study assistant grounded in MIT-WPU course materials. Browse indexes free; chat after sign-in.",
+    "changeFrequency": "monthly",
+    "priority": 0.7,
+    "lastModified": "2026-11-10"
+  },
+  {
+    "path": "/mit-wpu/flashcards",
+    "title": "SRS flashcards",
+    "description": "Spaced-repetition flashcards for college subjects on Utility OS.",
+    "changeFrequency": "monthly",
+    "priority": 0.65,
+    "lastModified": "2026-11-10"
+  },
+  {
+    "path": "/mit-wpu/focus-timer",
+    "title": "Focus timer",
+    "description": "Focus timer for study sessions inside the Utility OS workspace.",
+    "changeFrequency": "monthly",
+    "priority": 0.6,
+    "lastModified": "2026-11-10"
   }
 ]

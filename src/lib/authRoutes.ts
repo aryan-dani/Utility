@@ -25,6 +25,9 @@ export function normalizePathname(
 export function isPublicPath(pathname: string): boolean {
   const path = normalizePathname(pathname);
   if (PUBLIC_EXACT.has(path)) return true;
+  if (path === "/gpa" || path.startsWith("/gpa/")) return true;
+  if (path === "/visualize" || path.startsWith("/visualize/")) return true;
+  if (path === "/mit-wpu" || path.startsWith("/mit-wpu/")) return true;
   if (path.startsWith("/account/delete")) return true;
   if (path.startsWith("/clipboard/s/")) return true;
   if (path.startsWith("/c/")) return true;

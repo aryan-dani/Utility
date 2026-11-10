@@ -21,6 +21,11 @@ describe("authRoutes", () => {
     expect(isPublicPath("/campus/seating")).toBe(true);
     expect(isPublicPath("/clipboard/s/ab3km2")).toBe(true);
     expect(isPublicPath("/c/ab3km2")).toBe(true);
+    expect(isPublicPath("/mit-wpu")).toBe(true);
+    expect(isPublicPath("/mit-wpu/aids/semester/5")).toBe(true);
+    expect(isPublicPath("/gpa")).toBe(true);
+    expect(isPublicPath("/visualize")).toBe(true);
+    expect(isPublicPath("/visualize/bfs")).toBe(true);
     expect(isPublicPath("/resources")).toBe(false);
     expect(isPublicPath("/qa")).toBe(false);
     expect(isPublicPath("/community")).toBe(false);
