@@ -4,7 +4,6 @@ import { useState } from "react";
 import { LazyMotion, domAnimation } from "framer-motion";
 import { ThemeProvider, useTheme } from "next-themes";
 import dynamic from "next/dynamic";
-import { PWAProvider } from "@/contexts/PWAContext";
 import { Toaster } from "sonner";
 import NavigationProgress from "./NavigationProgress";
 import { ThemeColorSync } from "@/components/shell/ThemeColorSync";
@@ -63,16 +62,14 @@ export function Providers({ children }: { children: React.ReactNode }) {
         disableTransitionOnChange={false}
         storageKey="utility-theme"
       >
-        <PWAProvider>
-          <ThemeColorSync />
-          <CampusOriginGuard />
-          <NavigationProgress />
-          <CommandShortcuts />
-          {children}
-          <CommandPaletteHost />
-          <PwaUpdater />
-          <ToasterProvider />
-        </PWAProvider>
+        <ThemeColorSync />
+        <CampusOriginGuard />
+        <NavigationProgress />
+        <CommandShortcuts />
+        {children}
+        <CommandPaletteHost />
+        <PwaUpdater />
+        <ToasterProvider />
       </ThemeProvider>
     </LazyMotion>
   );

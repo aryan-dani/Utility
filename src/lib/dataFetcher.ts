@@ -408,42 +408,6 @@ export const getSubjectsFromDB = (
   { revalidate: 86400, tags: ["subjects"] }
 )();
 
-export const getResourcesFromDB = (
-  academicYear: AcademicYear,
-  branch: string,
-  semester: number,
-) =>
-  unstable_cache(
-    async () => {
-      const { resources } = await fetchWorkspaceListRaw(
-        academicYear,
-        branch,
-        semester,
-      );
-      return resources;
-    },
-    ["resources-cache", academicYear, branch, semester.toString()],
-    { revalidate: 86400, tags: ["resources"] },
-  )();
-
-export const getSyllabusFile = (
-  academicYear: AcademicYear,
-  branch: string,
-  semester: number,
-) =>
-  unstable_cache(
-    async () => {
-      const { syllabusUrl } = await fetchWorkspaceListRaw(
-        academicYear,
-        branch,
-        semester,
-      );
-      return syllabusUrl;
-    },
-    ["syllabus-cache", academicYear, branch, semester.toString()],
-    { revalidate: 86400, tags: ["syllabus", "resources"] },
-  )();
-
 /** Single cached payload for /api/resources/list (1 Data Cache entry). */
 export const getWorkspaceList = (
   academicYear: AcademicYear,

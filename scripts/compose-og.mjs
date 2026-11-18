@@ -62,7 +62,7 @@ await sharp(svg)
       top: frameY + chromeH,
     },
   ])
-  .png({ compressionLevel: 9 })
+  .png({ compressionLevel: 9, quality: 85, effort: 10, palette: true })
   .toFile(ogPath);
 
 await sharp(ogPath).toFile(twPath);

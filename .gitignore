@@ -77,4 +77,10 @@ eng.traineddata
 /AGENTS.md
 /CLAUDE.md
 
+# SEO audit raw report dumps (keep scores-summary.json, keywords.json, and markdown reports)
+seo-audit/**/*.report.json
+seo-audit/**/curl-*.html
+seo-audit/**/home*-txt.txt
+seo-audit/**/homesitemap-xml.txt
+
 .vercel

@@ -65,12 +65,6 @@ export const TOOL_LINKS: NavLinkItem[] = [
   { href: "/notes", label: "Notes", Icon: StickyNote, desc: "Markdown stored on the home server" },
 ];
 
-/** @deprecated Prefer PINNED_LINKS + TOOL_LINKS */
-export const PRODUCTIVITY_LINKS: NavLinkItem[] = [
-  PINNED_LINKS[3],
-  ...TOOL_LINKS.filter((l) => l.href !== "/clipboard"),
-];
-
 export const SOCIAL_LINKS: NavLinkItem[] = [
   { href: "/community", label: "Community", Icon: Users, desc: "Decks & WhatsApp" },
 ];

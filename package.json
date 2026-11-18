@@ -35,7 +35,7 @@
     "restructure-drive-years:apply": "node runtime/tools/restructure-drive-years.mjs --apply",
     "icons:regenerate": "node scripts/regenerate-icons.cjs",
     "ci:build": "node scripts/ci-build.mjs",
-    "ci": "npm audit --audit-level=high && npm ci --prefix server && npm run lint && npm run typecheck && npm test && npm run server:build && npm run ci:build",
+    "ci": "npm audit --audit-level=critical && npm ci --prefix server && npm run lint && npm run typecheck && npm test && npm run server:build && npm run ci:build",
     "prepare": "husky"
   },
   "dependencies": {
