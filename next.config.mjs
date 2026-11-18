@@ -19,6 +19,7 @@ const nextConfig = {
   },
   bundlePagesRouterDependencies: true,
   experimental: {
+    agentUpgrade: "security",
     // lucide-react is already optimized by default
     optimizePackageImports: ["framer-motion"],
   },
