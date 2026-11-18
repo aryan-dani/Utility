@@ -342,7 +342,7 @@ async function writeWorkspaceCatalog(
  * Public vault list: prefer 1-doc workspace catalog (Spark-friendly).
  * Cold miss rebuilds once and write-through so later hits cost 1 read.
  */
-async function fetchWorkspaceListRaw(
+export async function fetchWorkspaceListRaw(
   academicYear: AcademicYear,
   branch: string,
   semester: number,

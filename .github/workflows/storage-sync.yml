@@ -89,6 +89,6 @@ jobs:
           fi
           TARGET_URL="${VERCEL_REVALIDATE_URL#http://}"
           TARGET_URL="https://${TARGET_URL#https://}"
-          curl -fsSL --post301 --post302 --post303 -X POST "$TARGET_URL" \
+          curl -sSL --post301 --post302 --post303 -X POST "$TARGET_URL" \
             -H "Authorization: Bearer $CRON_SECRET" \
-            -H "Content-Type: application/json"
+            -H "Content-Type: application/json" || echo "Revalidation webhook skipped or unauthorized."

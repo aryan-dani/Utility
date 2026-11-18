@@ -22,16 +22,16 @@ type CacheEntry = {
   savedAt?: number;
 };
 
-const MEMORY_TTL_MS = 1000 * 60 * 60; // 1h in-tab
-const STORAGE_TTL_MS = 1000 * 60 * 60 * 12; // 12h across reloads
-const STORAGE_PREFIX = "utility.workspace.v3:";
+const MEMORY_TTL_MS = 1000 * 60 * 10; // 10m in-tab
+const STORAGE_TTL_MS = 1000 * 60 * 30; // 30m across reloads
+const STORAGE_PREFIX = "utility.workspace.v4:";
 
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<CacheEntry>>();
 
 function cacheKey(year: string, branch: string, semester: number): string {
-  // v3: catalog includes native PDF stamps from home-server Drive sync
-  return `v3:${year}:${branch}:${semester}`;
+  // v4: bust stale browser catalogs & include fresh Drive uploads
+  return `v4:${year}:${branch}:${semester}`;
 }
 
 function storageKey(key: string): string {
@@ -129,7 +129,7 @@ async function loadWorkspace(
   const promise = (async () => {
     // Public CDN-cached catalog — no auth header (would force private / miss CDN).
     const res = await fetch(
-      `/api/resources/list?year=${encodeURIComponent(academicYear)}&branch=${encodeURIComponent(branch)}&semester=${semester}`,
+      `/api/resources/list?year=${encodeURIComponent(academicYear)}&branch=${encodeURIComponent(branch)}&semester=${semester}&v=4`,
     );
     if (!res.ok) throw new Error("Failed to load resources");
     const data = await res.json();

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getWorkspaceList } from "@/lib/dataFetcher";
+import { getWorkspaceList, fetchWorkspaceListRaw } from "@/lib/dataFetcher";
 import { resolveWorkspace } from "@/lib/workspace";
 
 /**
@@ -9,7 +9,7 @@ import { resolveWorkspace } from "@/lib/workspace";
 export const dynamic = "force-dynamic";
 
 const PUBLIC_CATALOG_CACHE =
-  "public, s-maxage=86400, stale-while-revalidate=86400";
+  "public, s-maxage=300, stale-while-revalidate=600";
 
 function isQuotaExhausted(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -29,17 +29,18 @@ export async function GET(request: Request) {
       semester: searchParams.get("semester"),
     });
 
-    const { resources, syllabusUrl } = await getWorkspaceList(
-      academicYear,
-      branch,
-      semester,
-    );
+    const isBust = searchParams.has("bust") || searchParams.has("v");
+    const { resources, syllabusUrl } = isBust
+      ? await fetchWorkspaceListRaw(academicYear, branch, semester)
+      : await getWorkspaceList(academicYear, branch, semester);
 
     return NextResponse.json(
       { resources, syllabusUrl },
       {
         headers: {
-          "Cache-Control": PUBLIC_CATALOG_CACHE,
+          "Cache-Control": isBust
+            ? "public, s-maxage=300, stale-while-revalidate=600"
+            : PUBLIC_CATALOG_CACHE,
         },
       },
     );
