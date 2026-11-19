@@ -23,10 +23,24 @@ import { absoluteUrl } from "@/lib/seo";
 
 export const MIT_WPU_YEAR = DEFAULT_ACADEMIC_YEAR;
 
+/** Catalog folders that should never get a public subject landing. */
+const JUNK_SUBJECT_SLUGS = new Set(["general"]);
+
 export type PublicResourceTitle = {
   title: string;
   category: ResourceCategory;
   subject_name: string;
+};
+
+export type MitWpuSubjectPath = {
+  branch: string;
+  semester: string;
+  subject: string;
+};
+
+export type MitWpuSemesterPath = {
+  branch: string;
+  n: string;
 };
 
 export function branchLabel(branch: string): string {
@@ -63,6 +77,10 @@ export function slugifySubject(name: string): string {
     .slice(0, 80);
 }
 
+export function isJunkSubjectSlug(slug: string): boolean {
+  return JUNK_SUBJECT_SLUGS.has(slug);
+}
+
 export function officialAidsSubjects(
   semester: number,
 ): SyllabusOfficialSubject[] {
@@ -72,6 +90,34 @@ export function officialAidsSubjects(
   return [];
 }
 
+/** Canonical public slug is always the official full name. */
+export function officialCanonicalSlug(
+  subject: SyllabusOfficialSubject,
+): string {
+  return slugifySubject(subject.name);
+}
+
+export function officialAliasSlugs(
+  subject: SyllabusOfficialSubject,
+): string[] {
+  const slugs = new Set<string>([
+    slugifySubject(subject.name),
+    slugifySubject(subject.code),
+  ]);
+  return [...slugs].filter(Boolean);
+}
+
+export function officialResourceAliases(
+  subject: SyllabusOfficialSubject,
+): string[] {
+  return [subject.name, subject.code]
+    .map((value) => value.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Match by full-name slug or official code slug (e.g. `ds` → Data Structures).
+ */
 export function findOfficialSubject(
   branch: string,
   semester: number,
@@ -79,10 +125,24 @@ export function findOfficialSubject(
 ): SyllabusOfficialSubject | null {
   if (branch.toUpperCase() !== "AIDS") return null;
   return (
-    officialAidsSubjects(semester).find(
-      (subject) => slugifySubject(subject.name) === subjectSlug,
+    officialAidsSubjects(semester).find((subject) =>
+      officialAliasSlugs(subject).includes(subjectSlug),
     ) ?? null
   );
+}
+
+/**
+ * When the request slug is a code alias, return the canonical name slug for a 308.
+ */
+export function officialRedirectSlug(
+  branch: string,
+  semester: number,
+  subjectSlug: string,
+): string | null {
+  const official = findOfficialSubject(branch, semester, subjectSlug);
+  if (!official) return null;
+  const canonical = officialCanonicalSlug(official);
+  return canonical !== subjectSlug ? canonical : null;
 }
 
 /** Titles only — never expose Drive URLs on public HTML. */
@@ -121,10 +181,16 @@ export async function loadSemesterCatalog(branch: Branch, semester: Semester) {
 export function matchSubjectResources(
   resources: PublicResourceTitle[],
   subjectName: string,
+  official: SyllabusOfficialSubject | null = null,
 ): PublicResourceTitle[] {
-  const target = subjectName.trim().toLowerCase();
-  return resources.filter(
-    (resource) => resource.subject_name.trim().toLowerCase() === target,
+  const aliases = new Set(
+    (official
+      ? officialResourceAliases(official)
+      : [subjectName.trim().toLowerCase()]
+    ).filter(Boolean),
+  );
+  return resources.filter((resource) =>
+    aliases.has(resource.subject_name.trim().toLowerCase()),
   );
 }
 
@@ -134,10 +200,57 @@ export function resolveSubjectName(
   official: SyllabusOfficialSubject | null,
 ): string | null {
   if (official) return official.name;
+  if (isJunkSubjectSlug(subjectSlug)) return null;
   const hit = subjects.find(
     (subject) => slugifySubject(subject.name) === subjectSlug,
   );
   return hit?.name ?? null;
+}
+
+/**
+ * Prefer official full names for AIDS Sem 3–5; append catalog-only subjects
+ * that are not code aliases of an official outline.
+ */
+export function semesterSubjectLinks(
+  branch: Branch,
+  semester: Semester,
+  subjects: SubjectItem[],
+): Array<{ id: string; name: string; slug: string }> {
+  const official = officialAidsSubjects(semester);
+  if (branch === "AIDS" && official.length > 0) {
+    const aliasSlugs = new Set(
+      official.flatMap((subject) => officialAliasSlugs(subject)),
+    );
+    const extras = subjects
+      .filter((subject) => {
+        const slug = slugifySubject(subject.name);
+        return slug && !isJunkSubjectSlug(slug) && !aliasSlugs.has(slug);
+      })
+      .map((subject) => ({
+        id: subject.id,
+        name: subject.name,
+        slug: slugifySubject(subject.name),
+      }));
+    return [
+      ...official.map((subject) => ({
+        id: subject.id,
+        name: subject.name,
+        slug: officialCanonicalSlug(subject),
+      })),
+      ...extras,
+    ];
+  }
+
+  return subjects
+    .filter((subject) => {
+      const slug = slugifySubject(subject.name);
+      return slug && !isJunkSubjectSlug(slug);
+    })
+    .map((subject) => ({
+      id: subject.id,
+      name: subject.name,
+      slug: slugifySubject(subject.name),
+    }));
 }
 
 export function breadcrumbJsonLd(
@@ -156,28 +269,47 @@ export function breadcrumbJsonLd(
 }
 
 export function mitWpuHubPaths(): string[] {
-  const paths = ["/mit-wpu"];
-  for (const branch of BRANCHES) {
-    const b = branchSlug(branch);
-    paths.push(`/mit-wpu/${b}`);
-    for (const semester of SEMESTERS) {
-      paths.push(`/mit-wpu/${b}/semester/${semester}`);
-    }
-  }
-  paths.push(
+  return [
+    "/mit-wpu",
+    ...BRANCHES.map((branch) => `/mit-wpu/${branchSlug(branch)}`),
     "/mit-wpu/study-planner",
     "/mit-wpu/flashcards",
     "/mit-wpu/ask-ai",
     "/mit-wpu/focus-timer",
-  );
-  return paths;
+  ];
 }
 
-export async function mitWpuSubjectPaths(): Promise<
-  Array<{ branch: string; semester: string; subject: string }>
-> {
-  const params: Array<{ branch: string; semester: string; subject: string }> =
-    [];
+export function semesterHasIndexableSubjects(
+  branch: Branch,
+  semester: Semester,
+  subjects: SubjectItem[],
+): boolean {
+  if (branch === "AIDS" && officialAidsSubjects(semester).length > 0) {
+    return true;
+  }
+  return subjects.some((subject) => {
+    const slug = slugifySubject(subject.name);
+    return Boolean(slug) && !isJunkSubjectSlug(slug);
+  });
+}
+
+export async function mitWpuSemesterPaths(): Promise<MitWpuSemesterPath[]> {
+  const params: MitWpuSemesterPath[] = [];
+  for (const branch of BRANCHES) {
+    for (const semester of SEMESTERS) {
+      const { subjects } = await loadSemesterCatalog(branch, semester);
+      if (!semesterHasIndexableSubjects(branch, semester, subjects)) continue;
+      params.push({
+        branch: branchSlug(branch),
+        n: String(semester),
+      });
+    }
+  }
+  return params;
+}
+
+export async function mitWpuSubjectPaths(): Promise<MitWpuSubjectPath[]> {
+  const params: MitWpuSubjectPath[] = [];
 
   const aidsBySem: Array<[number, SyllabusOfficialSubject[]]> = [
     [3, AIDS_SEM_3_SUBJECTS_2026],
@@ -189,12 +321,19 @@ export async function mitWpuSubjectPaths(): Promise<
       params.push({
         branch: "aids",
         semester: String(semester),
-        subject: slugifySubject(subject.name),
+        subject: officialCanonicalSlug(subject),
       });
     }
   }
 
-  // Prefer catalog subjects when Firebase is available at build/ISR time.
+  const officialAliasBySem = new Map<number, Set<string>>();
+  for (const [semester, list] of aidsBySem) {
+    officialAliasBySem.set(
+      semester,
+      new Set(list.flatMap((subject) => officialAliasSlugs(subject))),
+    );
+  }
+
   for (const branch of BRANCHES) {
     for (const semester of SEMESTERS) {
       try {
@@ -203,11 +342,19 @@ export async function mitWpuSubjectPaths(): Promise<
           branch,
           semester,
         );
+        const aliases =
+          branch === "AIDS"
+            ? officialAliasBySem.get(semester) ?? new Set<string>()
+            : new Set<string>();
         for (const subject of subjects) {
+          const slug = slugifySubject(subject.name);
+          if (!slug || isJunkSubjectSlug(slug)) continue;
+          // AIDS Sem 3–5: skip code aliases already covered by official name URLs.
+          if (aliases.has(slug)) continue;
           params.push({
             branch: branchSlug(branch),
             semester: String(semester),
-            subject: slugifySubject(subject.name),
+            subject: slug,
           });
         }
       } catch {

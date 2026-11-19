@@ -10,7 +10,8 @@ import {
   officialAidsSubjects,
   parseBranchParam,
   parseSemesterParam,
-  slugifySubject,
+  semesterHasIndexableSubjects,
+  semesterSubjectLinks,
 } from "@/lib/mitWpuCatalog";
 import { absoluteUrl, jsonLdScript, SITE_NAME } from "@/lib/seo";
 import { MitWpuPage, MitWpuSignInCta } from "@/components/seo/MitWpuChrome";
@@ -34,6 +35,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const branch = parseBranchParam(rawBranch);
   const semester = parseSemesterParam(rawN);
   if (!branch || !semester) return {};
+
+  const { subjects } = await loadSemesterCatalog(branch, semester);
+  const indexable = semesterHasIndexableSubjects(branch, semester, subjects);
   const title = `MIT-WPU ${branch} Semester ${semester} syllabus and resources`;
   const description = `Subject list and study resource titles for MIT-WPU ${branchLabel(branch)}, Semester ${semester} (${MIT_WPU_YEAR}) on Utility OS.`;
   const path = `/mit-wpu/${branchSlug(branch)}/semester/${semester}`;
@@ -41,6 +45,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     title,
     description,
     alternates: { canonical: absoluteUrl(path) },
+    robots: indexable
+      ? undefined
+      : { index: false, follow: true },
     openGraph: {
       title: `${title} | ${SITE_NAME}`,
       description,
@@ -60,6 +67,7 @@ export default async function MitWpuSemesterPage({ params }: Props) {
     semester,
   );
   const official = officialAidsSubjects(semester);
+  const subjectLinks = semesterSubjectLinks(branch, semester, subjects);
   const path = `/mit-wpu/${branchSlug(branch)}/semester/${semester}`;
   const crumbs = [
     { name: "Home", path: "/" },
@@ -67,16 +75,6 @@ export default async function MitWpuSemesterPage({ params }: Props) {
     { name: branch, path: `/mit-wpu/${branchSlug(branch)}` },
     { name: `Sem ${semester}`, path },
   ];
-
-  const subjectLinks =
-    subjects.length > 0
-      ? subjects
-      : official.map((subject) => ({
-          id: subject.id,
-          name: subject.name,
-          branch,
-          semester,
-        }));
 
   const jsonLd = {
     "@context": "https://schema.org",
@@ -88,7 +86,7 @@ export default async function MitWpuSemesterPage({ params }: Props) {
       position: index + 1,
       name: subject.name,
       url: absoluteUrl(
-        `/mit-wpu/${branchSlug(branch)}/semester/${semester}/${slugifySubject(subject.name)}`,
+        `/mit-wpu/${branchSlug(branch)}/semester/${semester}/${subject.slug}`,
       ),
     })),
   };
@@ -121,9 +119,9 @@ export default async function MitWpuSemesterPage({ params }: Props) {
       ) : (
         <ul className="divide-y divide-border border border-border rounded-2xl overflow-hidden bg-card">
           {subjectLinks.map((subject) => (
-            <li key={subject.id || subject.name}>
+            <li key={subject.id || subject.slug}>
               <Link
-                href={`/mit-wpu/${branchSlug(branch)}/semester/${semester}/${slugifySubject(subject.name)}`}
+                href={`/mit-wpu/${branchSlug(branch)}/semester/${semester}/${subject.slug}`}
                 className="flex items-center justify-between gap-3 px-4 py-3 text-sm hover:bg-surface transition-colors"
               >
                 <span className="font-medium text-foreground">
