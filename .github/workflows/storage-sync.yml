@@ -83,12 +83,16 @@ jobs:
           CRON_SECRET: ${{ secrets.CRON_SECRET }}
           VERCEL_REVALIDATE_URL: ${{ secrets.VERCEL_REVALIDATE_URL }}
         run: |
-          if [ -z "$CRON_SECRET" ] || [ -z "$VERCEL_REVALIDATE_URL" ]; then
-            echo "Skipping revalidation: CRON_SECRET or VERCEL_REVALIDATE_URL not configured."
+          if [ -z "$CRON_SECRET" ]; then
+            echo "Skipping revalidation: CRON_SECRET is not configured."
             exit 0
           fi
-          TARGET_URL="${VERCEL_REVALIDATE_URL#http://}"
-          TARGET_URL="https://${TARGET_URL#https://}"
-          curl -sSL --post301 --post302 --post303 -X POST "$TARGET_URL" \
+          TARGET_URL="https://utilityos.tech/api/webhooks/revalidate-content"
+          HTTP_STATUS="$(curl -sS --post301 --post302 --post303 -o /tmp/revalidate-response.json -w "%{http_code}" -X POST "$TARGET_URL" \
             -H "Authorization: Bearer $CRON_SECRET" \
-            -H "Content-Type: application/json" || echo "Revalidation webhook skipped or unauthorized."
+            -H "Content-Type: application/json")"
+          if [ "$HTTP_STATUS" != "200" ]; then
+            echo "Revalidation webhook returned HTTP $HTTP_STATUS."
+            cat /tmp/revalidate-response.json 2>/dev/null || true
+            echo "Storage sync completed; cache revalidation is non-blocking."
+          fi
