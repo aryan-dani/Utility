@@ -835,11 +835,11 @@ input[type="range"].accent-slider::-moz-range-thumb:hover {
   outline: none !important;
 }
 
-[data-sonner-toast][data-mounted='true'] {
-  animation: toast-enter var(--dur-base) var(--ease-out-premium) both;
+.app-toast-content {
+  animation: app-toast-enter var(--dur-base) var(--ease-out-premium) both;
 }
 
-@keyframes toast-enter {
+@keyframes app-toast-enter {
   from {
     opacity: 0;
     transform: translateY(12px) scale(0.97);

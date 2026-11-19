@@ -55,6 +55,21 @@ const nextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "www.utilityos.tech",
+          },
+        ],
+        destination: "https://utilityos.tech/:path*",
+        permanent: true,
+      },
+    ];
+  },
   async headers() {
     const csp = [
       "default-src 'self'",
@@ -73,6 +88,18 @@ const nextConfig = {
     ].join("; ");
 
     return [
+      {
+        source: "/:path*",
+        has: [
+          {
+            type: "host",
+            value: "planner-flax-six.vercel.app",
+          },
+        ],
+        headers: [
+          { key: "X-Robots-Tag", value: "noindex, follow" },
+        ],
+      },
       {
         source: "/ok.txt",
         headers: [

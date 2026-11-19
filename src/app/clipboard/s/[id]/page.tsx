@@ -3,6 +3,7 @@ import ClipboardShareClient from "./ClipboardShareClient";
 export const metadata = {
   title: "Shared clipboard",
   description: "A 24-hour clipboard share from Utility OS.",
+  robots: { index: false, follow: false },
 };
 
 export default async function ClipboardSharePage({

@@ -7,7 +7,7 @@ import {
 import { absoluteUrl, sitemapEntries } from "@/lib/seo";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const today = "2026-11-10";
+  const today = "2026-11-19";
   const base = sitemapEntries();
 
   const branchSemester: MetadataRoute.Sitemap = [];

@@ -78,7 +78,7 @@ export function AppToast({
   return (
     <div
       className={cn(
-        "pointer-events-auto w-[min(100vw-2rem,22rem)] overflow-hidden rounded-[var(--radius-2xl)] border bg-card shadow-window",
+        "app-toast-content pointer-events-auto w-[min(100vw-2rem,22rem)] overflow-hidden rounded-[var(--radius-2xl)] border bg-card shadow-window",
         isError ? "border-destructive/45" : isUpdate ? "border-foreground/25" : "border-border",
       )}
       role="status"

@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { getAlgorithm } from "@/lib/visualize/catalog";
 import { VisualizerWorkspace } from "@/components/visualize/VisualizerWorkspace";
+import { absoluteUrl } from "@/lib/seo";
 
 export function generateStaticParams() {
   return [
@@ -27,6 +28,11 @@ export async function generateMetadata({
   return {
     title: algorithm ? algorithm.name : "Visualizer",
     description: algorithm?.description,
+    alternates: {
+      canonical: algorithm
+        ? absoluteUrl(`/visualize/${algorithmId}`)
+        : absoluteUrl("/visualize"),
+    },
   };
 }
 

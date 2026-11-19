@@ -59,6 +59,7 @@ export async function generateMetadata({
     return {
       title: `${plan.title} | ${monthLabel} ${plan.year}`,
       description: `Shared study plan by ${String(plan.owner_email || "").split("@")[0] || "a student"}`,
+      robots: { index: false, follow: false },
     };
   } catch {
     return { title: "Plan Not Found" };
