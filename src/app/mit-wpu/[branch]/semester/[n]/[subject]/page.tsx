@@ -1,17 +1,19 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, permanentRedirect } from "next/navigation";
 import {
+  branchLabel,
+  branchSlug,
   findOfficialSubject,
   loadSemesterCatalog,
   matchSubjectResources,
   MIT_WPU_YEAR,
   mitWpuSubjectPaths,
+  officialCanonicalSlug,
+  officialRedirectSlug,
   parseBranchParam,
   parseSemesterParam,
   resolveSubjectName,
-  branchSlug,
-  branchLabel,
 } from "@/lib/mitWpuCatalog";
 import { absoluteUrl, jsonLdScript, SITE_NAME } from "@/lib/seo";
 import { MitWpuPage, MitWpuSignInCta } from "@/components/seo/MitWpuChrome";
@@ -32,13 +34,16 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const branch = parseBranchParam(rawBranch);
   const semester = parseSemesterParam(rawN);
   if (!branch || !semester) return {};
-  const official = findOfficialSubject(branch, semester, subjectSlug);
-  const name = official?.name ?? subjectSlug.replace(/-/g, " ");
+
+  const redirectTo = officialRedirectSlug(branch, semester, subjectSlug);
+  const canonicalSlug = redirectTo ?? subjectSlug;
+  const official = findOfficialSubject(branch, semester, canonicalSlug);
+  const name = official?.name ?? canonicalSlug.replace(/-/g, " ");
   const title = `${name} — MIT-WPU ${branch} Sem ${semester}`;
   const description = official
     ? `Unit outline and study resource titles for ${name} (${official.code}) in MIT-WPU ${branch} Semester ${semester}.`
     : `Study resource titles for ${name} in MIT-WPU ${branchLabel(branch)}, Semester ${semester}.`;
-  const path = `/mit-wpu/${branchSlug(branch)}/semester/${semester}/${subjectSlug}`;
+  const path = `/mit-wpu/${branchSlug(branch)}/semester/${semester}/${canonicalSlug}`;
   return {
     title,
     description,
@@ -57,13 +62,27 @@ export default async function MitWpuSubjectPage({ params }: Props) {
   const semester = parseSemesterParam(rawN);
   if (!branch || !semester) notFound();
 
+  const redirectTo = officialRedirectSlug(branch, semester, subjectSlug);
+  if (redirectTo) {
+    permanentRedirect(
+      `/mit-wpu/${branchSlug(branch)}/semester/${semester}/${redirectTo}`,
+    );
+  }
+
   const official = findOfficialSubject(branch, semester, subjectSlug);
   const { subjects, resources } = await loadSemesterCatalog(branch, semester);
   const subjectName = resolveSubjectName(subjects, subjectSlug, official);
   if (!subjectName) notFound();
 
-  const subjectResources = matchSubjectResources(resources, subjectName);
-  const path = `/mit-wpu/${branchSlug(branch)}/semester/${semester}/${subjectSlug}`;
+  const subjectResources = matchSubjectResources(
+    resources,
+    subjectName,
+    official,
+  );
+  const canonicalSlug = official
+    ? officialCanonicalSlug(official)
+    : subjectSlug;
+  const path = `/mit-wpu/${branchSlug(branch)}/semester/${semester}/${canonicalSlug}`;
   const crumbs = [
     { name: "Home", path: "/" },
     { name: "MIT-WPU", path: "/mit-wpu" },

@@ -1,7 +1,8 @@
 import type { MetadataRoute } from "next";
-import { BRANCHES, SEMESTERS } from "@/lib/academic/scope";
+import { BRANCHES } from "@/lib/academic/scope";
 import {
   branchSlug,
+  mitWpuSemesterPaths,
   mitWpuSubjectPaths,
 } from "@/lib/mitWpuCatalog";
 import { absoluteUrl, sitemapEntries } from "@/lib/seo";
@@ -10,23 +11,24 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const today = "2026-11-19";
   const base = sitemapEntries();
 
-  const branchSemester: MetadataRoute.Sitemap = [];
-  for (const branch of BRANCHES) {
-    const b = branchSlug(branch);
-    branchSemester.push({
-      url: absoluteUrl(`/mit-wpu/${b}`),
+  const branchPages: MetadataRoute.Sitemap = BRANCHES.map((branch) => ({
+    url: absoluteUrl(`/mit-wpu/${branchSlug(branch)}`),
+    lastModified: today,
+    changeFrequency: "weekly" as const,
+    priority: 0.85,
+  }));
+
+  let semesters: MetadataRoute.Sitemap = [];
+  try {
+    const params = await mitWpuSemesterPaths();
+    semesters = params.map((entry) => ({
+      url: absoluteUrl(`/mit-wpu/${entry.branch}/semester/${entry.n}`),
       lastModified: today,
-      changeFrequency: "weekly",
-      priority: 0.85,
-    });
-    for (const semester of SEMESTERS) {
-      branchSemester.push({
-        url: absoluteUrl(`/mit-wpu/${b}/semester/${semester}`),
-        lastModified: today,
-        changeFrequency: "weekly",
-        priority: 0.8,
-      });
-    }
+      changeFrequency: "weekly" as const,
+      priority: 0.8,
+    }));
+  } catch {
+    semesters = [];
   }
 
   let subjects: MetadataRoute.Sitemap = [];
@@ -63,11 +65,15 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }));
 
   const seen = new Set<string>();
-  return [...base, ...branchSemester, ...subjects, ...visualizeAlgos].filter(
-    (entry) => {
-      if (seen.has(entry.url)) return false;
-      seen.add(entry.url);
-      return true;
-    },
-  );
+  return [
+    ...base,
+    ...branchPages,
+    ...semesters,
+    ...subjects,
+    ...visualizeAlgos,
+  ].filter((entry) => {
+    if (seen.has(entry.url)) return false;
+    seen.add(entry.url);
+    return true;
+  });
 }
