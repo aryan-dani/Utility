@@ -5,18 +5,27 @@ on:
   push:
     branches: [main]
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v6
         with:
           node-version: "24"
           cache: npm
       - run: npm ci
       - run: npm ci --prefix server
-      - run: npm audit --audit-level=critical
+      - run: npm audit --audit-level=moderate
+      - run: npm audit --prefix server --audit-level=moderate
       - run: npm run lint
       - run: npm run typecheck
       - run: npm test
