@@ -312,8 +312,11 @@ export default function ResourcesClient() {
   if (prevSubjectSyncKey !== subjectSyncKey) {
     setPrevSubjectSyncKey(subjectSyncKey);
 
-    if (filteredSubjectNames.length === 0) {
+    if (subjectNames.length === 0) {
       setSelectedSubject(null);
+    } else if (filteredSubjectNames.length === 0) {
+      // A content/vault search must not clear the user's selected subject.
+      // Keep the current selection; the subject panel simply shows no matches.
     } else {
       const fromLiveUrl = resolveSubjectName(urlSlug, filteredSubjectNames);
       const userPick = lastUserSubject;
@@ -524,6 +527,8 @@ export default function ResourcesClient() {
 
   const openResource = useCallback(
     (item: ResourceItem, page?: number | null) => {
+      setLastUserSubject(item.subject_name);
+      setSelectedSubject(item.subject_name);
       const folder = folderIdForResource(item);
       if (folder) setActiveFolderId(folder);
       setViewerResource(item);
@@ -548,6 +553,8 @@ export default function ResourcesClient() {
       academicYear,
       branch,
       semester,
+      setLastUserSubject,
+      setSelectedSubject,
       setActiveFolderId,
       setViewerResource,
       setViewerPage,

@@ -469,14 +469,15 @@ export default function ResourceViewer({
       animate={{ opacity: 1 }}
       exit={reduceMotion ? undefined : { opacity: 0 }}
       transition={{ duration: MOTION.duration.base, ease: MOTION.ease }}
-      className="fixed inset-0 z-modal bg-background outline-none flex flex-col overscroll-none p-2 sm:p-3"
+      className="viewer-fullscreen-shell fixed inset-0 z-modal bg-background outline-none flex flex-col overscroll-none p-2 sm:p-3"
     >
       <div
-        className={`os-window flex flex-col flex-1 min-h-0 relative shadow-window ${
+        className={`viewer-fullscreen-content os-window flex flex-col flex-1 min-h-0 relative shadow-window ${
           hasRelatedBar ? "pb-16 sm:pb-20" : ""
         }`}
       >
         <WindowChrome
+          className="viewer-fullscreen-chrome"
           titleId="viewer-title"
           icon={<FileIcon className="h-4 w-4" />}
           title={
@@ -790,7 +791,7 @@ export default function ResourceViewer({
             duration: MOTION.duration.base,
             ease: MOTION.ease,
           }}
-          className="absolute bottom-4 inset-x-0 z-10 flex justify-center px-4 pointer-events-none"
+          className="viewer-fullscreen-related absolute bottom-4 inset-x-0 z-10 flex justify-center px-4 pointer-events-none"
         >
           <div className="pointer-events-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-card/95 backdrop-blur-md border border-border rounded-2xl pl-3 pr-1.5 py-1.5 shadow-popover max-w-[min(96vw,48rem)]">
             <RelatedChipRow

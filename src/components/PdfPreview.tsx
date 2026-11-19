@@ -376,10 +376,12 @@ const PdfPreview = forwardRef<PdfPreviewHandle, PdfPreviewProps>(
     }, [setPage, setJumpValue]);
 
     useEffect(() => {
-      if (!hits[0]) return;
-      const el = scrollRef.current?.querySelector(`[data-pdf-page="${hits[0].page}"]`);
+      if (!activeHit) return;
+      const el = scrollRef.current?.querySelector(
+        `[data-pdf-page="${activeHit.page}"]`,
+      );
       el?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, [hits]);
+    }, [activeHit]);
 
     useImperativeHandle(
       ref,

@@ -657,15 +657,19 @@ body.focus-mode-active [data-app-tabbar] {
   color: transparent;
 }
 .pdf-text-layer .pdf-find-hit {
-  background: rgb(var(--foreground) / 0.18);
-  color: transparent;
-  border-radius: 2px;
-  /* Override any UA find paint sitting under our custom hits */
-  box-shadow: inset 0 0 0 9999px rgb(var(--foreground) / 0.12);
+  background: rgb(var(--foreground) / 0.38);
+  color: rgb(var(--foreground));
+  border-radius: 3px;
+  outline: 1px solid rgb(var(--foreground) / 0.7);
+  box-shadow: 0 0 0 1px rgb(var(--foreground) / 0.18);
 }
 .pdf-text-layer .pdf-find-hit-active {
-  background: rgb(var(--foreground) / 0.32);
-  box-shadow: 0 0 0 2px rgb(var(--foreground) / 0.55);
+  background: rgb(var(--foreground) / 0.82);
+  color: rgb(var(--background));
+  outline: 2px solid rgb(var(--foreground));
+  box-shadow:
+    0 0 0 3px rgb(var(--background) / 0.9),
+    0 0 18px rgb(var(--foreground) / 0.58);
   animation: pdf-find-pulse 0.7s ease;
 }
 @keyframes pdf-find-pulse {
@@ -881,6 +885,52 @@ input[type="range"].accent-slider::-moz-range-thumb:hover {
   background: rgb(var(--card));
   box-shadow: var(--elev-2);
   overflow: hidden;
+}
+
+@media (hover: hover) {
+  .viewer-fullscreen-shell:fullscreen {
+    padding: 0;
+  }
+
+  .viewer-fullscreen-shell:fullscreen .viewer-fullscreen-content {
+    border: 0;
+    border-radius: 0;
+  }
+
+  .viewer-fullscreen-shell:fullscreen .viewer-fullscreen-chrome {
+    position: absolute;
+    z-index: 60;
+    top: 0.5rem;
+    left: 0.5rem;
+    right: 0.5rem;
+    border: 1px solid rgb(var(--border));
+    border-radius: var(--radius-lg);
+    background: rgb(var(--card) / 0.94);
+    box-shadow: var(--elev-2);
+    opacity: 0;
+    transform: translateY(-0.75rem);
+    pointer-events: none;
+    transition:
+      opacity 160ms ease,
+      transform 160ms ease;
+  }
+
+  .viewer-fullscreen-shell:fullscreen:hover .viewer-fullscreen-chrome,
+  .viewer-fullscreen-shell:fullscreen .viewer-fullscreen-chrome:focus-within {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+  }
+
+  .viewer-fullscreen-shell:fullscreen .viewer-fullscreen-related {
+    visibility: hidden;
+    transition: visibility 160ms ease;
+  }
+
+  .viewer-fullscreen-shell:fullscreen:hover .viewer-fullscreen-related,
+  .viewer-fullscreen-shell:fullscreen:focus-within .viewer-fullscreen-related {
+    visibility: visible;
+  }
 }
 
 .os-toolbar {
