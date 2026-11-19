@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo, useEffect, useCallback, useRef } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import AppLink from "@/components/ui/AppLink";
 import { ResourceItem } from "@/lib/dataFetcher";
 import { useAcademicStore } from "@/store/academicStore";
@@ -105,7 +105,6 @@ function filterLabel(filter: ResourceFilter): string | null {
 
 export default function ResourcesClient() {
   const online = useOnline();
-  const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const { searchQuery, setSearchQuery, aiSearchQuery, setAiSearchQuery } =
@@ -233,9 +232,10 @@ export default function ResourcesClient() {
       }
 
       const nextQs = params.toString();
-      router.replace(nextQs ? `${pathname}?${nextQs}` : pathname, {
-        scroll: false,
-      });
+      const nextUrl = nextQs ? `${pathname}?${nextQs}` : pathname;
+      // Keep subject/filter changes in place. Router navigation can remount this
+      // catch-all page and briefly restore the "Select a Subject" empty state.
+      window.history.replaceState(window.history.state, "", nextUrl);
     },
     [
       searchParams,
@@ -246,7 +246,6 @@ export default function ResourcesClient() {
       selectedFilter,
       activeFolderId,
       viewerResource?.id,
-      router,
       pathname,
     ],
   );

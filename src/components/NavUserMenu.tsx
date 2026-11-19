@@ -61,6 +61,7 @@ export default function NavUserMenu({
 }) {
   const router = useRouter();
   const [user, setUser] = useState<NavUser | null>(null);
+  const [authResolved, setAuthResolved] = useState(false);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const [menuCoords, setMenuCoords] = useState<MenuCoords | null>(null);
   const isClient = useIsClient();
@@ -83,7 +84,12 @@ export default function NavUserMenu({
       if (cancelled) return;
       const { doc, getDoc, setDoc } = firestore;
 
+      void auth.authStateReady().then(() => {
+        if (!cancelled) setAuthResolved(true);
+      });
+
       unsubscribe = onIdTokenChanged(auth, async (firebaseUser) => {
+      setAuthResolved(true);
       if (firebaseUser) {
         const next = {
           email: firebaseUser.email || undefined,
@@ -251,6 +257,23 @@ export default function NavUserMenu({
     setUserMenuOpen(false);
     router.push("/");
   };
+
+  if (!authResolved) {
+    if (collapsed) {
+      return (
+        <div
+          className="w-10 h-10 rounded-xl border border-border bg-surface/60 animate-pulse"
+          aria-label="Loading account"
+        />
+      );
+    }
+    return (
+      <div
+        className="w-full h-16 rounded-xl border border-border bg-surface/60 animate-pulse"
+        aria-label="Loading account"
+      />
+    );
+  }
 
   if (!user) {
     if (collapsed) {
