@@ -51,12 +51,12 @@ export const metadata: Metadata = {
   ...(searchConsoleVerification ? { verification: searchConsoleVerification } : {}),
   icons: {
     icon: [
-      { url: '/favicon.ico?v=20260905', sizes: 'any' },
-      { url: '/utility-logo.svg?v=20260905', type: 'image/svg+xml' },
-      { url: '/icon-192x192.png?v=20260905', type: 'image/png', sizes: '192x192' },
-      { url: '/icon-512x512.png?v=20260905', type: 'image/png', sizes: '512x512' },
+      { url: '/favicon.ico?v=20261121', sizes: 'any' },
+      { url: '/utility-logo.svg?v=20261121', type: 'image/svg+xml' },
+      { url: '/icon-192x192.png?v=20261121', type: 'image/png', sizes: '192x192' },
+      { url: '/icon-512x512.png?v=20261121', type: 'image/png', sizes: '512x512' },
     ],
-    apple: [{ url: '/apple-icon.png?v=20260905', sizes: '180x180', type: 'image/png' }],
+    apple: [{ url: '/apple-icon.png?v=20261121', sizes: '180x180', type: 'image/png' }],
   },
   openGraph: {
     title: SITE_TITLE,

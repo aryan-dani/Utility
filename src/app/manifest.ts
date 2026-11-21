@@ -89,25 +89,25 @@ export default function manifest(): UtilityManifest {
     ],
     icons: [
       {
-        src: '/icon-192x192.png?v=20260905',
+        src: '/icon-192x192.png?v=20261121',
         sizes: '192x192',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon-512x512.png?v=20260905',
+        src: '/icon-512x512.png?v=20261121',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'any',
       },
       {
-        src: '/icon-512x512.png?v=20260905',
+        src: '/icon-512x512.png?v=20261121',
         sizes: '512x512',
         type: 'image/png',
         purpose: 'maskable',
       },
       {
-        src: '/apple-icon.png?v=20260905',
+        src: '/apple-icon.png?v=20261121',
         sizes: '180x180',
         type: 'image/png',
         purpose: 'any',
