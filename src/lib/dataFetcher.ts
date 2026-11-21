@@ -1,4 +1,4 @@
-import { adminDb } from "./firebaseAdmin";
+import { adminDb, hasFirebaseCredentials } from "./firebaseAdmin";
 import { unstable_cache } from "next/cache";
 import { matchesAcademicYear } from "@/lib/academic/scope";
 import type { AcademicYear } from "@/lib/academic/scope";
@@ -162,6 +162,7 @@ async function fetchSubjectsFromDB(
   branch: string,
   semester: number,
 ): Promise<SubjectItem[]> {
+  if (!hasFirebaseCredentials()) return [];
   try {
     const db = adminDb();
     const snapshot = await db.collection("subjects")
@@ -207,6 +208,7 @@ async function fetchResourcesFromDBRaw(
   branch: string,
   semester: number,
 ): Promise<ResourceItem[]> {
+  if (!hasFirebaseCredentials()) return [];
   const db = adminDb();
 
   const subjectsSnapshot = await db.collection("subjects")
@@ -348,6 +350,7 @@ export async function fetchWorkspaceListRaw(
   semester: number,
 ): Promise<WorkspaceListPayload> {
   const empty: WorkspaceListPayload = { resources: [], syllabusUrl: null };
+  if (!hasFirebaseCredentials()) return empty;
   let db: ReturnType<typeof adminDb>;
   try {
     db = adminDb();
@@ -428,6 +431,7 @@ export type HomeStats = {
 };
 
 async function fetchHomeStatsFromGlobal(): Promise<HomeStats | null> {
+  if (!hasFirebaseCredentials()) return null;
   try {
     const db = adminDb();
     const snap = await db.collection("stats").doc("global").get();

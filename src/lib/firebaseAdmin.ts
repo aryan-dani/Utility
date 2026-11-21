@@ -1,5 +1,4 @@
 import {
-  applicationDefault,
   cert,
   getApps,
   initializeApp,
@@ -49,8 +48,9 @@ export function getFirebaseAdmin(): App {
     return app;
   }
 
-  // If environment variables are missing or placeholders (e.g. during build),
-  // initialize with application default credentials or placeholder.
+  // Prefer explicit service-account env. Never fall through to applicationDefault()
+  // when keys are missing/placeholder: CI (`npm run ci:build`) strips Admin creds,
+  // and ADC refresh recurses hard enough to overflow the MIT-WPU prerender stack.
   if (hasFirebaseCredentials()) {
     app = initializeApp({
       credential: cert({
@@ -61,18 +61,10 @@ export function getFirebaseAdmin(): App {
       storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
     });
   } else {
-    try {
-      app = initializeApp({
-        credential: applicationDefault(),
-        projectId: projectId || "placeholder-project-id",
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      });
-    } catch {
-      app = initializeApp({
-        projectId: projectId || "placeholder-project-id",
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      });
-    }
+    app = initializeApp({
+      projectId: projectId || "placeholder-project-id",
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    });
   }
 
   return app;
