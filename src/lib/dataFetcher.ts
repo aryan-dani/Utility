@@ -50,6 +50,8 @@ export type ResourceCategory =
 export type WorkspaceListPayload = {
   resources: ResourceItem[];
   syllabusUrl: string | null;
+  /** ISO timestamp from workspace_catalogs.updated_at (or rebuild time). */
+  updatedAt: string | null;
 };
 
 // ─── Filter configuration ────────────────────────────────────────────────────
@@ -335,7 +337,7 @@ async function writeWorkspaceCatalog(
     resources: payload.resources,
     syllabusUrl: payload.syllabusUrl,
     resource_count: payload.resources.length,
-    updated_at: new Date().toISOString(),
+    updated_at: payload.updatedAt || new Date().toISOString(),
   };
   await db.collection(WORKSPACE_CATALOG_COLLECTION).doc(id).set(doc);
 }
@@ -349,7 +351,11 @@ export async function fetchWorkspaceListRaw(
   branch: string,
   semester: number,
 ): Promise<WorkspaceListPayload> {
-  const empty: WorkspaceListPayload = { resources: [], syllabusUrl: null };
+  const empty: WorkspaceListPayload = {
+    resources: [],
+    syllabusUrl: null,
+    updatedAt: null,
+  };
   if (!hasFirebaseCredentials()) return empty;
   let db: ReturnType<typeof adminDb>;
   try {
@@ -372,6 +378,10 @@ export async function fetchWorkspaceListRaw(
             typeof d.syllabusUrl === "string" || d.syllabusUrl === null
               ? d.syllabusUrl
               : null,
+          updatedAt:
+            typeof d.updated_at === "string" && d.updated_at
+              ? d.updated_at
+              : null,
         };
       }
     }
@@ -384,7 +394,8 @@ export async function fetchWorkspaceListRaw(
       fetchResourcesFromDBRaw(academicYear, branch, semester),
       fetchSyllabusFile(academicYear, branch, semester),
     ]);
-    const payload = { resources, syllabusUrl };
+    const updatedAt = new Date().toISOString();
+    const payload = { resources, syllabusUrl, updatedAt };
 
     try {
       await writeWorkspaceCatalog(academicYear, branch, semester, payload);

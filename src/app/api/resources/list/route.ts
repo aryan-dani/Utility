@@ -9,7 +9,7 @@ import { resolveWorkspace } from "@/lib/workspace";
 export const dynamic = "force-dynamic";
 
 const PUBLIC_CATALOG_CACHE =
-  "public, s-maxage=300, stale-while-revalidate=600";
+  "public, s-maxage=60, stale-while-revalidate=300";
 
 function isQuotaExhausted(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -30,17 +30,20 @@ export async function GET(request: Request) {
     });
 
     const isBust = searchParams.has("bust") || searchParams.has("v");
-    const { resources, syllabusUrl } = isBust
+    const { resources, syllabusUrl, updatedAt } = isBust
       ? await fetchWorkspaceListRaw(academicYear, branch, semester)
       : await getWorkspaceList(academicYear, branch, semester);
 
     return NextResponse.json(
-      { resources, syllabusUrl },
+      { resources, syllabusUrl, updatedAt },
       {
         headers: {
+          // Clients compare updatedAt and background-refetch; keep CDN short so
+          // Drive uploads (plus revalidateTag) show up without manual cache bumps.
           "Cache-Control": isBust
-            ? "public, s-maxage=300, stale-while-revalidate=600"
+            ? "public, s-maxage=60, stale-while-revalidate=300"
             : PUBLIC_CATALOG_CACHE,
+          ...(updatedAt ? { "X-Catalog-Updated-At": updatedAt } : {}),
         },
       },
     );

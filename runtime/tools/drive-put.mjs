@@ -4,7 +4,8 @@
  * Usage:
  *   node runtime/tools/drive-put.mjs <local> --to=2026-2027/AIDS/Sem_5_AIDS/Sem_5_Notes/GML
  *   node runtime/tools/drive-put.mjs ./file.pdf --year=2026-2027 --branch=AIDS --semester=5 --subject=GML --category=notes
- *   node runtime/tools/drive-put.mjs ./file.pdf --to=... --as=GML_Unit_1_Notes.pdf --index --revalidate
+ *   node runtime/tools/drive-put.mjs ./file.pdf --to=... --as=GML_Unit_1_Notes.pdf --index
+ *   (revalidates production by default; pass --no-revalidate to skip)
  */
 import { existsSync, readdirSync, statSync, createReadStream } from "fs";
 import { basename, join, resolve as pathResolve } from "path";
@@ -36,7 +37,9 @@ function parseArgs(argv) {
     dryRun: false,
     noSync: false,
     index: false,
-    revalidate: false,
+    // Default on: uploads must bust Next/CDN catalog caches or the vault
+    // keeps serving a pre-sync empty list until someone hits revalidate by hand.
+    revalidate: true,
     verbose: false,
     localTarget: null,
   };
@@ -48,6 +51,7 @@ function parseArgs(argv) {
     else if (arg === "--no-sync") flags.noSync = true;
     else if (arg === "--index") flags.index = true;
     else if (arg === "--revalidate") flags.revalidate = true;
+    else if (arg === "--no-revalidate") flags.revalidate = false;
     else if (arg === "--verbose") flags.verbose = true;
     else if (arg.startsWith("--to=")) flags.to = arg.slice(5).trim();
     else if (arg.startsWith("--year=")) flags.year = arg.slice(7).trim();

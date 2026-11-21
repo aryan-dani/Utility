@@ -19,19 +19,20 @@ type CacheEntry = {
   resources: ResourceItem[];
   subjects: string[];
   syllabusUrl: string | null;
+  /** Server workspace_catalogs.updated_at — used to detect Drive syncs. */
+  updatedAt: string | null;
   savedAt?: number;
 };
 
-const MEMORY_TTL_MS = 1000 * 60 * 10; // 10m in-tab
-const STORAGE_TTL_MS = 1000 * 60 * 30; // 30m across reloads
-const STORAGE_PREFIX = "utility.workspace.v4:";
+/** Soft paint cache only; network always revalidates in the background. */
+const STORAGE_TTL_MS = 1000 * 60 * 30;
+const STORAGE_PREFIX = "utility.workspace.v6:";
 
 const cache = new Map<string, CacheEntry>();
 const inflight = new Map<string, Promise<CacheEntry>>();
 
 function cacheKey(year: string, branch: string, semester: number): string {
-  // v4: bust stale browser catalogs & include fresh Drive uploads
-  return `v4:${year}:${branch}:${semester}`;
+  return `v6:${year}:${branch}:${semester}`;
 }
 
 function storageKey(key: string): string {
@@ -52,7 +53,10 @@ function readStored(storage: Storage, key: string): CacheEntry | null {
       storage.removeItem(storageKey(key));
       return null;
     }
-    if (!Array.isArray(parsed.resources)) return null;
+    if (!Array.isArray(parsed.resources) || parsed.resources.length === 0) {
+      storage.removeItem(storageKey(key));
+      return null;
+    }
     return parsed;
   } catch {
     return null;
@@ -66,6 +70,7 @@ function readSession(key: string): CacheEntry | null {
 
 function writeSession(key: string, entry: CacheEntry) {
   if (typeof window === "undefined") return;
+  if (entry.resources.length === 0) return;
   const raw = JSON.stringify(entry);
   try {
     sessionStorage.setItem(storageKey(key), raw);
@@ -105,7 +110,7 @@ function deriveSyllabusUrlFromResources(
 
 function getCachedEntry(key: string): CacheEntry | null {
   const mem = cache.get(key);
-  if (isFresh(mem, MEMORY_TTL_MS)) return mem;
+  if (mem && mem.resources.length > 0) return mem;
   const session = readSession(key);
   if (session) {
     cache.set(key, session);
@@ -114,36 +119,52 @@ function getCachedEntry(key: string): CacheEntry | null {
   return null;
 }
 
-async function loadWorkspace(
+/** Exported for unit tests — Drive sync must replace painted cache entries. */
+export function catalogChanged(
+  prev: Pick<CacheEntry, "resources" | "syllabusUrl" | "updatedAt"> | null,
+  next: Pick<CacheEntry, "resources" | "syllabusUrl" | "updatedAt">,
+): boolean {
+  if (!prev) return true;
+  if (prev.updatedAt && next.updatedAt && prev.updatedAt !== next.updatedAt) {
+    return true;
+  }
+  if (prev.resources.length !== next.resources.length) return true;
+  if (prev.syllabusUrl !== next.syllabusUrl) return true;
+  return false;
+}
+
+async function fetchWorkspaceFromNetwork(
   academicYear: string,
   branch: string,
   semester: number,
 ): Promise<CacheEntry> {
   const key = cacheKey(academicYear, branch, semester);
-  const hit = getCachedEntry(key);
-  if (hit) return hit;
-
   const existing = inflight.get(key);
   if (existing) return existing;
 
   const promise = (async () => {
-    // Public CDN-cached catalog — no auth header (would force private / miss CDN).
+    // No fixed ?v= bump — uploads revalidate server tags; client always
+    // revalidates in the background and compares updatedAt.
     const res = await fetch(
-      `/api/resources/list?year=${encodeURIComponent(academicYear)}&branch=${encodeURIComponent(branch)}&semester=${semester}&v=4`,
+      `/api/resources/list?year=${encodeURIComponent(academicYear)}&branch=${encodeURIComponent(branch)}&semester=${semester}`,
     );
     if (!res.ok) throw new Error("Failed to load resources");
     const data = await res.json();
     const resources: ResourceItem[] = Array.isArray(data.resources)
       ? data.resources
       : [];
-    // Prefer dedicated Firestore Syllabus subject URL (excluded from the vault list).
     const syllabusUrl =
       (typeof data.syllabusUrl === "string" && data.syllabusUrl) ||
       deriveSyllabusUrlFromResources(resources);
+    const updatedAt =
+      typeof data.updatedAt === "string" && data.updatedAt
+        ? data.updatedAt
+        : res.headers.get("X-Catalog-Updated-At");
     const entry: CacheEntry = {
       resources,
       subjects: deriveSubjects(resources),
       syllabusUrl,
+      updatedAt,
       savedAt: Date.now(),
     };
     cache.set(key, entry);
@@ -163,7 +184,8 @@ export async function loadWorkspaceResources(
   branch: string,
   semester: number,
 ): Promise<CacheEntry> {
-  return loadWorkspace(academicYear, branch, semester);
+  // Prefer a fresh network read so command palette / one-shots see uploads.
+  return fetchWorkspaceFromNetwork(academicYear, branch, semester);
 }
 
 export function clearWorkspaceResourcesCache(
@@ -222,23 +244,27 @@ export function useWorkspaceResources(): WorkspaceResourcesState & {
   }
 
   useEffect(() => {
-    // Cache hits are applied during render via the prevKey pattern above.
-    // retry() deletes the cache entry before bumping retryNonce.
-    if (getCachedEntry(key)) return;
-
     let cancelled = false;
-    loadWorkspace(academicYear, branch, semester)
+    const painted = getCachedEntry(key);
+
+    // Stale-while-revalidate: paint cache immediately, always hit the network
+    // so Drive uploads appear without bumping a manual ?v= cache key.
+    fetchWorkspaceFromNetwork(academicYear, branch, semester)
       .then((entry) => {
         if (cancelled) return;
-        setResources(entry.resources);
-        setSubjects(entry.subjects);
-        setSyllabusUrl(entry.syllabusUrl);
+        if (catalogChanged(painted, entry) || !painted) {
+          setResources(entry.resources);
+          setSubjects(entry.subjects);
+          setSyllabusUrl(entry.syllabusUrl);
+        }
         setLoading(false);
         setError(null);
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load");
+        if (!painted) {
+          setError(err instanceof Error ? err.message : "Failed to load");
+        }
         setLoading(false);
       });
 
