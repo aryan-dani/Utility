@@ -69,6 +69,7 @@ import { getReadingProgress } from "@/lib/readingProgress";
 import { logResourceOpen } from "@/lib/activity";
 import { homeOrVercelSearch } from "@/lib/homeApi";
 import { useWorkspaceResources } from "@/lib/useWorkspaceResources";
+import { LEGACY_ACADEMIC_YEAR } from "@/lib/workspace";
 import { Button, Card, Badge, PageHeader, Input, IconButton, EmptyState, ErrorState, PageShell } from "@/components/ui";
 import { NeedsConnection, useOnline } from "@/components/NeedsConnection";
 import PageSkeleton from "@/components/PageSkeleton";
@@ -942,7 +943,11 @@ export default function ResourcesClient() {
         <EmptyState
           icon={<Folder className="w-10 h-10 text-muted/40" />}
           title="No files found"
-          description={`No resources uploaded for ${branch} Semester ${semester} yet.`}
+          description={
+            academicYear === LEGACY_ACADEMIC_YEAR
+              ? `You're on the archive year ${LEGACY_ACADEMIC_YEAR}. Switch Workspace Scope to the current year to see ${branch} Semester ${semester} notes.`
+              : `No resources uploaded for ${branch} Semester ${semester} yet.`
+          }
         />
       ) : (
         <div className="flex flex-col lg:flex-row gap-8 items-start">

@@ -8,10 +8,15 @@ import AppLink from "@/components/ui/AppLink";
 import { ChevronDown, LogOut, User, UserPlus } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import type { AcademicYear, Branch, Semester } from "@/store/academicStore";
-import { isAcademicYear } from "@/lib/academic/scope";
 import { clearLocalUserData } from "@/lib/localUserData";
 import { useAcademicStore } from "@/store/academicStore";
 import { useMotionSafe } from "@/lib/motion";
+import {
+  WORKSPACE_SCOPE_VERSION,
+  migrateWorkspacePrefs,
+  parseBranch,
+  parseSemester,
+} from "@/lib/workspace";
 
 type NavUser = {
   email: string | undefined;
@@ -142,22 +147,42 @@ export default function NavUserMenu({
 
             if (snap.exists()) {
               const data = snap.data();
-              const rawYear = data.academic_year as string | undefined;
-              const prefYear =
-                rawYear && isAcademicYear(rawYear) ? rawYear : null;
-              const prefBranch = (data.branch as Branch | undefined) || null;
-              const prefSemester =
-                typeof data.semester === "number"
-                  ? (data.semester as Semester)
-                  : null;
-              if (prefYear && prefBranch && prefSemester) {
+              const prefBranch = parseBranch(
+                (data.branch as string | undefined) || null,
+              );
+              const prefSemester = parseSemester(data.semester as number | null);
+              const migrated = migrateWorkspacePrefs({
+                academicYear: data.academic_year as string | undefined,
+                branch: prefBranch,
+                semester: prefSemester,
+                scopeVersion:
+                  typeof data.workspace_scope_version === "number"
+                    ? data.workspace_scope_version
+                    : null,
+              });
+
+              if (prefBranch && prefSemester) {
                 if (onWorkspaceFromPrefs) {
-                  onWorkspaceFromPrefs(prefYear, prefBranch, prefSemester);
+                  onWorkspaceFromPrefs(
+                    migrated.academicYear,
+                    migrated.branch,
+                    migrated.semester,
+                  );
                 } else {
-                  setAcademicYear(prefYear);
-                  setBranch(prefBranch);
-                  setSemester(prefSemester);
+                  setAcademicYear(migrated.academicYear);
+                  setBranch(migrated.branch);
+                  setSemester(migrated.semester);
                 }
+              }
+
+              if (migrated.migrated) {
+                updateData.academic_year = migrated.academicYear;
+                updateData.workspace_scope_version = WORKSPACE_SCOPE_VERSION;
+              } else if (
+                typeof data.workspace_scope_version !== "number" ||
+                data.workspace_scope_version < WORKSPACE_SCOPE_VERSION
+              ) {
+                updateData.workspace_scope_version = WORKSPACE_SCOPE_VERSION;
               }
 
               const existing = data;
@@ -167,7 +192,9 @@ export default function NavUserMenu({
                 existing.photoURL === updateData.photoURL &&
                 existing.displayName === updateData.displayName &&
                 existing.provider === updateData.provider &&
-                !("lastActive" in updateData);
+                !("lastActive" in updateData) &&
+                !("academic_year" in updateData) &&
+                !("workspace_scope_version" in updateData);
               if (!profileUnchanged) {
                 await setDoc(userPrefsRef, updateData, { merge: true });
               }

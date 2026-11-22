@@ -4,11 +4,14 @@ import {
   parseBranch,
   parseSemester,
   resolveWorkspace,
+  migrateWorkspacePrefs,
   sanitizeRedirectTo,
   workspaceQuery,
   DEFAULT_ACADEMIC_YEAR,
   DEFAULT_BRANCH,
   DEFAULT_SEMESTER,
+  LEGACY_ACADEMIC_YEAR,
+  WORKSPACE_SCOPE_VERSION,
 } from "@/lib/workspace";
 
 describe("parseAcademicYear", () => {
@@ -39,6 +42,41 @@ describe("parseSemester", () => {
   });
 });
 
+describe("migrateWorkspacePrefs", () => {
+  it("upgrades stale archive prefs to the current academic year", () => {
+    expect(
+      migrateWorkspacePrefs({
+        academicYear: LEGACY_ACADEMIC_YEAR,
+        branch: "CSE",
+        semester: 5,
+      }),
+    ).toEqual({
+      academicYear: DEFAULT_ACADEMIC_YEAR,
+      branch: "CSE",
+      semester: 5,
+      scopeVersion: WORKSPACE_SCOPE_VERSION,
+      migrated: true,
+    });
+  });
+
+  it("keeps an explicit archive pick at the current scope version", () => {
+    expect(
+      migrateWorkspacePrefs({
+        academicYear: LEGACY_ACADEMIC_YEAR,
+        branch: "CSE",
+        semester: 5,
+        scopeVersion: WORKSPACE_SCOPE_VERSION,
+      }),
+    ).toEqual({
+      academicYear: LEGACY_ACADEMIC_YEAR,
+      branch: "CSE",
+      semester: 5,
+      scopeVersion: WORKSPACE_SCOPE_VERSION,
+      migrated: false,
+    });
+  });
+});
+
 describe("resolveWorkspace", () => {
   it("lets URL win over prefs over defaults", () => {
     expect(resolveWorkspace({})).toEqual({
@@ -50,10 +88,10 @@ describe("resolveWorkspace", () => {
     expect(
       resolveWorkspace(
         {},
-        { academicYear: "2025-2026", branch: "CSE", semester: 2 },
+        { academicYear: LEGACY_ACADEMIC_YEAR, branch: "CSE", semester: 2 },
       ),
     ).toEqual({
-      academicYear: "2025-2026",
+      academicYear: DEFAULT_ACADEMIC_YEAR,
       branch: "CSE",
       semester: 2,
     });
@@ -61,7 +99,7 @@ describe("resolveWorkspace", () => {
     expect(
       resolveWorkspace(
         { year: "2026-2027", branch: "ECE", semester: "7" },
-        { academicYear: "2025-2026", branch: "CSE", semester: 2 },
+        { academicYear: LEGACY_ACADEMIC_YEAR, branch: "CSE", semester: 2 },
       ),
     ).toEqual({
       academicYear: "2026-2027",

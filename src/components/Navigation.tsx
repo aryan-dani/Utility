@@ -32,6 +32,7 @@ import dynamic from "next/dynamic";
 import { useAcademicStore, AcademicYear, Branch, Semester } from "../store/academicStore";
 import { startNavigationProgress } from "./NavigationProgress";
 import {
+  LEGACY_ACADEMIC_YEAR,
   readStoredWorkspace,
   resolveWorkspace,
   writeStoredWorkspace,
@@ -225,9 +226,19 @@ function NavigationUrlSync() {
             academicYear: stored?.academicYear,
             branch: stored?.branch,
             semester: stored?.semester,
+            scopeVersion: stored?.scopeVersion,
           },
     );
     setWorkspace(resolved.academicYear, resolved.branch, resolved.semester);
+    // Persist migrated current-year scope so archive-year leftovers from last
+    // rollover do not keep emptying the vault on every visit.
+    if (!hasUrl) {
+      writeStoredWorkspace(
+        resolved.academicYear,
+        resolved.branch,
+        resolved.semester,
+      );
+    }
   }, [urlYear, urlBranch, urlSemester, setWorkspace, setStudyFocus]);
 
   return null;
@@ -676,7 +687,10 @@ function SidebarDock({
                               Sem {semester}
                             </span>
                             <span className="text-[11px] font-medium text-muted truncate leading-none">
-                              · {academicYear.split("-")[0]}
+                              ·{" "}
+                              {academicYear === LEGACY_ACADEMIC_YEAR
+                                ? "Archive"
+                                : academicYear.split("-")[0]}
                             </span>
                           </div>
                         </div>
