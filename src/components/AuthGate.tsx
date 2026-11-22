@@ -16,7 +16,10 @@ const OnboardingStory = dynamic(
 /** Offline auth resolve — long enough for IndexedDB, short enough to feel usable. */
 const AUTH_OFFLINE_TIMEOUT_MS = 2500;
 
-/** Vault, Ask, Planner, Doubt Board, and the other tools need a signed-in user. */
+/**
+ * Gate write / accountability surfaces (QA, Ask, planner, notes, clipboard,
+ * SRS, community, profile, admin). Read-only vault tools stay public.
+ */
 export function AuthGate({ children }: { children: ReactNode }) {
   const pathname = normalizePathname(usePathname());
   const router = useRouter();

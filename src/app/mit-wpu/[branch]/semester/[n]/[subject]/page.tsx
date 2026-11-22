@@ -128,8 +128,8 @@ export default async function MitWpuSubjectPage({ params }: Props) {
       </h1>
       <p className="text-base text-muted leading-relaxed mb-8">
         {official
-          ? `${official.type} · ${official.credits} credits. Unit outline below; open files after sign-in.`
-          : "Resource titles from the Utility catalog. Sign in to open PDFs and notebooks from Drive."}
+          ? `${official.type} · ${official.credits} credits. Unit outline below; open files in the Resource Vault — no sign-in required.`
+          : "Resource titles from the Utility catalog. Open PDFs and notebooks in the Resource Vault without signing in."}
       </p>
 
       {official && official.modules.length > 0 ? (

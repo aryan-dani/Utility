@@ -26,11 +26,17 @@ describe("authRoutes", () => {
     expect(isPublicPath("/gpa")).toBe(true);
     expect(isPublicPath("/visualize")).toBe(true);
     expect(isPublicPath("/visualize/bfs")).toBe(true);
-    expect(isPublicPath("/resources")).toBe(false);
+    expect(isPublicPath("/resources")).toBe(true);
+    expect(isPublicPath("/resources/AIDS/5")).toBe(true);
+    expect(isPublicPath("/syllabus")).toBe(true);
+    expect(isPublicPath("/timer")).toBe(true);
     expect(isPublicPath("/qa")).toBe(false);
     expect(isPublicPath("/community")).toBe(false);
     expect(isPublicPath("/ask")).toBe(false);
     expect(isPublicPath("/clipboard")).toBe(false);
+    expect(isPublicPath("/planner")).toBe(false);
+    expect(isPublicPath("/notes")).toBe(false);
+    expect(isPublicPath("/srs")).toBe(false);
   });
 
   it("recognizes auth pages", () => {

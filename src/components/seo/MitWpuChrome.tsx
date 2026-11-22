@@ -40,15 +40,20 @@ export function MitWpuBreadcrumbs({ items }: { items: Crumb[] }) {
 }
 
 export function MitWpuSignInCta({
-  action = "open course files and Ask AI",
+  action = "use Ask AI, the planner, and the doubt board",
 }: {
   action?: string;
 }) {
   return (
     <p className="mt-8 rounded-2xl border border-border bg-surface/60 px-4 py-3 text-sm text-muted leading-relaxed">
-      Sign in free to {action}. Utility OS keeps PDFs and notebooks on Google
-      Drive or the campus files host — this page only lists titles for search
-      and planning.{" "}
+      Browse titles here, then{" "}
+      <Link
+        href="/resources"
+        className="text-foreground font-semibold underline-offset-2 hover:underline"
+      >
+        open the Resource Vault
+      </Link>{" "}
+      without signing in. Create a free account to {action}.{" "}
       <Link href="/signup" className="text-foreground font-semibold underline-offset-2 hover:underline">
         Create account
       </Link>

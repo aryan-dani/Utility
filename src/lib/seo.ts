@@ -130,9 +130,7 @@ export function llmsTxt(): string {
     "",
     "## Signed-in tools",
     "",
-    "Public MIT-WPU indexes list subject and resource titles only. The resource vault file viewer, Ask AI chat, syllabus tracker UI, saved planner, focus timer sessions, flashcards, doubt board, clipboard, and community require a student account.",
-    "",
-    "The GPA calculator and algorithm visualizer are free without sign-in.",
+    "The resource vault, syllabus browser, focus timer, GPA calculator, and algorithm visualizer are free without sign-in. Ask AI chat, the saved planner, flashcards, doubt board posts, clipboard sync, notes, and community require a student account where accountability or personal data matters.",
     "",
   ].join("\n");
 }

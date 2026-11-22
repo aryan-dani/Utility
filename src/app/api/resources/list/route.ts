@@ -4,7 +4,7 @@ import { resolveWorkspace } from "@/lib/workspace";
 
 /**
  * Shared catalog for a year/branch/semester — identical for every student.
- * Public + CDN-cached; AuthGate still requires sign-in for the Resources UI.
+ * Public + CDN-cached; the Resources UI is also public (no AuthGate).
  */
 export const dynamic = "force-dynamic";
 

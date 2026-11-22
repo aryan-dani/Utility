@@ -1,10 +1,9 @@
 import type { Metadata } from "next";
-import { PRIVATE_ROBOTS } from "@/lib/seo";
+import { indexableMeta } from "@/lib/seo";
 
 export const metadata: Metadata = {
   title: "Syllabus",
-  description: "Track course syllabus modules and schedule study blocks.",
-  robots: PRIVATE_ROBOTS,
+  ...indexableMeta("/syllabus"),
 };
 
 export default function SyllabusLayout({

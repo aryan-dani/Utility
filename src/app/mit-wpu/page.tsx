@@ -55,9 +55,9 @@ export default function MitWpuHubPage() {
       </h1>
       <p className="text-base text-muted leading-relaxed mb-8 max-w-2xl">
         Utility OS is a free academic workspace for MIT-WPU students — not the
-        official ERP or ILIP attendance app. Use these public indexes to find
-        syllabus topics and resource titles, then sign in to open files, Ask AI
-        grounded in your materials, and plan the week.
+        official ERP or ILIP attendance app. Browse syllabus indexes and open
+        the Resource Vault without signing in. Sign in only when you need Ask
+        AI, the planner, doubt board, or other personal tools.
       </p>
 
       <section className="mb-10">

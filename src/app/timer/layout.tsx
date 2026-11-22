@@ -1,10 +1,15 @@
 import type { Metadata } from "next";
-import { PRIVATE_ROBOTS } from "@/lib/seo";
+import { indexableMeta } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  robots: PRIVATE_ROBOTS,
+  title: "Focus timer",
+  ...indexableMeta("/timer"),
 };
 
-export default function TimerLayout({ children }: { children: React.ReactNode }) {
+export default function TimerLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return children;
 }

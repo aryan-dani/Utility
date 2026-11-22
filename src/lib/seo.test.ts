@@ -12,7 +12,7 @@ import {
   sitemapEntries,
 } from "./seo";
 
-const SIGNED_IN = ["/resources", "/ask", "/syllabus", "/planner", "/login"];
+const SIGNED_IN = ["/ask", "/planner", "/qa", "/notes", "/srs", "/login"];
 
 describe("public SEO pages", () => {
   it("lists only crawlable URLs, including support", () => {
@@ -58,7 +58,8 @@ describe("public SEO pages", () => {
       expect(text).toContain(absoluteUrl(page.path));
     }
     expect(text).toContain("require a student account");
-    expect(text).not.toContain("/resources");
+    expect(text).toContain("/resources");
+    expect(text).toContain("/syllabus");
     expect(text).toContain("/mit-wpu");
     expect(text).toContain("GPA calculator");
   });

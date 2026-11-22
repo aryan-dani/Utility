@@ -80,6 +80,30 @@
     "lastModified": "2026-11-10"
   },
   {
+    "path": "/resources",
+    "title": "Resource vault",
+    "description": "Browse MIT-WPU notes, presentations, labs, and PYQs by branch and semester. No sign-in required to view files.",
+    "changeFrequency": "daily",
+    "priority": 0.95,
+    "lastModified": "2026-11-22"
+  },
+  {
+    "path": "/syllabus",
+    "title": "Syllabus",
+    "description": "MIT-WPU course syllabus modules by branch and semester on Utility OS. Browse without signing in.",
+    "changeFrequency": "weekly",
+    "priority": 0.85,
+    "lastModified": "2026-11-22"
+  },
+  {
+    "path": "/timer",
+    "title": "Focus timer",
+    "description": "Focus timer for study sessions. Free on Utility OS without signing in.",
+    "changeFrequency": "monthly",
+    "priority": 0.6,
+    "lastModified": "2026-11-22"
+  },
+  {
     "path": "/gpa",
     "title": "MIT-WPU GPA calculator",
     "description": "Free SGPA and CGPA calculator for MIT-WPU’s 10-point grading system. No sign-in required.",
@@ -121,10 +145,10 @@
   },
   {
     "path": "/mit-wpu/focus-timer",
-    "title": "Focus timer",
+    "title": "Focus timer landing",
     "description": "Focus timer for study sessions inside the Utility OS workspace.",
     "changeFrequency": "monthly",
-    "priority": 0.6,
+    "priority": 0.55,
     "lastModified": "2026-11-10"
   }
 ]
