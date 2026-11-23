@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
-import { isAuthFailure, requireUser, getAdminEmails } from "@/lib/apiAuth";
+import { isAuthFailure, requireUser, isAdminUser } from "@/lib/apiAuth";
 import { attachAnswerVotes } from "@/lib/qa/viewerState";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 import type { QAQuestion, QAAnswer } from "@/lib/qa/types";
@@ -95,8 +95,7 @@ export async function PATCH(
     }
 
     const data = qDoc.data()!;
-    const userEmail = auth.email?.toLowerCase() ?? "";
-    const isAdmin = !!userEmail && getAdminEmails().includes(userEmail);
+    const isAdmin = isAdminUser(auth);
     if (data.author_uid !== auth.uid && !isAdmin) {
       return NextResponse.json({ error: "Only the author or an admin can update this question" }, { status: 403 });
     }
@@ -169,8 +168,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Question not found" }, { status: 404 });
     }
 
-    const userEmail = auth.email?.toLowerCase() ?? "";
-    const isAdmin = !!userEmail && getAdminEmails().includes(userEmail);
+    const isAdmin = isAdminUser(auth);
     const isAuthor = qDoc.data()?.author_uid === auth.uid;
 
     if (!isAuthor && !isAdmin) {

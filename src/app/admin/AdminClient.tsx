@@ -45,6 +45,7 @@ import {
 import { fetchAdminStatus } from "@/lib/adminStatus";
 import { authFetch } from "@/lib/authFetch";
 import { utilityFetch } from "@/lib/utilityServer";
+import { AdminDriveUploader } from "@/components/admin/AdminDriveUploader";
 
 interface Subject {
   id: string;
@@ -822,20 +823,25 @@ export default function AdminClient({
 
       {tab === "drive" && (
         <div className="flex flex-col gap-6 animate-fade-in">
+          <AdminDriveUploader
+            defaultYear="2026-2027"
+            defaultBranch="AIDS"
+            defaultSemester={5}
+          />
+
           <Card className="rounded-2xl" padding="lg">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-xl bg-surface border border-border flex items-center justify-center">
                 <CloudFog className="w-5 h-5 text-foreground" />
               </div>
-              <h3 className="text-xl font-bold tracking-tight text-foreground">
-                Google Drive Integration
+              <h3 className="text-lg font-bold tracking-tight text-foreground">
+                Full Drive sync
               </h3>
             </div>
-            <p className="text-sm text-muted mb-8 max-w-2xl leading-relaxed">
-              Utility uses Google Drive as the single source of truth. Do not
-              upload files here. Instead, upload your PDFs, DOCs, and PPTs into
-              the Google Drive folder. Once uploaded, click &quot;Sync Now&quot; to
-              ingest them into Firebase and start AI indexing.
+            <p className="text-sm text-muted mb-6 max-w-2xl leading-relaxed">
+              Uploads above publish into the vault immediately. Use a full sync
+              only if files were changed outside this uploader and the catalog
+              looks stale.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-3">
@@ -843,7 +849,7 @@ export default function AdminClient({
                 href={driveFolderUrl || "https://drive.google.com/drive/my-drive"}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center justify-center gap-2 bg-foreground text-background font-semibold text-sm px-6 py-3 rounded-xl hover:opacity-90 transition-opacity"
+                className="inline-flex items-center justify-center gap-2 bg-surface text-foreground border border-border font-semibold text-sm px-6 py-3 rounded-xl hover:bg-surface-hover transition-colors"
               >
                 <span>Open Utility Drive</span>
                 <ExternalLink className="w-4 h-4" />

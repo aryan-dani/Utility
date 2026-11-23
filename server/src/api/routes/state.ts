@@ -16,7 +16,7 @@ import {
   studyPacks,
   userNotes,
 } from "../../db/schema.js";
-import { adminEmails, env } from "../../lib/env.js";
+import { isAdminAccount, env } from "../../lib/env.js";
 import { checkRateLimit } from "../../lib/rateLimit.js";
 import { requireUser, type AppVars, clientIp } from "../middleware/auth.js";
 
@@ -631,8 +631,7 @@ stateRoutes.get("/study-pack", async (c) => {
 });
 
 stateRoutes.get("/admin/status", async (c) => {
-  const email = c.get("user").email?.toLowerCase();
-  if (!email || !adminEmails().includes(email)) return c.json({ error: "Forbidden" }, 403);
+  if (!isAdminAccount(c.get("user"))) return c.json({ error: "Forbidden" }, 403);
   const meta = await getDb().select().from(healthMeta);
   const map = Object.fromEntries(meta.map((m) => [m.key, m.value]));
   let diskFreeRatio: number | null = null;

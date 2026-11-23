@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminDb } from "@/lib/firebaseAdmin";
 import {
-  getAdminEmails,
+  isAdminUser,
   isAuthFailure,
   requireAdmin,
 } from "@/lib/apiAuth";
@@ -78,7 +78,7 @@ export async function DELETE(request: Request) {
     const email = String(userSnap.data()?.email || "")
       .trim()
       .toLowerCase();
-    if (email && getAdminEmails().includes(email)) {
+    if (isAdminUser({ uid, email: email || null })) {
       return NextResponse.json(
         { error: "Cannot remove an allowlisted admin account" },
         { status: 403 },

@@ -2,7 +2,7 @@ import { NextResponse, after } from "next/server";
 import { revalidateTag } from "next/cache";
 import syncDrive from "../../../../../runtime/tools/sync-drive.mjs";
 import { adminAuth, hasFirebaseCredentials } from "@/lib/firebaseAdmin";
-import { getAdminEmails } from "@/lib/apiAuth";
+import { isAdminUser } from "@/lib/apiAuth";
 import { safeEqualSecret } from "@/lib/safeEqual";
 import { devLog } from "@/lib/devLog";
 
@@ -37,8 +37,12 @@ async function isAuthorized(request: Request): Promise<boolean> {
   if (bearer) {
     try {
       const decoded = await adminAuth().verifyIdToken(bearer);
-      const email = decoded.email?.toLowerCase();
-      if (email && getAdminEmails().includes(email)) {
+      if (
+        isAdminUser({
+          uid: decoded.uid,
+          email: decoded.email ?? null,
+        })
+      ) {
         return true;
       }
     } catch {

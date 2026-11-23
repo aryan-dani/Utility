@@ -19,6 +19,25 @@ export function getAdminEmails(): string[] {
     .filter(Boolean);
 }
 
+/** Uid allowlist for Google logins that never expose an email to Firebase. */
+export function getAdminUids(): string[] {
+  const raw = process.env.ADMIN_UIDS || "";
+  return raw
+    .split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
+}
+
+/** True when email or uid is on the corresponding allowlist. */
+export function isAdminUser(user: {
+  uid: string;
+  email?: string | null;
+}): boolean {
+  if (getAdminUids().includes(user.uid)) return true;
+  const email = user.email?.trim().toLowerCase();
+  return !!email && getAdminEmails().includes(email);
+}
+
 export function isAuthFailure(
   result: AuthedUser | NextResponse,
 ): result is NextResponse {
@@ -82,15 +101,14 @@ export async function requireRecentUser(
   return user;
 }
 
-/** Require a signed-in user whose email is on the admin allowlist. */
+/** Require a signed-in user on the email or uid admin allowlist. */
 export async function requireAdmin(
   request: Request,
 ): Promise<AuthedUser | NextResponse> {
   const user = await requireUser(request);
   if (isAuthFailure(user)) return user;
 
-  const email = user.email?.toLowerCase();
-  if (!email || !getAdminEmails().includes(email)) {
+  if (!isAdminUser(user)) {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

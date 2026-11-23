@@ -1,5 +1,5 @@
 import { createMiddleware } from "hono/factory";
-import { adminEmails } from "../../lib/env.js";
+import { isAdminAccount } from "../../lib/env.js";
 import { secretsEqual } from "../../lib/crypto.js";
 import { env } from "../../lib/env.js";
 import { verifyIdToken, type AuthedUser } from "../../lib/firebase.js";
@@ -41,8 +41,7 @@ export const requireAdmin = createMiddleware<AppVars>(async (c, next) => {
   }
   const user = await verifyIdToken(auth.slice(7).trim());
   if (!user) return c.json({ error: "Unauthorized" }, 401);
-  const email = user.email?.toLowerCase();
-  if (!email || !adminEmails().includes(email)) {
+  if (!isAdminAccount(user)) {
     return c.json({ error: "Forbidden" }, 403);
   }
   c.set("user", user);

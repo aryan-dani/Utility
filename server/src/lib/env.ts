@@ -20,6 +20,7 @@ const schema = z.object({
   GOOGLE_CLIENT_SECRET: z.string().optional(),
   GOOGLE_REFRESH_TOKEN: z.string().optional(),
   ADMIN_EMAILS: z.string().default(""),
+  ADMIN_UIDS: z.string().default(""),
   VERCEL_REVALIDATE_URL: z.string().url().optional().or(z.literal("")),
   CRON_SECRET: z.string().optional(),
   FILES_ROOT: z.string().default("/data/files"),
@@ -58,4 +59,20 @@ export function adminEmails(): string[] {
     .ADMIN_EMAILS.split(",")
     .map((e) => e.trim().toLowerCase())
     .filter(Boolean);
+}
+
+export function adminUids(): string[] {
+  return env()
+    .ADMIN_UIDS.split(",")
+    .map((u) => u.trim())
+    .filter(Boolean);
+}
+
+export function isAdminAccount(user: {
+  uid: string;
+  email?: string | null;
+}): boolean {
+  if (adminUids().includes(user.uid)) return true;
+  const email = user.email?.trim().toLowerCase();
+  return !!email && adminEmails().includes(email);
 }

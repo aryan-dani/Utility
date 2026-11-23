@@ -11,6 +11,8 @@ vi.mock("@/lib/firebaseAdmin", () => ({
 
 import {
   getAdminEmails,
+  getAdminUids,
+  isAdminUser,
   isAuthFailure,
   requireUser,
   requireAdmin,
@@ -135,19 +137,49 @@ describe("requireRecentUser", () => {
   });
 });
 
+describe("getAdminUids / isAdminUser", () => {
+  const originalEmails = process.env.ADMIN_EMAILS;
+  const originalUids = process.env.ADMIN_UIDS;
+
+  afterEach(() => {
+    process.env.ADMIN_EMAILS = originalEmails;
+    process.env.ADMIN_UIDS = originalUids;
+  });
+
+  it("parses ADMIN_UIDS", () => {
+    process.env.ADMIN_UIDS = " uid-1 , uid-2 ";
+    expect(getAdminUids()).toEqual(["uid-1", "uid-2"]);
+  });
+
+  it("matches email or uid allowlist", () => {
+    process.env.ADMIN_EMAILS = "admin@example.com";
+    process.env.ADMIN_UIDS = "VzI1v6Epg8hkiomx0CJ0mPl7ijR2";
+    expect(
+      isAdminUser({ uid: "VzI1v6Epg8hkiomx0CJ0mPl7ijR2", email: null }),
+    ).toBe(true);
+    expect(isAdminUser({ uid: "other", email: "Admin@Example.com" })).toBe(
+      true,
+    );
+    expect(isAdminUser({ uid: "other", email: null })).toBe(false);
+  });
+});
+
 describe("requireAdmin", () => {
-  const original = process.env.ADMIN_EMAILS;
+  const originalEmails = process.env.ADMIN_EMAILS;
+  const originalUids = process.env.ADMIN_UIDS;
 
   beforeEach(() => {
     verifyIdToken.mockReset();
     process.env.ADMIN_EMAILS = "admin@example.com";
+    process.env.ADMIN_UIDS = "VzI1v6Epg8hkiomx0CJ0mPl7ijR2";
   });
 
   afterEach(() => {
-    process.env.ADMIN_EMAILS = original;
+    process.env.ADMIN_EMAILS = originalEmails;
+    process.env.ADMIN_UIDS = originalUids;
   });
 
-  it("returns 403 when email is not in ADMIN_EMAILS", async () => {
+  it("returns 403 when email is not in ADMIN_EMAILS and uid is not listed", async () => {
     verifyIdToken.mockResolvedValueOnce({
       uid: "u1",
       email: "user@example.com",
@@ -161,7 +193,7 @@ describe("requireAdmin", () => {
     if (isAuthFailure(res)) expect(res.status).toBe(403);
   });
 
-  it("returns user when admin", async () => {
+  it("returns user when email is admin", async () => {
     verifyIdToken.mockResolvedValueOnce({
       uid: "a1",
       email: "Admin@Example.com",
@@ -175,6 +207,24 @@ describe("requireAdmin", () => {
     expect(result).toEqual({
       uid: "a1",
       email: "Admin@Example.com",
+      authTime: 0,
+    });
+  });
+
+  it("returns user when uid is on ADMIN_UIDS even without email", async () => {
+    verifyIdToken.mockResolvedValueOnce({
+      uid: "VzI1v6Epg8hkiomx0CJ0mPl7ijR2",
+      email: undefined,
+    });
+    const result = await requireAdmin(
+      new Request("http://localhost/api", {
+        headers: { Authorization: "Bearer good" },
+      }),
+    );
+    expect(isAuthFailure(result)).toBe(false);
+    expect(result).toEqual({
+      uid: "VzI1v6Epg8hkiomx0CJ0mPl7ijR2",
+      email: null,
       authTime: 0,
     });
   });

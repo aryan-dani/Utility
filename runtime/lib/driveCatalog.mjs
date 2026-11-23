@@ -175,6 +175,7 @@ function resourceUnchanged(existing, payload) {
  *   prunePrefix?: string|null,
  *   updateStats?: 'full'|'bump'|'none',
  *   subjectFilter?: string|null,
+ *   previews?: boolean,
  * }} [options]
  */
 export async function upsertResources(files, options = {}) {
@@ -185,6 +186,7 @@ export async function upsertResources(files, options = {}) {
     prunePrefix = null,
     updateStats = "none",
     subjectFilter = null,
+    previews = true,
   } = options;
 
   const filter = subjectFilter ? String(subjectFilter).trim().toLowerCase() : null;
@@ -392,7 +394,7 @@ export async function upsertResources(files, options = {}) {
 
   await flush();
 
-  if (!dryRun && previewJobs.length > 0) {
+  if (!dryRun && previews && previewJobs.length > 0) {
     console.log(`\n📝 Storing ${previewJobs.length} in-app text preview(s)…`);
     for (const job of previewJobs) {
       try {
@@ -410,6 +412,10 @@ export async function upsertResources(files, options = {}) {
         console.warn(`  ⚠️  ${job.fileName}: ${err.message}`);
       }
     }
+  } else if (!dryRun && !previews && previewJobs.length > 0) {
+    console.log(
+      `\n⏭️  Skipping ${previewJobs.length} text preview(s) (previews=false).`,
+    );
   }
 
   // Prune
