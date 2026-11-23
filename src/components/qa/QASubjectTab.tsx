@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
-import { Plus, Loader2, MessageCircle } from "lucide-react";
+import { Plus, Loader2, MessageCircle, LogIn } from "lucide-react";
 import { auth } from "@/lib/firebase/auth";
+import { onAuthStateChanged } from "firebase/auth";
 import { qaFetch as authFetch } from "@/lib/homeApi";
 import { notify } from "@/lib/toast";
 import { useAcademicStore } from "@/store/academicStore";
 import { Button, EmptyState } from "@/components/ui";
+import { ButtonLink } from "@/components/ui/ButtonLink";
 import type {
   QAQuestion,
   QuestionCategory,
@@ -33,6 +35,10 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
   const [questions, setQuestions] = useState<QAQuestion[]>([]);
   const [loading, setLoading] = useState(true);
   const [composerOpen, setComposerOpen] = useState(false);
+  const [signedIn, setSignedIn] = useState(() => Boolean(auth.currentUser));
+  const [currentUid, setCurrentUid] = useState<string | null>(
+    () => auth.currentUser?.uid ?? null,
+  );
   const [activeThreadId, setActiveThreadId] = useState<string | null>(() => {
     if (typeof window === "undefined") return null;
     return new URLSearchParams(window.location.search).get("thread");
@@ -47,7 +53,17 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
   const [userVotes, setUserVotes] = useState<Record<string, VoteValue | null>>({});
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
   const { isAdmin } = useAdminStatus();
-  const currentUid = auth.currentUser?.uid ?? null;
+
+  useEffect(() => {
+    return onAuthStateChanged(auth, (user) => {
+      setSignedIn(Boolean(user));
+      setCurrentUid(user?.uid ?? null);
+      if (!user) {
+        setQuestions([]);
+        setLoading(false);
+      }
+    });
+  }, []);
 
   const applyViewerState = (next: QAQuestion[]) => {
     const votes: Record<string, VoteValue | null> = {};
@@ -61,6 +77,11 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
   };
 
   const fetchQuestions = useCallback(async (showLoading = false) => {
+    if (!auth.currentUser) {
+      setQuestions([]);
+      setLoading(false);
+      return;
+    }
     if (showLoading) setLoading(true);
     try {
       const params = new URLSearchParams({
@@ -85,6 +106,8 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
   }, [academicYear, branch, semester, subjectName, resourceId]);
 
   useEffect(() => {
+    if (!signedIn) return;
+
     let active = true;
     const params = new URLSearchParams({
       academic_year: academicYear,
@@ -94,7 +117,7 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
     });
     if (resourceId) params.set("resource_id", resourceId);
 
-    authFetch(`/api/qa/questions?${params}`)
+    void authFetch(`/api/qa/questions?${params}`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((json) => {
         if (active) {
@@ -114,7 +137,7 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
     return () => {
       active = false;
     };
-  }, [academicYear, branch, semester, subjectName, resourceId]);
+  }, [signedIn, academicYear, branch, semester, subjectName, resourceId]);
 
   const handleCreateQuestion = async (data: {
     subject_name: string;
@@ -240,6 +263,30 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
     return rankQuestions(result);
   }, [questions, categoryFilter, statusFilter, searchQuery]);
 
+  if (!signedIn) {
+    return (
+      <EmptyState
+        icon={<LogIn className="w-10 h-10" />}
+        title="Sign in to view the doubt board"
+        description="Questions and answers stay behind an account so posts stay accountable. Browse notes freely — sign in only to ask or reply."
+        action={
+          <ButtonLink
+            href={`/login?redirectTo=${encodeURIComponent(
+              typeof window !== "undefined"
+                ? `${window.location.pathname}${window.location.search}`
+                : "/resources",
+            )}`}
+            variant="primary"
+            size="sm"
+            className="rounded-xl"
+          >
+            Sign in
+          </ButtonLink>
+        }
+      />
+    );
+  }
+
   if (activeThreadId) {
     return (
       <div className="py-2">
@@ -275,13 +322,7 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
         <Button
           variant="primary"
           size="sm"
-          onClick={() => {
-            if (!auth.currentUser) {
-              notify.error("Sign in to ask a question.");
-              return;
-            }
-            setComposerOpen(true);
-          }}
+          onClick={() => setComposerOpen(true)}
           className="rounded-xl shrink-0"
         >
           <Plus className="w-4 h-4" />

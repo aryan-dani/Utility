@@ -18,15 +18,19 @@ const AUTH_OFFLINE_TIMEOUT_MS = 2500;
 
 /**
  * Gate write / accountability surfaces (QA, Ask, planner, notes, clipboard,
- * SRS, community, profile, admin). Read-only vault tools stay public.
+ * SRS, community, profile, admin). Read-only vault tools stay public and never
+ * block paint on a Firebase Auth round-trip.
  */
 export function AuthGate({ children }: { children: ReactNode }) {
   const pathname = normalizePathname(usePathname());
   const router = useRouter();
-  const [ready, setReady] = useState(false);
-  const [uid, setUid] = useState<string | null>(null);
+  const publicPage = isPublicPath(pathname) || isAuthPage(pathname);
+  /** `undefined` = still resolving; only used on private routes. */
+  const [uid, setUid] = useState<string | null | undefined>(undefined);
 
   useEffect(() => {
+    if (publicPage) return;
+
     let cancelled = false;
     let finished = false;
     let unsub = () => {};
@@ -36,7 +40,6 @@ export function AuthGate({ children }: { children: ReactNode }) {
       if (cancelled || finished) return;
       finished = true;
       setUid(nextUid);
-      setReady(true);
     };
 
     void (async () => {
@@ -68,10 +71,10 @@ export function AuthGate({ children }: { children: ReactNode }) {
       window.clearTimeout(timer);
       unsub();
     };
-  }, []);
+  }, [publicPage]);
 
-  const publicPage = isPublicPath(pathname) || isAuthPage(pathname);
-  const locked = ready && !uid && !publicPage;
+  const ready = publicPage || uid !== undefined;
+  const locked = ready && !publicPage && !uid;
 
   useEffect(() => {
     if (!locked) return;
@@ -79,7 +82,8 @@ export function AuthGate({ children }: { children: ReactNode }) {
     router.replace(`/login?redirectTo=${encodeURIComponent(next)}`);
   }, [locked, pathname, router]);
 
-  const onboarding = uid ? <OnboardingStory /> : null;
+  const onboarding =
+    !publicPage && typeof uid === "string" ? <OnboardingStory /> : null;
 
   return (
     <>

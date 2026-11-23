@@ -37,7 +37,6 @@ import {
   matchCachedDriveFile,
 } from "@/lib/driveFileCache";
 import { nativeFileUrl } from "@/lib/utilityServer";
-import { authFetch } from "@/lib/authFetch";
 import { useIsClient } from "@/lib/clientHooks";
 import { WindowChrome, IconButton } from "@/components/ui";
 import { StudyCompanion } from "@/components/resources/StudyCompanion";
@@ -275,7 +274,7 @@ export default function ResourceViewer({
           }
           let stored: string | null = null;
           try {
-            const previewRes = await authFetch(
+            const previewRes = await fetch(
               `/api/resources/text?id=${encodeURIComponent(resource.id)}`,
               { signal: abort.signal },
             );
