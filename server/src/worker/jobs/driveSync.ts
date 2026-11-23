@@ -356,6 +356,50 @@ async function revalidateVercel(): Promise<void> {
   }
 }
 
+type ExistingResource = {
+  driveFileId: string | null;
+  driveModifiedAt: Date | null;
+  native: { hash?: string; ext?: string } | null;
+};
+
+async function loadExistingResources(
+  db: ReturnType<typeof getDb>,
+): Promise<Map<string, ExistingResource>> {
+  const rows = await db
+    .select({
+      id: resources.id,
+      driveFileId: resources.driveFileId,
+      driveModifiedAt: resources.driveModifiedAt,
+      native: resources.native,
+    })
+    .from(resources);
+  return new Map(rows.map((r) => [r.id, r]));
+}
+
+/** True when the stored row matches the Drive version and the mirrored file is on disk. */
+async function isUnchanged(
+  prev: ExistingResource | undefined,
+  file: { id: string; modifiedTime?: string | null },
+  rid: string,
+  filesRoot: string,
+): Promise<boolean> {
+  if (!prev || prev.driveFileId !== file.id) return false;
+  if (!prev.native?.hash || !prev.native?.ext) return false;
+  if (!file.modifiedTime) return false;
+  const storedMs = prev.driveModifiedAt ? prev.driveModifiedAt.getTime() : null;
+  if (storedMs === null || storedMs !== new Date(file.modifiedTime).getTime()) {
+    return false;
+  }
+  try {
+    await access(
+      join(filesRoot, "r", rid, `${prev.native.hash}.${prev.native.ext}`),
+    );
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
   const folderId = env().GOOGLE_DRIVE_FOLDER_ID;
   if (!folderId) {
@@ -367,8 +411,15 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
   const filesRoot = env().FILES_ROOT;
   await mkdir(filesRoot, { recursive: true });
   const db = getDb();
+  // Incremental runs skip files whose Drive version and mirrored copy are unchanged.
+  // Full runs reprocess everything (repair mode).
+  const existing =
+    payload.mode === "incremental"
+      ? await loadExistingResources(db)
+      : new Map<string, ExistingResource>();
 
   let mirrored = 0;
+  let unchanged = 0;
   let pathSkipped = 0;
   let downloadFailed = 0;
   for (const file of files) {
@@ -378,6 +429,13 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
       continue;
     }
     const rid = resourceIdFromPath(file.path);
+    if (
+      payload.mode === "incremental" &&
+      (await isUnchanged(existing.get(rid), file, rid, filesRoot))
+    ) {
+      unchanged += 1;
+      continue;
+    }
     const subjectId = subjectIdFromParts(
       parsed.academicYear,
       parsed.branch,
@@ -609,6 +667,6 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
   }
 
   console.log(
-    `drive.sync ${payload.mode}: listed=${files.length} mirrored=${mirrored} pathSkipped=${pathSkipped} downloadFailed=${downloadFailed}`,
+    `drive.sync ${payload.mode}: listed=${files.length} mirrored=${mirrored} unchanged=${unchanged} pathSkipped=${pathSkipped} downloadFailed=${downloadFailed}`,
   );
 }
