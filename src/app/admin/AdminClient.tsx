@@ -217,8 +217,25 @@ export default function AdminClient({
     });
   }, [usersList, userSearch, userActiveFilter]);
 
+  const fetchHomeHealth = useCallback(async () => {
+    const res = await utilityFetch("/v1/admin/status");
+    if (!res?.ok) {
+      setHomeHealth("Home server offline");
+      return;
+    }
+    const data = (await res.json()) as {
+      lastSyncAt?: string | null;
+      ragChunkCount?: string | null;
+      diskFreeRatio?: number | null;
+      lastBackupAt?: string | null;
+    };
+    setHomeHealth(
+      `Last sync ${data.lastSyncAt ?? "never"} · chunks ${data.ragChunkCount ?? "—"} · backup ${data.lastBackupAt ?? "—"} · disk free ${data.diskFreeRatio ?? "—"}`,
+    );
+  }, []);
+
   useEffect(() => {
-    if (tab !== "overview") return;
+    if (!isAdmin || tab !== "overview") return;
     let cancelled = false;
     void utilityFetch("/v1/admin/status").then(async (res) => {
       if (cancelled) return;
@@ -232,6 +249,7 @@ export default function AdminClient({
         diskFreeRatio?: number | null;
         lastBackupAt?: string | null;
       };
+      if (cancelled) return;
       setHomeHealth(
         `Last sync ${data.lastSyncAt ?? "never"} · chunks ${data.ragChunkCount ?? "—"} · backup ${data.lastBackupAt ?? "—"} · disk free ${data.diskFreeRatio ?? "—"}`,
       );
@@ -239,7 +257,7 @@ export default function AdminClient({
     return () => {
       cancelled = true;
     };
-  }, [tab]);
+  }, [isAdmin, tab]);
 
   const fetchUsers = useCallback(async () => {
     await Promise.resolve();
@@ -566,7 +584,10 @@ export default function AdminClient({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => void fetchStats()}
+            onClick={() => {
+              void fetchStats();
+              void fetchHomeHealth();
+            }}
             disabled={loadingStats}
             className="sm:ml-auto"
           >
