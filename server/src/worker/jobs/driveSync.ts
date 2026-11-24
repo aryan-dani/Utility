@@ -22,7 +22,8 @@ import { env } from "../../lib/env.js";
 import { adminDb } from "../../lib/firebase.js";
 import { embedBatch } from "../../lib/embed.js";
 import { syncCatalogs } from "../../lib/catalogSync.js";
-import { CHUNK_TARGET_CHARS, CHUNK_OVERLAP_CHARS } from "../../lib/ragConfig.js";
+import { chunkText } from "../../lib/textChunks.js";
+import { indexPdfBuffer } from "../../lib/pdfIndex.js";
 
 export type DriveSyncPayload = { mode: "incremental" | "full" };
 
@@ -35,40 +36,6 @@ function driveAuth() {
     scopes: ["https://www.googleapis.com/auth/drive.readonly"],
   });
   return google.drive({ version: "v3", auth: jwt });
-}
-
-function tokenize(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s]/g, " ")
-    .split(/\s+/)
-    .filter((t) => t.length > 1);
-}
-
-function chunkText(text: string): Array<{ text: string; tokens: string[] }> {
-  const clean = text.replace(/\u0000/g, "").trim();
-  if (!clean) return [];
-  if (clean.length <= CHUNK_TARGET_CHARS) {
-    const tokens = tokenize(clean);
-    return [{ text: clean, tokens }];
-  }
-  const sentences = clean.split(/(?<=[.!?])\s+/).filter(Boolean);
-  const chunks: Array<{ text: string; tokens: string[] }> = [];
-  let buffer = "";
-  for (const sentence of sentences) {
-    const candidate = buffer ? `${buffer} ${sentence}` : sentence;
-    if (candidate.length > CHUNK_TARGET_CHARS && buffer) {
-      chunks.push({ text: buffer.trim(), tokens: tokenize(buffer) });
-      const overlap = buffer.slice(-CHUNK_OVERLAP_CHARS);
-      buffer = overlap ? `${overlap} ${sentence}` : sentence;
-    } else {
-      buffer = candidate;
-    }
-  }
-  if (buffer.trim()) {
-    chunks.push({ text: buffer.trim(), tokens: tokenize(buffer) });
-  }
-  return chunks;
 }
 
 /** Must match runtime/lib/driveCatalog.mjs generateId (existing Firestore IDs). */
@@ -553,6 +520,24 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
         );
     } catch (err) {
       console.warn("firestore resource native update failed", rid, err);
+    }
+
+    // PDFs: extract text from the bytes already in memory so search and summaries work on home.
+    if (kind === "pdf") {
+      try {
+        await indexPdfBuffer(
+          db,
+          {
+            id: rid,
+            academicYear: parsed.academicYear,
+            branch: parsed.branch,
+            semester: parsed.semester,
+          },
+          buf,
+        );
+      } catch (err) {
+        console.warn("pdf index failed", rid, err);
+      }
     }
 
     // Index text for RAG when we can extract something cheap

@@ -41,6 +41,18 @@ internalRoutes.post("/sync", async (c) => {
   return c.json({ ok: true, jobId: id, mode });
 });
 
+/** Indexes mirrored PDFs that have no search text yet (see worker pdf.backfill). */
+internalRoutes.post("/pdf-backfill", async (c) => {
+  const body = (await c.req.json().catch(() => ({}))) as { limit?: number };
+  const boss = await getBoss();
+  const id = await boss.send(
+    "pdf.backfill",
+    { limit: body.limit },
+    { expireInSeconds: 2 * 60 * 60 },
+  );
+  return c.json({ ok: true, jobId: id });
+});
+
 /** Vercel calls this after an admin Drive upload so the vault updates without waiting for the sync. */
 internalRoutes.post("/catalog/ingest", async (c) => {
   const body = (await c.req.json().catch(() => null)) as

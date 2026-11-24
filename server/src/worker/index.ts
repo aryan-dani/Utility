@@ -5,6 +5,7 @@ import { runCachePurge } from "./jobs/cachePurge.js";
 import { runUsersReconcile } from "./jobs/usersReconcile.js";
 import { runStudyPack } from "./jobs/studyPack.js";
 import { runRagEval } from "./jobs/ragEval.js";
+import { runPdfBackfill, type PdfBackfillPayload } from "./jobs/pdfBackfill.js";
 import { closeDb } from "../db/client.js";
 
 async function main() {
@@ -21,6 +22,18 @@ async function main() {
   await boss.createQueue("catalog.publish");
   await boss.createQueue("study.pack");
   await boss.createQueue("rag.eval");
+
+  // PDF text backfill over every mirrored PDF can run long; allow two hours.
+  await boss.createQueue("pdf.backfill");
+  await boss.updateQueue("pdf.backfill", {
+    expireInSeconds: 2 * 60 * 60,
+    retryLimit: 0,
+  });
+  await boss.work("pdf.backfill", async (jobs: Job<PdfBackfillPayload>[]) => {
+    for (const job of jobs) {
+      await runPdfBackfill(job.data);
+    }
+  });
 
   await boss.work("drive.sync", async (jobs: Job<DriveSyncPayload>[]) => {
     for (const job of jobs) {
