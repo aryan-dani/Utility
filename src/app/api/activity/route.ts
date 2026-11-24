@@ -145,24 +145,10 @@ async function writeResourceOpens(
 
   if (totalOpenIncrements <= 0) return;
 
-  const last = opens[opens.length - 1];
-  const lastTitle = truncate(last?.title || "", 200);
-  const lastId = truncate(last?.id || "", 128);
-
+  // Per-user open counts are written to resource_usage above and read from the home server.
+  // The legacy users doc is no longer updated here.
   await Promise.all([
     writeActionLog(userId, "resource_open", totalOpenIncrements, today),
-    db
-      .collection("users")
-      .doc(userId)
-      .set(
-        {
-          resourceOpenCount: FieldValue.increment(totalOpenIncrements),
-          lastOpenedAt: nowIso,
-          ...(lastTitle ? { lastOpenedTitle: lastTitle } : {}),
-          ...(lastId ? { lastOpenedResourceId: lastId } : {}),
-        },
-        { merge: true },
-      ),
     db
       .collection("stats")
       .doc("usage")

@@ -45,9 +45,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Per-user profile / prefs
+    // Per-user profile / prefs. Profile and academic prefs live on the home server now;
+    // this legacy doc is read-only for its owner so stale clients cannot keep writing it.
     match /users/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow write: if false;
     }
 
     // Spaced-repetition decks (doc id = uid)

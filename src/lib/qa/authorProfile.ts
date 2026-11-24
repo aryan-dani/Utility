@@ -1,4 +1,4 @@
-import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth } from "@/lib/firebaseAdmin";
 
 export type QaAuthorProfile = {
   author_name: string;
@@ -27,7 +27,10 @@ function cleanPhoto(value: unknown): string | null {
   return null;
 }
 
-/** Resolve display name + photo for a signed-in user (Firestore prefs, then Auth). */
+/**
+ * Resolve display name + photo for a signed-in user. Firebase Auth is the source: profile
+ * edits update it, and the legacy Firestore users doc is no longer written.
+ */
 export async function resolveAuthorProfile(
   uid: string,
   email?: string | null,
@@ -36,27 +39,14 @@ export async function resolveAuthorProfile(
   let author_photo_url: string | null = null;
 
   try {
-    const snap = await adminDb().collection("users").doc(uid).get();
-    if (snap.exists) {
-      const data = snap.data() || {};
-      author_name = cleanName(data.displayName);
-      author_photo_url = cleanPhoto(data.photoURL);
+    const user = await adminAuth().getUser(uid);
+    author_name = cleanName(user.displayName);
+    author_photo_url = cleanPhoto(user.photoURL);
+    if (!author_name) {
+      author_name = cleanName(user.email?.split("@")[0]);
     }
   } catch {
-    // Fall through to Auth
-  }
-
-  if (!author_name || !author_photo_url) {
-    try {
-      const user = await adminAuth().getUser(uid);
-      author_name = author_name || cleanName(user.displayName);
-      author_photo_url = author_photo_url || cleanPhoto(user.photoURL);
-      if (!author_name) {
-        author_name = cleanName(user.email?.split("@")[0]);
-      }
-    } catch {
-      // ignore
-    }
+    // ignore: fall back to the email prefix below
   }
 
   if (!author_name) {

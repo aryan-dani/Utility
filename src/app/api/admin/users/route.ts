@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { adminAuth, adminDb } from "@/lib/firebaseAdmin";
 import {
   isAdminUser,
   isAuthFailure,
@@ -51,12 +51,18 @@ export async function DELETE(request: Request) {
   try {
     const db = adminDb();
     const userRef = db.collection("users").doc(uid);
-    const userSnap = await userRef.get();
-    if (!userSnap.exists) {
+    // Auth is the source for email now; users who signed in after the move have no legacy doc.
+    const [userSnap, authUser] = await Promise.all([
+      userRef.get(),
+      adminAuth()
+        .getUser(uid)
+        .catch(() => null),
+    ]);
+    if (!userSnap.exists && !authUser) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const email = String(userSnap.data()?.email || "")
+    const email = String(authUser?.email || userSnap.data()?.email || "")
       .trim()
       .toLowerCase();
     if (isAdminUser({ uid, email: email || null })) {
