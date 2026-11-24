@@ -9,7 +9,7 @@ import { ChevronDown, LogOut, User, UserPlus } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import type { AcademicYear, Branch, Semester } from "@/store/academicStore";
 import { clearLocalUserData } from "@/lib/localUserData";
-import { syncProfileOncePerDay } from "@/lib/profileSync";
+import { fetchHomeProfile, syncProfileToHome, type ProfileSyncFields } from "@/lib/profileSync";
 import { useAcademicStore } from "@/store/academicStore";
 import { useMotionSafe } from "@/lib/motion";
 import {
@@ -81,14 +81,11 @@ export default function NavUserMenu({
     let unsubscribe = () => {};
 
     void (async () => {
-      const [{ auth }, { onIdTokenChanged }, { db }, firestore] = await Promise.all([
+      const [{ auth }, { onIdTokenChanged }] = await Promise.all([
         import("@/lib/firebase/auth"),
         import("firebase/auth"),
-        import("@/lib/firebase/db"),
-        import("firebase/firestore"),
       ]);
       if (cancelled) return;
-      const { doc, getDoc, setDoc } = firestore;
 
       void auth.authStateReady().then(() => {
         if (!cancelled) setAuthResolved(true);
@@ -105,15 +102,12 @@ export default function NavUserMenu({
         setUser(next);
         onUserChange?.(next);
 
-        const userPrefsRef = doc(db, "users", firebaseUser.uid);
-        getDoc(userPrefsRef)
-          .then(async (snap) => {
-            const isGoogle = firebaseUser.providerData.some(
-              (p) => p.providerId === "google.com",
-            );
-            const isGithub = firebaseUser.providerData.some(
-              (p) => p.providerId === "github.com",
-            );
+        void fetchHomeProfile()
+          .then(async (prefs) => {
+            // Home unreachable: keep the local workspace and try again on the next sign-in.
+            if (!prefs) return;
+            const isGoogle = firebaseUser.providerData.some((p) => p.providerId === "google.com");
+            const isGithub = firebaseUser.providerData.some((p) => p.providerId === "github.com");
             const provider = isGoogle
               ? "Google Account"
               : isGithub
@@ -121,7 +115,6 @@ export default function NavUserMenu({
                 : "Email Account";
 
             const updateData: Record<string, unknown> = {
-              uid: firebaseUser.uid,
               email: firebaseUser.email || "",
               photoURL: firebaseUser.photoURL || "",
               displayName:
@@ -131,34 +124,22 @@ export default function NavUserMenu({
               provider,
             };
 
-            const existingLastActive =
-              snap.exists() && typeof snap.data()?.lastActive === "string"
-                ? snap.data()!.lastActive
-                : null;
-            const lastActiveMs = existingLastActive
-              ? new Date(existingLastActive).getTime()
-              : 0;
+            const lastActiveMs = prefs.lastActive ? new Date(prefs.lastActive).getTime() : 0;
             const DAY_MS = 24 * 60 * 60 * 1000;
-            if (
-              !Number.isFinite(lastActiveMs) ||
-              Date.now() - lastActiveMs >= DAY_MS
-            ) {
+            if (!Number.isFinite(lastActiveMs) || Date.now() - lastActiveMs >= DAY_MS) {
               updateData.lastActive = new Date().toISOString();
             }
 
-            if (snap.exists()) {
-              const data = snap.data();
-              const prefBranch = parseBranch(
-                (data.branch as string | undefined) || null,
-              );
-              const prefSemester = parseSemester(data.semester as number | null);
+            if (prefs.exists) {
+              const prefBranch = parseBranch(prefs.branch ?? null);
+              const prefSemester = parseSemester(prefs.semester ?? null);
               const migrated = migrateWorkspacePrefs({
-                academicYear: data.academic_year as string | undefined,
+                academicYear: prefs.academicYear ?? undefined,
                 branch: prefBranch,
                 semester: prefSemester,
                 scopeVersion:
-                  typeof data.workspace_scope_version === "number"
-                    ? data.workspace_scope_version
+                  typeof prefs.workspaceScopeVersion === "number"
+                    ? prefs.workspaceScopeVersion
                     : null,
               });
 
@@ -180,43 +161,37 @@ export default function NavUserMenu({
                 updateData.academic_year = migrated.academicYear;
                 updateData.workspace_scope_version = WORKSPACE_SCOPE_VERSION;
               } else if (
-                typeof data.workspace_scope_version !== "number" ||
-                data.workspace_scope_version < WORKSPACE_SCOPE_VERSION
+                typeof prefs.workspaceScopeVersion !== "number" ||
+                prefs.workspaceScopeVersion < WORKSPACE_SCOPE_VERSION
               ) {
                 updateData.workspace_scope_version = WORKSPACE_SCOPE_VERSION;
               }
 
-              const existing = data;
-              const profileUnchanged =
-                existing.uid === updateData.uid &&
-                existing.email === updateData.email &&
-                existing.photoURL === updateData.photoURL &&
-                existing.displayName === updateData.displayName &&
-                existing.provider === updateData.provider &&
+              const unchanged =
+                prefs.email === updateData.email &&
+                prefs.photoURL === updateData.photoURL &&
+                prefs.displayName === updateData.displayName &&
+                prefs.provider === updateData.provider &&
                 !("lastActive" in updateData) &&
                 !("academic_year" in updateData) &&
                 !("workspace_scope_version" in updateData);
-              if (!profileUnchanged) {
-                await setDoc(userPrefsRef, updateData, { merge: true });
-              }
+              if (unchanged) return;
             } else {
               updateData.lastActive = new Date().toISOString();
-              await setDoc(userPrefsRef, updateData, { merge: true });
             }
-            const merged: Record<string, unknown> = {
-              ...(snap.exists() ? snap.data() : {}),
-              ...updateData,
+
+            const sync: ProfileSyncFields = {
+              displayName: String(updateData.displayName),
+              email: String(updateData.email),
+              photoURL: String(updateData.photoURL),
+              provider: String(updateData.provider),
             };
-            syncProfileOncePerDay(firebaseUser.uid, {
-              displayName: String(merged.displayName ?? ""),
-              email: String(merged.email ?? ""),
-              photoURL: String(merged.photoURL ?? ""),
-              provider: String(merged.provider ?? ""),
-              branch: typeof merged.branch === "string" ? merged.branch : null,
-              semester: typeof merged.semester === "number" ? merged.semester : null,
-              lastActive:
-                typeof merged.lastActive === "string" ? merged.lastActive : undefined,
-            });
+            if (typeof updateData.lastActive === "string") sync.lastActive = updateData.lastActive;
+            if (typeof updateData.academic_year === "string") sync.academic_year = updateData.academic_year;
+            if (typeof updateData.workspace_scope_version === "number") {
+              sync.workspace_scope_version = updateData.workspace_scope_version;
+            }
+            await syncProfileToHome(sync);
           })
           .catch((err) => {
             console.error("Error syncing user preferences:", err);

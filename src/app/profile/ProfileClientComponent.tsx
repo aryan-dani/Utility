@@ -4,7 +4,6 @@ import Image from "next/image";
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { auth } from "@/lib/firebase/auth";
-import { db } from "@/lib/firebase/db";
 import { updateProfile, type User as FirebaseUser, type UserInfo } from "firebase/auth";
 import { FirebaseError } from "firebase/app";
 import {
@@ -17,12 +16,11 @@ import {
   markPendingAccountDelete,
   takePendingAccountDelete,
 } from "@/lib/firebaseAuth";
-import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useAcademicStore, AcademicYear, Branch, Semester } from "@/store/academicStore";
 import { DEFAULT_ACADEMIC_YEAR, DEFAULT_SEMESTER, workspaceQuery } from "@/lib/workspace";
 import { BRANCH_OPTIONS_LONG, isAcademicYear } from "@/lib/academic/scope";
 import { notify } from "@/lib/toast";
-import { syncProfileToHome } from "@/lib/profileSync";
+import { fetchHomeProfile, syncProfileToHome } from "@/lib/profileSync";
 import { describeError } from "@/lib/errors";
 import { authFetch } from "@/lib/authFetch";
 import { clearLocalUserData } from "@/lib/localUserData";
@@ -228,38 +226,29 @@ export default function ProfileClientComponent() {
       setPhotoURL(user.photoURL || "");
       setTempPhotoUrl(user.photoURL || "");
 
-      // Fetch academic preferences from Firestore (or fallback to Zustand store)
+      // Academic preferences come from the home server. If home is unreachable or there is
+      // no saved profile yet, fall back to the current store settings.
       try {
-        const userPrefsRef = doc(db, "users", user.uid);
-        const snap = await getDoc(userPrefsRef);
-        if (snap.exists()) {
-          const data = snap.data();
-          if (data.academic_year && isAcademicYear(data.academic_year)) {
-            setSelectedAcademicYear(data.academic_year);
-          } else {
-            setSelectedAcademicYear(workspaceRef.current.academicYear);
-          }
-          if (data.branch) {
-            setSelectedBranch(data.branch as Branch);
-          } else {
-            setSelectedBranch(workspaceRef.current.branch);
-          }
-          if (data.semester) {
-            setSelectedSemester(data.semester as Semester);
-          } else {
-            setSelectedSemester(workspaceRef.current.semester);
-          }
-          if (typeof data.updatedAt === "string") {
-            setLastSavedAt(data.updatedAt);
-          }
+        const profile = await fetchHomeProfile();
+        const saved = profile?.exists ? profile : null;
+        if (saved?.academicYear && isAcademicYear(saved.academicYear)) {
+          setSelectedAcademicYear(saved.academicYear);
         } else {
-          // If no doc, match the current store settings
           setSelectedAcademicYear(workspaceRef.current.academicYear);
+        }
+        if (saved?.branch) {
+          setSelectedBranch(saved.branch as Branch);
+        } else {
           setSelectedBranch(workspaceRef.current.branch);
+        }
+        if (saved?.semester) {
+          setSelectedSemester(saved.semester as Semester);
+        } else {
           setSelectedSemester(workspaceRef.current.semester);
         }
-      } catch (err) {
-        console.error("Error fetching academic preferences:", err);
+        if (saved?.updatedAt) {
+          setLastSavedAt(saved.updatedAt);
+        }
       } finally {
         setLoading(false);
       }
@@ -319,33 +308,17 @@ export default function ProfileClientComponent() {
             photoURL: photoURL.trim() || null,
           });
 
-          const userPrefsRef = doc(db, "users", currentUser.uid);
-          await setDoc(
-            userPrefsRef,
-            {
-              uid: currentUser.uid,
-              email: currentUser.email || "",
-              displayName: displayName.trim() || currentUser.email?.split("@")[0] || "Student",
-              photoURL: photoURL.trim() || "",
-              provider: providerLabel,
-              academic_year: selectedAcademicYear,
-              branch: selectedBranch,
-              semester: Number(selectedSemester),
-              updatedAt: new Date().toISOString(),
-              lastActive: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-
-          void syncProfileToHome({
+          const saved = await syncProfileToHome({
             displayName: displayName.trim() || currentUser.email?.split("@")[0] || "Student",
             email: currentUser.email || "",
             photoURL: photoURL.trim() || "",
             provider: providerLabel,
+            academic_year: selectedAcademicYear,
             branch: selectedBranch,
             semester: Number(selectedSemester),
             lastActive: new Date().toISOString(),
           });
+          if (!saved) throw new Error("Profile save failed");
 
           setAcademicYear(selectedAcademicYear);
           setBranch(selectedBranch);

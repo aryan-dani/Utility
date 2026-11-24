@@ -10,6 +10,7 @@ import {
   resourceContent,
   resourceTotals,
   resourceUsage,
+  userProfiles,
   visualizeTelemetry,
 } from "../../db/schema.js";
 import { env } from "../../lib/env.js";
@@ -355,6 +356,27 @@ v1Routes.post("/planner/parse", async (c) => {
     console.error("planner/parse", err);
     return c.json({ error: "Failed to parse prompt with AI" }, 500);
   }
+});
+
+/** The caller's own profile and academic preferences (the Firestore `users` doc replacement). */
+v1Routes.get("/profile", async (c) => {
+  const uid = c.get("user").uid;
+  const [row] = await getDb().select().from(userProfiles).where(eq(userProfiles.uid, uid)).limit(1);
+  if (!row) return c.json({ exists: false });
+  return c.json({
+    exists: true,
+    displayName: row.displayName,
+    email: row.email,
+    photoURL: row.photoUrl,
+    provider: row.provider,
+    branch: row.branch,
+    semester: row.semester,
+    academicYear: row.academicYear,
+    workspaceScopeVersion: row.workspaceScopeVersion,
+    onboardingCompletedAt: row.onboardingCompletedAt?.toISOString() ?? null,
+    lastActive: row.lastActiveAt?.toISOString() ?? null,
+    updatedAt: row.updatedAt?.toISOString() ?? null,
+  });
 });
 
 /** Keeps the admin profile mirror current. Upsert of the caller's own row only. */

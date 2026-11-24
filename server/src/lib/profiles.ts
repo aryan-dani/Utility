@@ -13,8 +13,20 @@ export type ProfilePatch = {
   provider?: string;
   branch?: string | null;
   semester?: number | null;
+  academicYear?: string | null;
+  workspaceScopeVersion?: number | null;
+  onboardingCompletedAt?: Date | null;
   lastActiveAt?: Date | null;
 };
+
+const ACADEMIC_YEAR = /^\d{4}-\d{4}$/;
+
+/** Reads a Firestore-style or client-style timestamp into a Date, or null when empty. */
+function parseWhen(value: unknown): Date | null {
+  if (value === null || value === "" || value === undefined) return null;
+  const when = new Date(value as string);
+  return Number.isNaN(when.getTime()) ? null : when;
+}
 
 function clipText(value: unknown, max: number): string | undefined {
   return typeof value === "string" ? value.trim().slice(0, max) : undefined;
@@ -64,6 +76,27 @@ export function sanitizeProfilePatch(input: unknown): ProfilePatch {
       const when = new Date(raw);
       if (!Number.isNaN(when.getTime())) patch.lastActiveAt = when;
     }
+  }
+
+  const academicYear = src.academic_year ?? src.academicYear;
+  if (academicYear === null || academicYear === "") {
+    patch.academicYear = null;
+  } else {
+    const year = clipText(academicYear, 16);
+    if (year && ACADEMIC_YEAR.test(year)) patch.academicYear = year;
+  }
+
+  if (src.workspace_scope_version === null) {
+    patch.workspaceScopeVersion = null;
+  } else if (src.workspace_scope_version !== undefined) {
+    const version = Number(src.workspace_scope_version);
+    if (Number.isInteger(version) && version >= 0 && version <= 1000) {
+      patch.workspaceScopeVersion = version;
+    }
+  }
+
+  if (src.onboarding_completed_at !== undefined) {
+    patch.onboardingCompletedAt = parseWhen(src.onboarding_completed_at);
   }
 
   return patch;
@@ -172,6 +205,11 @@ export async function backfillProfilesFromFirestore(
       branch: d.branch || null,
       semester: d.semester ?? null,
       lastActive: d.lastActive || null,
+      academic_year: typeof d.academic_year === "string" ? d.academic_year : null,
+      workspace_scope_version:
+        typeof d.workspace_scope_version === "number" ? d.workspace_scope_version : undefined,
+      onboarding_completed_at:
+        typeof d.onboarding_completed_at === "string" ? d.onboarding_completed_at : undefined,
     });
     await upsertProfile(db, uid, patch);
     written += 1;

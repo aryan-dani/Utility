@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
-import { doc, getDoc, setDoc } from "firebase/firestore";
-import { syncProfileToHome } from "@/lib/profileSync";
+import { fetchHomeProfile, syncProfileToHome } from "@/lib/profileSync";
 import {
   BookOpen,
   Brain,
@@ -14,7 +13,6 @@ import {
   Sparkles,
 } from "lucide-react";
 import { auth } from "@/lib/firebase/auth";
-import { db } from "@/lib/firebase/db";
 import { useAcademicStore } from "@/store/academicStore";
 import {
   isAcademicYear,
@@ -114,19 +112,23 @@ export function OnboardingStory() {
       const capturedUid = user.uid;
       setUid(capturedUid);
       try {
-        const snap = await getDoc(doc(db, "users", capturedUid));
+        const profile = await fetchHomeProfile();
         if (auth.currentUser?.uid !== capturedUid) return;
-        const data = snap.data();
-        if (data?.academic_year && isAcademicYear(data.academic_year)) {
-          setYear(data.academic_year);
+        if (!profile) {
+          // Home unreachable: do not guess at onboarding; the next sign-in retries.
+          setOpen(false);
+          return;
         }
-        if (typeof data?.branch === "string" && isBranch(data.branch)) {
-          setBr(data.branch);
+        if (profile.academicYear && isAcademicYear(profile.academicYear)) {
+          setYear(profile.academicYear);
         }
-        if (typeof data?.semester === "number" && isSemester(data.semester)) {
-          setSem(data.semester);
+        if (typeof profile.branch === "string" && isBranch(profile.branch)) {
+          setBr(profile.branch);
         }
-        if (data?.onboarding_completed_at) {
+        if (typeof profile.semester === "number" && isSemester(profile.semester)) {
+          setSem(profile.semester);
+        }
+        if (profile.onboardingCompletedAt) {
           setOpen(false);
         } else {
           setKind(onboardingKindFromCreatedAt(user.metadata.creationTime));
@@ -150,25 +152,14 @@ export function OnboardingStory() {
   const persistWorkspace = async () => {
     if (!uid) return;
     const user = auth.currentUser;
-    await setDoc(
-      doc(db, "users", uid),
-      {
-        uid,
-        email: user?.email || "",
-        academic_year: year,
-        branch: br,
-        semester: Number(sem),
-        updatedAt: new Date().toISOString(),
-        lastActive: new Date().toISOString(),
-      },
-      { merge: true },
-    );
-    void syncProfileToHome({
+    const saved = await syncProfileToHome({
       email: user?.email || "",
+      academic_year: year,
       branch: br,
       semester: Number(sem),
       lastActive: new Date().toISOString(),
     });
+    if (!saved) throw new Error("Workspace save failed");
     setWorkspace(year, br, sem);
   };
 
@@ -177,11 +168,10 @@ export function OnboardingStory() {
     setSaving(true);
     try {
       await persistWorkspace();
-      await setDoc(
-        doc(db, "users", uid),
-        { onboarding_completed_at: new Date().toISOString() },
-        { merge: true },
-      );
+      const done = await syncProfileToHome({
+        onboarding_completed_at: new Date().toISOString(),
+      });
+      if (!done) throw new Error("Onboarding save failed");
       setOpen(false);
     } catch {
       notify.error("Could not save your workspace. Try again.");
