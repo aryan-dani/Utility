@@ -9,29 +9,11 @@ import {
   plannerPlans,
 } from "../db/schema.js";
 import { adminFirestore } from "./firebase.js";
+import { int, text, toDate } from "./firestoreValues.js";
 
 type Db = ReturnType<typeof getDb>;
 
 const PRODUCT_IMPORT_KEY = "product_state_v1";
-
-function toDate(value: unknown): Date | null {
-  if (value == null || value === "") return null;
-  if (typeof value === "object" && value !== null && "toDate" in value) {
-    const fn = (value as { toDate: () => Date }).toDate;
-    return typeof fn === "function" ? fn.call(value) : null;
-  }
-  const date = new Date(value as string | number);
-  return Number.isNaN(date.getTime()) ? null : date;
-}
-
-function text(value: unknown, max: number): string | null {
-  return typeof value === "string" && value.trim() ? value.trim().slice(0, max) : null;
-}
-
-function int(value: unknown, fallback: number): number {
-  const n = Number(value);
-  return Number.isInteger(n) ? n : fallback;
-}
 
 export type ProductImportResult = {
   alreadyRun: boolean;

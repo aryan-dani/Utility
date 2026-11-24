@@ -20,6 +20,7 @@ import {
   removeProfileAndUsage,
 } from "../../lib/profiles.js";
 import { importProductState } from "../../lib/productImport.js";
+import { importQa } from "../../lib/qaImport.js";
 
 export const internalRoutes = new Hono();
 
@@ -82,6 +83,12 @@ internalRoutes.post("/purge-user", async (c) => {
 /** One-time: planner, clipboard, and community data from Firestore. Refuses to run twice. */
 internalRoutes.post("/product-state/import", async (c) => {
   const result = await importProductState(getDb());
+  return c.json({ ok: true, ...result });
+});
+
+/** One-time: the Firestore Q&A board (questions, answers, votes, bookmarks). Refuses to run twice. */
+internalRoutes.post("/qa/import", async (c) => {
+  const result = await importQa(getDb());
   return c.json({ ok: true, ...result });
 });
 

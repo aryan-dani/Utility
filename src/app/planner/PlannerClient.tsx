@@ -17,7 +17,6 @@ import { MOTION } from '@/lib/motion';
 import { notify } from '@/lib/toast';
 import { Button, Modal, PageHeader, Card, Segmented, Switch, PageShell } from '@/components/ui';
 import AppLink from '@/components/ui/AppLink';
-import { authFetch } from '@/lib/authFetch';
 import { homeOrVercelJson } from '@/lib/homeApi';
 import { utilityFetch } from '@/lib/utilityServer';
 import { getSoonestUpcomingExam } from '@/lib/examCountdown';
@@ -388,12 +387,8 @@ function PromptModal({
       if (!auth.currentUser) {
         throw new Error('Please sign in to use AI plan parsing.');
       }
-      const res = await authFetch('/api/planner/parse', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ prompt: text, month, year }),
+      const res = await homeOrVercelJson('/api/planner/parse', {
+        body: { prompt: text, month, year },
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json.error || 'Failed to parse prompt');

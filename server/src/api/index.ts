@@ -5,6 +5,7 @@ import { corsMiddleware } from "./middleware/cors.js";
 import { healthRoutes } from "./routes/health.js";
 import { v1Routes } from "./routes/v1.js";
 import { adminRoutes } from "./routes/admin.js";
+import { qaRoutes } from "./routes/qa.js";
 import { stateRoutes } from "./routes/state.js";
 import { publicRoutes } from "./routes/public.js";
 import { internalRoutes } from "./routes/internal.js";
@@ -23,6 +24,7 @@ app.use(
 
 app.route("/", healthRoutes);
 app.route("/v1/admin", adminRoutes);
+app.route("/v1/qa", qaRoutes);
 app.route("/v1", v1Routes);
 app.route("/v1", stateRoutes);
 app.route("/public", publicRoutes);
