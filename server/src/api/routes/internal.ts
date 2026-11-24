@@ -16,6 +16,7 @@ import { getBoss } from "../../worker/boss.js";
 import { ingestDriveFile } from "../../lib/catalogIngest.js";
 import {
   backfillProfilesFromFirestore,
+  importFirestoreUsageHistory,
   removeProfileAndUsage,
 } from "../../lib/profiles.js";
 
@@ -75,6 +76,12 @@ internalRoutes.post("/purge-user", async (c) => {
   }
   await db.delete(qaAnswers).where(eq(qaAnswers.userId, uid));
   return c.json({ ok: true });
+});
+
+/** One-time: adds Firestore per-user open history onto Postgres usage. Refuses to run twice. */
+internalRoutes.post("/usage-history/import", async (c) => {
+  const result = await importFirestoreUsageHistory(getDb());
+  return c.json({ ok: true, ...result });
 });
 
 /** One-time copy of Firestore users into the profile mirror. Re-runnable. */

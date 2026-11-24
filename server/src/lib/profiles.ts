@@ -1,6 +1,6 @@
-import { eq } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { getDb } from "../db/client.js";
-import { resourceUsage, userProfiles } from "../db/schema.js";
+import { migrateCheckpoint, resourceUsage, userProfiles } from "../db/schema.js";
 import { adminFirestore } from "./firebase.js";
 
 type Db = ReturnType<typeof getDb>;
@@ -87,6 +87,68 @@ export async function upsertProfile(db: Db, uid: string, patch: ProfilePatch): P
 export async function removeProfileAndUsage(db: Db, uid: string): Promise<void> {
   await db.delete(resourceUsage).where(eq(resourceUsage.userId, uid));
   await db.delete(userProfiles).where(eq(userProfiles.uid, uid));
+}
+
+const USAGE_HISTORY_KEY = "resource_usage_history_v1";
+
+/**
+ * One-time: adds the all-time per-user open counts from Firestore `resource_usage`
+ * onto the Postgres usage rows, so the admin numbers keep their history. Adding (not
+ * replacing) is correct because Firestore only held opens recorded before the home
+ * server took over, plus any Vercel fallback writes while it was down. Guarded by a
+ * checkpoint row and one transaction, so it can't double count.
+ */
+export async function importFirestoreUsageHistory(
+  db: Db,
+): Promise<{ alreadyRun: boolean; scanned: number; rowsAdded: number }> {
+  const [done] = await db
+    .select({ done: migrateCheckpoint.done })
+    .from(migrateCheckpoint)
+    .where(eq(migrateCheckpoint.collection, USAGE_HISTORY_KEY))
+    .limit(1);
+  if (done?.done) return { alreadyRun: true, scanned: 0, rowsAdded: 0 };
+
+  const snapshot = await adminFirestore().collection("resource_usage").get();
+  const rows = snapshot.docs.flatMap((doc) => {
+    const d = doc.data();
+    const userId = String(d.user_id || "").trim();
+    const resourceId = String(d.resource_id || "").trim();
+    const count = Math.floor(Number(d.count) || 0);
+    if (!userId || !resourceId || count <= 0) return [];
+    const when = typeof d.lastOpenedAt === "string" ? new Date(d.lastOpenedAt) : null;
+    return [
+      {
+        userId,
+        resourceId,
+        count,
+        lastOpenedAt: when && !Number.isNaN(when.getTime()) ? when : null,
+      },
+    ];
+  });
+
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      await tx
+        .insert(resourceUsage)
+        .values(row)
+        .onConflictDoUpdate({
+          target: [resourceUsage.userId, resourceUsage.resourceId],
+          set: {
+            count: sql`${resourceUsage.count} + ${row.count}`,
+            lastOpenedAt: sql`greatest(coalesce(${resourceUsage.lastOpenedAt}, 'epoch'::timestamptz), coalesce(${row.lastOpenedAt}, 'epoch'::timestamptz))`,
+          },
+        });
+    }
+    await tx
+      .insert(migrateCheckpoint)
+      .values({ collection: USAGE_HISTORY_KEY, done: true, updatedAt: new Date() })
+      .onConflictDoUpdate({
+        target: migrateCheckpoint.collection,
+        set: { done: true, updatedAt: new Date() },
+      });
+  });
+
+  return { alreadyRun: false, scanned: snapshot.size, rowsAdded: rows.length };
 }
 
 /**
