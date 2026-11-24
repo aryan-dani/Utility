@@ -71,7 +71,8 @@ export async function homeOrVercelSearch(params: {
         section_label: s.sectionLabel ?? undefined,
       }));
     }
-    // Empty home index — fall through to Vercel (still has PDF text).
+    // The home index now holds PDF text too, so an empty answer is a real miss.
+    return [];
   }
 
   const res = await authFetch(`/api/search?${qs.toString()}`, {
