@@ -289,6 +289,41 @@ v1Routes.get("/activity", async (c) => {
   });
 });
 
+const VISUALIZE_ACTIONS = new Set(["PLAY", "PAUSE", "RESET", "STEP_FORWARD", "STEP_BACKWARD"]);
+
+/** Visualizer telemetry (opt-in on the client). Low volume and write-only. */
+v1Routes.post("/visualize/telemetry", async (c) => {
+  const limited = rateOr429(c, "visualize-telemetry", 60);
+  if (limited) return limited;
+  const uid = c.get("user").uid;
+  const body = (await c.req.json().catch(() => null)) as {
+    algorithmId?: unknown;
+    sessionId?: unknown;
+    action?: unknown;
+  } | null;
+
+  const algorithmId =
+    typeof body?.algorithmId === "string" ? body.algorithmId.replace(/-tree$/, "") : "";
+  if (!/^[a-z0-9-]{1,64}$/.test(algorithmId)) {
+    return c.json({ error: "Unknown algorithm" }, 400);
+  }
+  const sessionId = typeof body?.sessionId === "string" ? body.sessionId.slice(0, 80) : "";
+  if (!sessionId) return c.json({ error: "sessionId required" }, 400);
+
+  const rawAction = typeof body?.action === "string" ? body.action : "";
+  const action = VISUALIZE_ACTIONS.has(rawAction)
+    ? rawAction
+    : rawAction.startsWith("JUMP_TO_STEP_")
+      ? "JUMP"
+      : null;
+  if (!action) return c.json({ error: "Invalid action" }, 400);
+
+  await getDb()
+    .insert(visualizeTelemetry)
+    .values({ id: randomUUID(), userId: uid, event: action, payload: { algorithmId, sessionId } });
+  return c.json({ ok: true });
+});
+
 /** Keeps the admin profile mirror current. Upsert of the caller's own row only. */
 v1Routes.post("/profile", async (c) => {
   const limited = rateOr429(c, "profile", 30);

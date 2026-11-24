@@ -19,6 +19,7 @@ import {
   importFirestoreUsageHistory,
   removeProfileAndUsage,
 } from "../../lib/profiles.js";
+import { importProductState } from "../../lib/productImport.js";
 
 export const internalRoutes = new Hono();
 
@@ -76,6 +77,12 @@ internalRoutes.post("/purge-user", async (c) => {
   }
   await db.delete(qaAnswers).where(eq(qaAnswers.userId, uid));
   return c.json({ ok: true });
+});
+
+/** One-time: planner, clipboard, and community data from Firestore. Refuses to run twice. */
+internalRoutes.post("/product-state/import", async (c) => {
+  const result = await importProductState(getDb());
+  return c.json({ ok: true, ...result });
 });
 
 /** One-time: adds Firestore per-user open history onto Postgres usage. Refuses to run twice. */

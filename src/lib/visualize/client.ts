@@ -1,4 +1,5 @@
 import { auth } from "@/lib/firebase/auth";
+import { homeOrVercelJson } from "@/lib/homeApi";
 import { SavedGridData } from "@/lib/visualize/grid";
 
 export type SavedGrid = {
@@ -111,12 +112,9 @@ export async function logTelemetryEvent(payload: {
   } catch {
     return;
   }
-  const headers = await authHeaders(false);
   // Strip -tree so graph/tree sessions share the same algorithm id in telemetry.
   const algorithmId = payload.algorithmId.replace(/-tree$/, "");
-  await fetch("/api/visualize/telemetry", {
-    method: "POST",
-    headers,
-    body: JSON.stringify({ ...payload, algorithmId }),
+  await homeOrVercelJson("/api/visualize/telemetry", {
+    body: { ...payload, algorithmId },
   });
 }
