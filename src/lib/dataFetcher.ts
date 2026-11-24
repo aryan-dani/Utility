@@ -2,11 +2,17 @@ import { adminDb, hasFirebaseCredentials } from "./firebaseAdmin";
 import { unstable_cache } from "next/cache";
 import { matchesAcademicYear } from "@/lib/academic/scope";
 import type { AcademicYear } from "@/lib/academic/scope";
-import {
-  WORKSPACE_CATALOG_COLLECTION,
-  workspaceCatalogId,
-  type WorkspaceCatalogDoc,
-} from "@/lib/workspaceCatalog";
+import { apiOrigins } from "@/lib/utilityServer";
+
+/** Home-server catalog read. Keeps the vault responsive; Firestore is only the fallback. */
+const HOME_CATALOG_TIMEOUT_MS = 4000;
+
+type HomeCatalogPayload = {
+  resources: (Omit<ResourceItem, "category"> & { category: ResourceCategory | null })[];
+  subjects: SubjectItem[];
+  syllabusUrl: string | null;
+  updatedAt: string | null;
+};
 
 // ─── Interfaces ───────────────────────────────────────────────────────────────
 
@@ -159,7 +165,71 @@ function normalizeResources(resources: ResourceItem[], branch: string): Resource
 
 // ─── Fetchers ─────────────────────────────────────────────────────────────────
 
+/** Vault catalog from the home server (Postgres). Null when no origin answers. */
+async function fetchCatalogFromHome(
+  academicYear: AcademicYear,
+  branch: string,
+  semester: number,
+): Promise<HomeCatalogPayload | null> {
+  const query = new URLSearchParams({
+    year: academicYear,
+    branch,
+    semester: String(semester),
+  });
+  for (const origin of apiOrigins()) {
+    try {
+      const res = await fetch(`${origin}/public/catalog?${query.toString()}`, {
+        signal: AbortSignal.timeout(HOME_CATALOG_TIMEOUT_MS),
+      });
+      if (!res.ok) continue;
+      const body = (await res.json()) as Partial<HomeCatalogPayload> | null;
+      if (!body || !Array.isArray(body.resources)) continue;
+      return {
+        resources: body.resources,
+        subjects: Array.isArray(body.subjects) ? body.subjects : [],
+        syllabusUrl: typeof body.syllabusUrl === "string" ? body.syllabusUrl : null,
+        updatedAt: typeof body.updatedAt === "string" ? body.updatedAt : null,
+      };
+    } catch (error) {
+      console.warn(`home catalog unavailable at ${origin}:`, error);
+    }
+  }
+  return null;
+}
+
+function fromHomeResources(
+  resources: HomeCatalogPayload["resources"],
+  branch: string,
+): ResourceItem[] {
+  return normalizeResources(
+    resources.map((item) => ({
+      ...item,
+      category: item.category ?? getResourceCategory(item.title, item.file_url),
+    })),
+    branch,
+  );
+}
+
 async function fetchSubjectsFromDB(
+  academicYear: AcademicYear,
+  branch: string,
+  semester: number,
+): Promise<SubjectItem[]> {
+  const home = await fetchCatalogFromHome(academicYear, branch, semester);
+  if (!home) return fetchSubjectsFromFirestore(academicYear, branch, semester);
+
+  const excluded = (BRANCH_SUBJECT_EXCLUSIONS[branch] ?? []).map((s) =>
+    s.toUpperCase(),
+  );
+  return home.subjects
+    .map((s) => ({ id: s.id, name: s.name, branch: s.branch, semester: s.semester }))
+    .filter((item) => !excluded.includes(item.name.toUpperCase()))
+    .filter((item) => item.name.toUpperCase() !== "SYLLABUS")
+    .sort((a, b) => a.name.localeCompare(b.name));
+}
+
+/** Firestore fallback for subjects, used only when the home server is unreachable. */
+async function fetchSubjectsFromFirestore(
   academicYear: AcademicYear,
   branch: string,
   semester: number,
@@ -322,91 +392,38 @@ async function fetchSyllabusFile(
   }
 }
 
-async function writeWorkspaceCatalog(
-  academicYear: AcademicYear,
-  branch: string,
-  semester: number,
-  payload: WorkspaceListPayload,
-): Promise<void> {
-  const db = adminDb();
-  const id = workspaceCatalogId(academicYear, branch, semester);
-  const doc: WorkspaceCatalogDoc = {
-    academic_year: academicYear,
-    branch,
-    semester,
-    resources: payload.resources,
-    syllabusUrl: payload.syllabusUrl,
-    resource_count: payload.resources.length,
-    updated_at: payload.updatedAt || new Date().toISOString(),
-  };
-  await db.collection(WORKSPACE_CATALOG_COLLECTION).doc(id).set(doc);
-}
-
 /**
- * Public vault list: prefer 1-doc workspace catalog (Spark-friendly).
- * Cold miss rebuilds once and write-through so later hits cost 1 read.
+ * Public vault list. The home server owns the catalog (Postgres, rebuilt only when
+ * Drive content changes) and this route reads it with one small request. Firestore
+ * is a fallback for when the home server is unreachable. Nothing is written back to
+ * Firestore here: that write-through was the per-visit cost this replaces.
  */
 export async function fetchWorkspaceListRaw(
   academicYear: AcademicYear,
   branch: string,
   semester: number,
 ): Promise<WorkspaceListPayload> {
-  const empty: WorkspaceListPayload = {
-    resources: [],
-    syllabusUrl: null,
-    updatedAt: null,
-  };
-  if (!hasFirebaseCredentials()) return empty;
-  let db: ReturnType<typeof adminDb>;
-  try {
-    db = adminDb();
-  } catch (error) {
-    console.warn("workspace catalog skipped (no Admin credentials):", error);
-    return empty;
+  const home = await fetchCatalogFromHome(academicYear, branch, semester);
+  if (home) {
+    return {
+      resources: fromHomeResources(home.resources, branch),
+      syllabusUrl: home.syllabusUrl,
+      updatedAt: home.updatedAt,
+    };
   }
 
-  const id = workspaceCatalogId(academicYear, branch, semester);
-
-  try {
-    const snap = await db.collection(WORKSPACE_CATALOG_COLLECTION).doc(id).get();
-    if (snap.exists) {
-      const d = snap.data() as WorkspaceCatalogDoc;
-      if (Array.isArray(d.resources)) {
-        return {
-          resources: d.resources,
-          syllabusUrl:
-            typeof d.syllabusUrl === "string" || d.syllabusUrl === null
-              ? d.syllabusUrl
-              : null,
-          updatedAt:
-            typeof d.updated_at === "string" && d.updated_at
-              ? d.updated_at
-              : null,
-        };
-      }
-    }
-  } catch (error) {
-    console.warn("workspace catalog read failed, rebuilding:", error);
+  if (!hasFirebaseCredentials()) {
+    return { resources: [], syllabusUrl: null, updatedAt: null };
   }
-
   try {
     const [resources, syllabusUrl] = await Promise.all([
       fetchResourcesFromDBRaw(academicYear, branch, semester),
       fetchSyllabusFile(academicYear, branch, semester),
     ]);
-    const updatedAt = new Date().toISOString();
-    const payload = { resources, syllabusUrl, updatedAt };
-
-    try {
-      await writeWorkspaceCatalog(academicYear, branch, semester, payload);
-    } catch (error) {
-      console.warn("workspace catalog write-through failed:", error);
-    }
-
-    return payload;
+    return { resources, syllabusUrl, updatedAt: new Date().toISOString() };
   } catch (error) {
-    console.warn("workspace catalog rebuild failed:", error);
-    return empty;
+    console.warn("workspace catalog fallback failed:", error);
+    return { resources: [], syllabusUrl: null, updatedAt: null };
   }
 }
 

@@ -73,6 +73,50 @@ export const resources = pgTable(
   ],
 );
 
+export type CatalogResourceJson = {
+  id: string;
+  title: string;
+  file_url: string;
+  created_at: string;
+  subject_name: string;
+  category: string | null;
+  native: {
+    kind: "pdf" | "image" | "text" | "notebook" | "other";
+    hash: string;
+    bytes: number;
+    ext: string;
+    convertedFrom?: string;
+  } | null;
+  drive_file_id: string | null;
+};
+
+export type CatalogSubjectJson = {
+  id: string;
+  name: string;
+  branch: string;
+  semester: number;
+};
+
+export type CatalogPayloadJson = {
+  resources: CatalogResourceJson[];
+  subjects: CatalogSubjectJson[];
+  syllabusUrl: string | null;
+};
+
+export const workspaceCatalogs = pgTable(
+  "workspace_catalogs",
+  {
+    id: text("id").primaryKey(),
+    academicYear: varchar("academic_year", { length: 16 }).notNull(),
+    branch: varchar("branch", { length: 32 }).notNull(),
+    semester: integer("semester").notNull(),
+    contentHash: text("content_hash").notNull(),
+    resourceCount: integer("resource_count").notNull().default(0),
+    payload: jsonb("payload").$type<CatalogPayloadJson>().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+);
+
 export const resourceContent = pgTable("resource_content", {
   resourceId: text("resource_id")
     .primaryKey()

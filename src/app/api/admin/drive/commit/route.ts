@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidateTag } from "next/cache";
 import { isAuthFailure, requireAdmin } from "@/lib/apiAuth";
+import { apiOrigins } from "@/lib/utilityServer";
 import {
   assertCanonicalDestPath,
   buildAdminDestPath,
@@ -13,6 +14,30 @@ import { upsertResources } from "../../../../../../runtime/lib/driveCatalog.mjs"
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 60;
+
+/**
+ * Tells the home server about the new file so the vault catalog updates right away
+ * instead of waiting for the next Drive sync. Best effort: the upload already
+ * succeeded in Drive and Firestore, and the sync reconciles anything missed here.
+ */
+async function ingestIntoHomeCatalog(driveFileId: string, path: string): Promise<void> {
+  const secret = process.env.UTILITY_API_SECRET;
+  if (!secret) return;
+  for (const origin of apiOrigins()) {
+    try {
+      const res = await fetch(`${origin}/internal/catalog/ingest`, {
+        method: "POST",
+        headers: { "content-type": "application/json", "x-utility-key": secret },
+        body: JSON.stringify({ driveFileId, path }),
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (res.ok) return;
+      console.warn(`catalog ingest at ${origin} returned ${res.status}`);
+    } catch (error) {
+      console.warn(`catalog ingest at ${origin} failed:`, error);
+    }
+  }
+}
 
 export async function POST(request: Request) {
   const auth = await requireAdmin(request);
@@ -84,6 +109,8 @@ export async function POST(request: Request) {
         verbose: false,
       },
     );
+
+    await ingestIntoHomeCatalog(fileId, fullPath);
 
     revalidateTag("resources", "max");
     revalidateTag("subjects", "max");

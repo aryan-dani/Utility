@@ -1,10 +1,34 @@
 import { Hono } from "hono";
 import { eq } from "drizzle-orm";
 import { getDb } from "../../db/client.js";
-import { clipboardShares, clipboards } from "../../db/schema.js";
+import { clipboardShares, clipboards, workspaceCatalogs } from "../../db/schema.js";
 
 /** Unauthenticated reads. Share ids are unguessable; rows expire in 24h. */
 export const publicRoutes = new Hono();
+
+/** Vault list for one academic scope (public, same data for every visitor). */
+publicRoutes.get("/catalog", async (c) => {
+  const year = c.req.query("year") ?? "";
+  const branch = (c.req.query("branch") ?? "").toUpperCase();
+  const semester = Number(c.req.query("semester"));
+  if (!/^\d{4}-\d{4}$/.test(year) || !/^[A-Z]{2,12}$/.test(branch) || !Number.isInteger(semester)) {
+    return c.json({ error: "Invalid scope" }, 400);
+  }
+  c.header("Cache-Control", "public, s-maxage=60, stale-while-revalidate=300");
+  const rows = await getDb()
+    .select()
+    .from(workspaceCatalogs)
+    .where(eq(workspaceCatalogs.id, `${year}__${branch}__${semester}`))
+    .limit(1);
+  const row = rows[0];
+  if (!row) {
+    return c.json({ resources: [], subjects: [], syllabusUrl: null, updatedAt: null });
+  }
+  return c.json({
+    ...row.payload,
+    updatedAt: row.updatedAt.toISOString(),
+  });
+});
 
 publicRoutes.get("/clipboard/:id", async (c) => {
   const id = c.req.param("id");

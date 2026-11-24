@@ -21,6 +21,7 @@ import {
 import { env } from "../../lib/env.js";
 import { adminDb } from "../../lib/firebase.js";
 import { embedBatch } from "../../lib/embed.js";
+import { syncCatalogs } from "../../lib/catalogSync.js";
 import { CHUNK_TARGET_CHARS, CHUNK_OVERLAP_CHARS } from "../../lib/ragConfig.js";
 
 export type DriveSyncPayload = { mode: "incremental" | "full" };
@@ -76,11 +77,11 @@ function generateId(input: string): string {
   return `${hash.substring(0, 8)}-${hash.substring(8, 12)}-4${hash.substring(12, 15)}-a${hash.substring(15, 18)}-${hash.substring(18, 30)}`;
 }
 
-function resourceIdFromPath(path: string): string {
+export function resourceIdFromPath(path: string): string {
   return generateId(path);
 }
 
-function subjectIdFromParts(
+export function subjectIdFromParts(
   academicYear: string,
   branch: string,
   semester: number,
@@ -118,7 +119,7 @@ function categoryFromSegment(catSegment: string, fileName = ""): string {
  * Real Drive layout (same as runtime parseDrivePath):
  *   [YYYY-YYYY/]<BRANCH>/Sem_<N>_<BRANCH>/Sem_<N>_{Notes|PPT|…}/<Subject>/<File>
  */
-function parseAcademicPath(path: string): {
+export function parseAcademicPath(path: string): {
   academicYear: string;
   branch: string;
   semester: number;
@@ -285,59 +286,28 @@ async function listAllFiles(
   return out;
 }
 
+/**
+ * Rebuilds the vault catalog in Postgres (served by the home server) and writes the
+ * Firestore stats doc only when something changed. Vercel is revalidated only then,
+ * so an idle sync costs no Firestore writes and no Vercel cache churn.
+ */
 async function publishCatalogSnapshot(): Promise<void> {
   const db = getDb();
-  const all = await db.select().from(resources);
-  const byScope = new Map<string, typeof all>();
-  for (const r of all) {
-    const key = `${r.academicYear}__${r.branch}__${r.semester}`;
-    const list = byScope.get(key) || [];
-    list.push(r);
-    byScope.set(key, list);
-  }
-  const firestore = adminDb();
-  const batchSize = 400;
-  for (const [key, list] of byScope) {
-    const [academicYear, branch, semester] = key.split("__");
-    const subjectRows = await db.select().from(subjects);
-  const subjectNames = new Map(subjectRows.map((s) => [s.id, s.name]));
-  const payload = {
-      academic_year: academicYear,
-      branch,
-      semester: Number(semester),
-      updated_at: new Date().toISOString(),
-      resource_count: list.length,
-      syllabusUrl: null as string | null,
-      resources: list.map((r) => ({
-        id: r.id,
-        title: r.title,
-        category: r.category || "other",
-        subject_id: r.subjectId,
-        subject_name: (r.subjectId && subjectNames.get(r.subjectId)) || "Unknown",
-        file_url: r.fileUrl || "",
-        created_at: r.updatedAt?.toISOString?.() || new Date().toISOString(),
-        drive_file_id: r.driveFileId,
-        native: r.native,
-      })),
-    };
-    const syllabus = list.find(
-      (r) =>
-        /syllabus/i.test(r.title || "") || /syllabus/i.test(r.drivePath || ""),
-    );
-    if (syllabus?.fileUrl) payload.syllabusUrl = syllabus.fileUrl;
-    await firestore.collection("workspace_catalogs").doc(key).set(payload);
-  }
-  // Touch global stats
-  await firestore.collection("stats").doc("global").set(
-    {
-      resources: all.length,
-      updated_at: new Date().toISOString(),
-    },
-    { merge: true },
-  );
-  void batchSize;
-}
+  const result = await syncCatalogs(db);
+  if (result.changed === 0) return;
 
+  await adminDb()
+    .collection("stats")
+    .doc("global")
+    .set(
+      {
+        resources: result.resourceCount,
+        updated_at: new Date().toISOString(),
+      },
+      { merge: true },
+    );
+  await revalidateVercel();
+}
 async function revalidateVercel(): Promise<void> {
   const url = env().VERCEL_REVALIDATE_URL;
   const secret = env().CRON_SECRET;

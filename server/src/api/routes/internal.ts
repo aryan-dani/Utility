@@ -12,6 +12,7 @@ import {
 } from "../../db/schema.js";
 import { requireInternalKey } from "../middleware/auth.js";
 import { getBoss } from "../../worker/boss.js";
+import { ingestDriveFile } from "../../lib/catalogIngest.js";
 
 export const internalRoutes = new Hono();
 
@@ -30,6 +31,21 @@ internalRoutes.post("/sync", async (c) => {
     },
   );
   return c.json({ ok: true, jobId: id, mode });
+});
+
+/** Vercel calls this after an admin Drive upload so the vault updates without waiting for the sync. */
+internalRoutes.post("/catalog/ingest", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as
+    | { driveFileId?: unknown; path?: unknown }
+    | null;
+  const driveFileId = typeof body?.driveFileId === "string" ? body.driveFileId.trim() : "";
+  const path = typeof body?.path === "string" ? body.path.trim() : "";
+  if (!driveFileId || !path) {
+    return c.json({ error: "driveFileId and path are required" }, 400);
+  }
+  const result = await ingestDriveFile(getDb(), { driveFileId, path });
+  if (!result.ok) return c.json({ error: result.reason }, 422);
+  return c.json({ ok: true, resourceId: result.resourceId, catalogChanged: result.catalog.changed });
 });
 
 internalRoutes.post("/purge-user", async (c) => {
