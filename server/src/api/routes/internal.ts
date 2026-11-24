@@ -8,11 +8,16 @@ import {
   qaSaved,
   qaVotes,
   resourceUsage,
+  userProfiles,
   visualizeTelemetry,
 } from "../../db/schema.js";
 import { requireInternalKey } from "../middleware/auth.js";
 import { getBoss } from "../../worker/boss.js";
 import { ingestDriveFile } from "../../lib/catalogIngest.js";
+import {
+  backfillProfilesFromFirestore,
+  removeProfileAndUsage,
+} from "../../lib/profiles.js";
 
 export const internalRoutes = new Hono();
 
@@ -55,6 +60,7 @@ internalRoutes.post("/purge-user", async (c) => {
   const db = getDb();
   await db.delete(activityLogs).where(eq(activityLogs.userId, uid));
   await db.delete(resourceUsage).where(eq(resourceUsage.userId, uid));
+  await db.delete(userProfiles).where(eq(userProfiles.uid, uid));
   await db.delete(visualizeTelemetry).where(eq(visualizeTelemetry.userId, uid));
   await db.delete(qaVotes).where(eq(qaVotes.userId, uid));
   await db.delete(qaSaved).where(eq(qaSaved.userId, uid));
@@ -68,6 +74,20 @@ internalRoutes.post("/purge-user", async (c) => {
     await db.delete(qaQuestions).where(inArray(qaQuestions.id, qids));
   }
   await db.delete(qaAnswers).where(eq(qaAnswers.userId, uid));
+  return c.json({ ok: true });
+});
+
+/** One-time copy of Firestore users into the profile mirror. Re-runnable. */
+internalRoutes.post("/profiles/backfill", async (c) => {
+  const result = await backfillProfilesFromFirestore(getDb());
+  return c.json({ ok: true, ...result });
+});
+
+/** Admin "remove user": drops the mirrored profile and its usage rows. */
+internalRoutes.post("/profile-remove", async (c) => {
+  const body = (await c.req.json().catch(() => null)) as { uid?: string } | null;
+  if (!body?.uid) return c.json({ error: "uid required" }, 400);
+  await removeProfileAndUsage(getDb(), body.uid);
   return c.json({ ok: true });
 });
 

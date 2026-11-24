@@ -9,6 +9,7 @@ import { ChevronDown, LogOut, User, UserPlus } from "lucide-react";
 import { AnimatePresence, m } from "framer-motion";
 import type { AcademicYear, Branch, Semester } from "@/store/academicStore";
 import { clearLocalUserData } from "@/lib/localUserData";
+import { syncProfileOncePerDay } from "@/lib/profileSync";
 import { useAcademicStore } from "@/store/academicStore";
 import { useMotionSafe } from "@/lib/motion";
 import {
@@ -202,6 +203,20 @@ export default function NavUserMenu({
               updateData.lastActive = new Date().toISOString();
               await setDoc(userPrefsRef, updateData, { merge: true });
             }
+            const merged: Record<string, unknown> = {
+              ...(snap.exists() ? snap.data() : {}),
+              ...updateData,
+            };
+            syncProfileOncePerDay(firebaseUser.uid, {
+              displayName: String(merged.displayName ?? ""),
+              email: String(merged.email ?? ""),
+              photoURL: String(merged.photoURL ?? ""),
+              provider: String(merged.provider ?? ""),
+              branch: typeof merged.branch === "string" ? merged.branch : null,
+              semester: typeof merged.semester === "number" ? merged.semester : null,
+              lastActive:
+                typeof merged.lastActive === "string" ? merged.lastActive : undefined,
+            });
           })
           .catch((err) => {
             console.error("Error syncing user preferences:", err);

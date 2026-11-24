@@ -28,6 +28,11 @@ export function adminAuth() {
   return getAuth(getApp());
 }
 
+/** Firestore handle for the one-time profile backfill. Request paths should not use this. */
+export function adminFirestore() {
+  return getFirestore(getApp());
+}
+
 export function adminDb() {
   const db = getFirestore(getApp());
   try {

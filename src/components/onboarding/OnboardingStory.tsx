@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged } from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
+import { syncProfileToHome } from "@/lib/profileSync";
 import {
   BookOpen,
   Brain,
@@ -162,6 +163,12 @@ export function OnboardingStory() {
       },
       { merge: true },
     );
+    void syncProfileToHome({
+      email: user?.email || "",
+      branch: br,
+      semester: Number(sem),
+      lastActive: new Date().toISOString(),
+    });
     setWorkspace(year, br, sem);
   };
 

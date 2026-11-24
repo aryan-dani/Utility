@@ -22,6 +22,7 @@ import { useAcademicStore, AcademicYear, Branch, Semester } from "@/store/academ
 import { DEFAULT_ACADEMIC_YEAR, DEFAULT_SEMESTER, workspaceQuery } from "@/lib/workspace";
 import { BRANCH_OPTIONS_LONG, isAcademicYear } from "@/lib/academic/scope";
 import { notify } from "@/lib/toast";
+import { syncProfileToHome } from "@/lib/profileSync";
 import { describeError } from "@/lib/errors";
 import { authFetch } from "@/lib/authFetch";
 import { clearLocalUserData } from "@/lib/localUserData";
@@ -335,6 +336,16 @@ export default function ProfileClientComponent() {
             },
             { merge: true }
           );
+
+          void syncProfileToHome({
+            displayName: displayName.trim() || currentUser.email?.split("@")[0] || "Student",
+            email: currentUser.email || "",
+            photoURL: photoURL.trim() || "",
+            provider: providerLabel,
+            branch: selectedBranch,
+            semester: Number(selectedSemester),
+            lastActive: new Date().toISOString(),
+          });
 
           setAcademicYear(selectedAcademicYear);
           setBranch(selectedBranch);

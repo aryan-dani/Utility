@@ -18,6 +18,7 @@ import {
 import { env } from "../../lib/env.js";
 import { checkRateLimit } from "../../lib/rateLimit.js";
 import { retrieve } from "../../lib/retrieve.js";
+import { sanitizeProfilePatch, upsertProfile } from "../../lib/profiles.js";
 import { CHAT_TEMPERATURE } from "../../lib/ragConfig.js";
 import {
   requireUser,
@@ -286,6 +287,17 @@ v1Routes.get("/activity", async (c) => {
       count: r.count,
     })),
   });
+});
+
+/** Keeps the admin profile mirror current. Upsert of the caller's own row only. */
+v1Routes.post("/profile", async (c) => {
+  const limited = rateOr429(c, "profile", 30);
+  if (limited) return limited;
+  const user = c.get("user");
+  const patch = sanitizeProfilePatch(await c.req.json().catch(() => null));
+  if (patch.email === undefined && user.email) patch.email = user.email.toLowerCase();
+  await upsertProfile(getDb(), user.uid, patch);
+  return c.json({ ok: true });
 });
 
 v1Routes.post("/activity", async (c) => {

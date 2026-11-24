@@ -209,6 +209,22 @@ export const resourceTotals = pgTable("resource_totals", {
   openCount: integer("open_count").notNull().default(0),
 });
 
+export const userProfiles = pgTable(
+  "user_profiles",
+  {
+    uid: text("uid").primaryKey(),
+    email: text("email").notNull().default(""),
+    displayName: text("display_name").notNull().default(""),
+    photoUrl: text("photo_url").notNull().default(""),
+    provider: text("provider").notNull().default(""),
+    branch: varchar("branch", { length: 32 }),
+    semester: integer("semester"),
+    lastActiveAt: timestamp("last_active_at", { withTimezone: true }),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [index("user_profiles_last_active_idx").on(t.lastActiveAt)],
+);
+
 export const qaQuestions = pgTable(
   "qa_questions",
   {

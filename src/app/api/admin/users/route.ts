@@ -5,45 +5,26 @@ import {
   isAuthFailure,
   requireAdmin,
 } from "@/lib/apiAuth";
+import { callHomeInternal, proxyAdminGet } from "@/lib/homeProxy";
 
 export const dynamic = "force-dynamic";
 
+/** Users tab. Read from the home server's profile mirror, which carries usage counts. */
 export async function GET(request: Request) {
   const auth = await requireAdmin(request);
   if (isAuthFailure(auth)) return auth;
 
-  try {
-    const db = adminDb();
-    const snapshot = await db.collection("users").limit(500).get();
-    const users = snapshot.docs
-      .map((doc) => {
-        const d = doc.data();
-        return {
-          id: doc.id,
-          uid: d.uid || doc.id,
-          email: d.email || "",
-          displayName: d.displayName || "",
-          provider: d.provider || "",
-          branch: d.branch || "",
-          semester: d.semester || null,
-          lastActive: d.lastActive || d.updatedAt || "",
-          photoURL: d.photoURL || "",
-          resourceOpenCount: Number(d.resourceOpenCount) || 0,
-          lastOpenedTitle: d.lastOpenedTitle || "",
-          lastOpenedAt: d.lastOpenedAt || "",
-        };
-      })
-      .sort((a, b) => {
-        const dateA = a.lastActive ? new Date(a.lastActive).getTime() : 0;
-        const dateB = b.lastActive ? new Date(b.lastActive).getTime() : 0;
-        return dateB - dateA;
-      });
-
-    return NextResponse.json({ users });
-  } catch (error: unknown) {
-    console.error("Error fetching users:", error);
-    return NextResponse.json({ error: "Failed to fetch users" }, { status: 500 });
+  const res = await proxyAdminGet(request, "/v1/admin/users");
+  if (!res) {
+    return NextResponse.json(
+      { error: "Home server unavailable. The users list needs it." },
+      { status: 503, headers: { "Cache-Control": "private, no-store" } },
+    );
   }
+  return new NextResponse(res.body, {
+    status: res.status,
+    headers: { "Content-Type": "application/json", "Cache-Control": "private, no-store" },
+  });
 }
 
 /**
@@ -106,10 +87,14 @@ export async function DELETE(request: Request) {
 
     await userRef.delete();
 
+    // Usage rows and the mirrored profile live on the home server now.
+    const homeCleared = await callHomeInternal("/internal/profile-remove", { uid });
+
     return NextResponse.json({
       success: true,
       uid,
       usageDeleted,
+      homeCleared,
     });
   } catch (error: unknown) {
     console.error("Error deleting user profile:", error);
