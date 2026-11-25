@@ -20,6 +20,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^5.0.148",
     "@ai-sdk/groq": "^4.0.69",
     "@hono/node-server": "^2.1.6",
     "ai": "^7.0.152",

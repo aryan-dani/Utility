@@ -1,5 +1,4 @@
-import { groq } from '@ai-sdk/groq';
-import { GROQ_CHAT_MODEL } from '@/lib/groqModels';
+import { getLanguageModel } from '@/lib/aiProvider';
 import { generateText } from 'ai';
 import { createHash } from 'crypto';
 import { adminDb } from '@/lib/firebaseAdmin';
@@ -179,7 +178,7 @@ CRITICAL INSTRUCTION: You MUST output ONLY a block of valid JSON matching the ex
 }`;
 
     const { text } = await generateText({
-      model: groq(GROQ_CHAT_MODEL),
+      model: getLanguageModel('chat').model,
       maxOutputTokens: 2048,
       prompt: prompt,
     });

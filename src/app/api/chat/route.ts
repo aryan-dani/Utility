@@ -1,5 +1,4 @@
-import { groq } from "@ai-sdk/groq";
-import { GROQ_CHAT_MODEL, GROQ_FAST_MODEL } from "@/lib/groqModels";
+import { getLanguageModel } from "@/lib/aiProvider";
 import {
   createUIMessageStream,
   createUIMessageStreamResponse,
@@ -320,15 +319,14 @@ export async function POST(req: Request) {
     answerMode: context?.answerMode,
   });
 
-  const modelId = modelForIntent(routed.intent) === "fast"
-    ? GROQ_FAST_MODEL
-    : GROQ_CHAT_MODEL;
+  const tier = modelForIntent(routed.intent) === "fast" ? "fast" : "chat";
+  const { model, provider } = getLanguageModel(tier);
 
   const sources = retrieval?.sources ?? [];
   const markers = validMarkerSet(sources);
 
   const result = streamText({
-    model: groq(modelId),
+    model,
     system: systemPrompt,
     messages: finalMessages,
     maxOutputTokens: 2048,
@@ -374,5 +372,8 @@ export async function POST(req: Request) {
     },
   });
 
-  return createUIMessageStreamResponse({ stream });
+  return createUIMessageStreamResponse({
+    stream,
+    headers: { "X-AI-Provider": provider },
+  });
 }

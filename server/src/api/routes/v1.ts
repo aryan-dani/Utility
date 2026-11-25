@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { createUIMessageStream, createUIMessageStreamResponse, generateText, streamText } from "ai";
-import { createGroq } from "@ai-sdk/groq";
+import { getServerLanguageModel, isAiConfigured } from "../../lib/aiProvider.js";
 import { z } from "zod";
 import { desc, eq, sql } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
@@ -13,7 +13,6 @@ import {
   userProfiles,
   visualizeTelemetry,
 } from "../../db/schema.js";
-import { env } from "../../lib/env.js";
 import { checkRateLimit } from "../../lib/rateLimit.js";
 import { retrieve } from "../../lib/retrieve.js";
 import { sanitizeProfilePatch, upsertProfile } from "../../lib/profiles.js";
@@ -86,8 +85,8 @@ function messageText(m: {
 v1Routes.post("/chat", async (c) => {
   const limited = rateOr429(c, "chat", 30);
   if (limited) return limited;
-  if (!env().GROQ_API_KEY) {
-    return c.json({ error: "GROQ_API_KEY not configured" }, 503);
+  if (!isAiConfigured()) {
+    return c.json({ error: "AI provider not configured" }, 503);
   }
   const body = await c.req.json().catch(() => null);
   if (!body || typeof body !== "object") {
@@ -126,7 +125,7 @@ v1Routes.post("/chat", async (c) => {
     });
   }
 
-  const groq = createGroq({ apiKey: env().GROQ_API_KEY });
+  const { model, provider } = getServerLanguageModel("chat");
   const system = [
     "You are Utility OS study assistant for MIT-WPU students.",
     "Answer using the provided notes context. Cite sources as [S1], [S2].",
@@ -146,7 +145,7 @@ v1Routes.post("/chat", async (c) => {
     execute({ writer }) {
       writer.write({ type: "data-sources", data: uiSources } as never);
       const result = streamText({
-        model: groq("openai/gpt-oss-120b"),
+        model,
         system,
         messages: messages
           .map((m) => ({
@@ -165,6 +164,7 @@ v1Routes.post("/chat", async (c) => {
     stream,
     headers: {
       "X-Utility-Source-Count": String(sources.length),
+      "X-AI-Provider": provider,
     },
   });
 });
@@ -172,8 +172,8 @@ v1Routes.post("/chat", async (c) => {
 v1Routes.post("/study", async (c) => {
   const limited = rateOr429(c, "study", 20);
   if (limited) return limited;
-  if (!env().GROQ_API_KEY) {
-    return c.json({ error: "GROQ_API_KEY not configured" }, 503);
+  if (!isAiConfigured()) {
+    return c.json({ error: "AI provider not configured" }, 503);
   }
   const body = (await c.req.json().catch(() => null)) as {
     mode?: string;
@@ -200,7 +200,7 @@ v1Routes.post("/study", async (c) => {
     branch,
     semester,
   });
-  const groq = createGroq({ apiKey: env().GROQ_API_KEY });
+  const { model } = getServerLanguageModel("fast");
   const mode =
     body?.type === "pyq" || body?.mode === "pyq"
       ? "pyq"
@@ -214,7 +214,7 @@ v1Routes.post("/study", async (c) => {
       ? `Create a 5-question multiple-choice quiz from the notes. Return ONLY JSON {quiz:[{id,question,options:[A,B,C,D],correctIndex,explanation,citations:[]}]}.\n${context}`
       : `Create 8 flashcards from the notes. Return ONLY JSON {flashcards:[{id,question,answer}]}.\n${context}`;
   const out = await generateText({
-    model: groq("openai/gpt-oss-20b"),
+    model,
     prompt,
     temperature: 0.3,
     abortSignal: AbortSignal.timeout(45_000),
@@ -247,12 +247,12 @@ v1Routes.get("/resources/:id/summarize", async (c) => {
   if (!row.content?.trim()) {
     return c.json({ error: "No extractable text available to summarize." }, 422);
   }
-  if (!env().GROQ_API_KEY) {
+  if (!isAiConfigured()) {
     return c.json({ summary: row.content.slice(0, 800) });
   }
-  const groq = createGroq({ apiKey: env().GROQ_API_KEY });
+  const { model } = getServerLanguageModel("fast");
   const out = await generateText({
-    model: groq("openai/gpt-oss-20b"),
+    model,
     prompt: `Summarize these course notes in 5 bullet points:\n${row.content.slice(0, 6000)}`,
     temperature: 0.2,
     abortSignal: AbortSignal.timeout(45_000),
@@ -330,17 +330,20 @@ const plannerParseSchema = z.object({
   year: z.coerce.number().int().min(2000).max(2100),
 });
 
-/** AI study-plan parser (Groq), served from home. Same prompt and response as the Vercel route. */
+/** AI study-plan parser (Bedrock or Groq), served from home. Same prompt and response as the Vercel route. */
 v1Routes.post("/planner/parse", async (c) => {
   const limited = rateOr429(c, "planner-parse", 15);
   if (limited) return limited;
+  if (!isAiConfigured()) {
+    return c.json({ error: "AI provider not configured" }, 503);
+  }
   const parsed = plannerParseSchema.safeParse(await c.req.json().catch(() => null));
   if (!parsed.success) return c.json({ error: "Invalid request payload" }, 400);
   const { prompt, month, year } = parsed.data;
   try {
-    const groq = createGroq({ apiKey: env().GROQ_API_KEY });
+    const { model } = getServerLanguageModel("chat");
     const response = await generateText({
-      model: groq("openai/gpt-oss-120b"),
+      model,
       maxOutputTokens: 2048,
       system: buildPlannerSystemPrompt(month, year),
       messages: [

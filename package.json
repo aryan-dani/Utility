@@ -39,6 +39,7 @@
     "prepare": "husky"
   },
   "dependencies": {
+    "@ai-sdk/amazon-bedrock": "^5.0.148",
     "@ai-sdk/groq": "^4.0.69",
     "@ai-sdk/react": "^4.0.156",
     "@ducanh2912/next-pwa": "^10.2.9",

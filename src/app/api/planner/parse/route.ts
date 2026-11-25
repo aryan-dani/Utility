@@ -1,5 +1,4 @@
-import { groq } from '@ai-sdk/groq';
-import { GROQ_CHAT_MODEL } from '@/lib/groqModels';
+import { getLanguageModel } from '@/lib/aiProvider';
 import { generateText } from 'ai';
 import { isAuthFailure, requireUser } from '@/lib/apiAuth';
 import { enforceAiRateLimit } from '@/lib/rateLimit';
@@ -93,7 +92,7 @@ Example JSON output format:
 ]`;
 
     const response = await generateText({
-      model: groq(GROQ_CHAT_MODEL),
+      model: getLanguageModel('chat').model,
       maxOutputTokens: 2048,
       system: systemInstructions,
       messages: [
