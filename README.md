@@ -32,14 +32,13 @@ It is built for MIT-WPU engineering students (AIDS, CSE, ECE) who want sourced e
 - **Campus Hub (`/campus`)**: Faculty directory, seating lookup, and lab lookup powered by the companion campus API.
 - **PWA and Microsoft Store (`/install`)**: Installable offline-capable web app packaged for Windows on the Microsoft Store.
 
-## Built with AWS
+## Amazon Bedrock Support (optional)
 
-Utility OS integrates **Amazon Bedrock** for grounded RAG answer generation, study material generation (flashcards, quizzes, PYQs), document summarization, and natural-language planner parsing across both the Next.js API (`src/lib/aiProvider.ts`) and the companion server (`server/src/lib/aiProvider.ts`).
+Utility OS can run its AI answers on **Amazon Bedrock** through `@ai-sdk/amazon-bedrock`, covering grounded chat, flashcard/quiz generation, summaries, and planner parsing. This is an optional provider and is **off by default**: production runs on Groq unless `AI_PROVIDER=bedrock` and AWS credentials are set.
 
-- **Feature-flagged provider switch**: Set `AI_PROVIDER=bedrock` with `AWS_REGION` and IAM credentials (or `AWS_BEARER_TOKEN_BEDROCK`) to route generation through Amazon Bedrock (`us.amazon.nova-lite-v1:0` for grounded chat and `us.amazon.nova-micro-v1:0` for fast summaries, or `apac.*` profiles in `ap-south-1` Mumbai).
-- **Zero-downtime fallback**: Existing Groq configuration (`AI_PROVIDER=groq`) remains the default and automatic fallback if AWS credentials are not present.
-- **Verifiable in production**: `/api/chat` and `/v1/chat` emit an `X-AI-Provider` header showing whether Amazon Bedrock or Groq served the response.
-- **Setup guide**: See [`docs/aws.md`](docs/aws.md) for least-privilege IAM policy JSON, regions, and model IDs.
+- Provider selection lives in `src/lib/aiProvider.ts` (Next.js API) and `server/src/lib/aiProvider.ts` (companion server).
+- `/api/chat` and `/v1/chat` send an `X-AI-Provider` response header so you can see which provider answered.
+- Setup, region notes, and the least-privilege IAM policy are in [`docs/aws.md`](docs/aws.md).
 
 ## Tech Stack
 
