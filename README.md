@@ -6,7 +6,7 @@ One academic operating system for MIT-WPU students: semester-scoped notes, a gro
 
 ## GrowthX Off Campus
 
-**Off Campus Code:** `[PASTE YOUR OFF CAMPUS CODE HERE]`
+**Off Campus Code:** `8AS7MU`
 
 Utility OS is an all-in-one academic workspace that organizes syllabus units, course resources, AI-grounded Q&A, study planning, and revision tools into a single semester-aware app.
 It is built for MIT-WPU engineering students (AIDS, CSE, ECE) who want sourced exam answers from their real course notes instead of digging through scattered Drive folders and WhatsApp forwards.
