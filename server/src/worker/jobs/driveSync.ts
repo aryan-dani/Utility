@@ -419,7 +419,11 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
       }
     }
     if (file.mimeType.startsWith("application/vnd.google-apps.")) {
-      ext = ".pdf";
+      ext =
+        file.mimeType === "application/vnd.google-apps.presentation" ||
+        file.mimeType === "application/vnd.google-apps.document"
+          ? ".pdf"
+          : ".txt";
     }
 
     const hash = createHash("sha256").update(buf).digest("hex").slice(0, 32);
@@ -556,24 +560,25 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
         });
 
       const chunks = chunkText(text);
-      await db.delete(resourceChunks).where(eq(resourceChunks.resourceId, rid));
       const embeddings = await embedBatch(chunks.map((c) => c.text.slice(0, 2000)));
-      for (let idx = 0; idx < chunks.length; idx++) {
-        const ch = chunks[idx];
-        const emb = embeddings[idx];
-        await db.insert(resourceChunks).values({
-          id: `${rid}_${idx}`,
-          resourceId: rid,
-          chunkIndex: idx,
-          text: ch.text,
-          chunkTokens: ch.tokens.slice(0, 200),
-          tokenCount: ch.tokens.length,
-          academicYear: parsed.academicYear,
-          branch: parsed.branch,
-          semester: parsed.semester,
-          embedding: emb,
-        });
-      }
+      const chunkRows = chunks.map((ch, idx) => ({
+        id: `${rid}_${idx}`,
+        resourceId: rid,
+        chunkIndex: idx,
+        text: ch.text,
+        chunkTokens: ch.tokens.slice(0, 200),
+        tokenCount: ch.tokens.length,
+        academicYear: parsed.academicYear,
+        branch: parsed.branch,
+        semester: parsed.semester,
+        embedding: embeddings[idx],
+      }));
+      await db.transaction(async (tx) => {
+        await tx.delete(resourceChunks).where(eq(resourceChunks.resourceId, rid));
+        if (chunkRows.length > 0) {
+          await tx.insert(resourceChunks).values(chunkRows);
+        }
+      });
     }
 
     mirrored += 1;
@@ -610,7 +615,6 @@ export async function runDriveSync(payload: DriveSyncPayload): Promise<void> {
     });
 
   await publishCatalogSnapshot();
-  await revalidateVercel();
 
   const ping = env().HEALTHCHECKS_SYNC_URL;
   if (ping) {

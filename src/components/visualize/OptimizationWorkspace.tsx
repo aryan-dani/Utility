@@ -18,9 +18,9 @@ import {
 import { generateGeneticAlgorithmSteps } from "@/lib/visualize/engines/genetic";
 import { OptimizationState } from "@/lib/visualize/optimization";
 import { AlgorithmStep } from "@/lib/visualize/types";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { easeOut } from "@/components/visualize/motion";
-import { MOTION } from "@/lib/motion";
+import { MOTION, useMotionSafe } from "@/lib/motion";
 
 const HILL_PSEUDOCODE = [
   { line: 1, code: "1. Stand at the current x" },
@@ -44,6 +44,7 @@ interface OptimizationWorkspaceProps {
 export function OptimizationWorkspace({
   algorithmId,
 }: OptimizationWorkspaceProps) {
+  const motionSafe = useMotionSafe();
   const [initialX, setInitialX] = useState(2);
   const [steps, setSteps] = useState<AlgorithmStep<OptimizationState>[]>([]);
   const [hasGenerated, setHasGenerated] = useState(false);
@@ -245,7 +246,10 @@ export function OptimizationWorkspace({
                 cx: mapXToSvg(currentMathX),
                 cy: mapYToSvg(currentMathY),
               }}
-              transition={{ duration: MOTION.duration.enter, ease: easeOut }}
+              transition={{
+                duration: !motionSafe.reduce ? MOTION.duration.enter : 0,
+                ease: easeOut,
+              }}
               r="6"
               fill="currentColor"
               className="text-foreground"
@@ -256,7 +260,10 @@ export function OptimizationWorkspace({
                 cx: mapXToSvg(currentMathX),
                 cy: mapYToSvg(currentMathY),
               }}
-              transition={{ duration: MOTION.duration.enter, ease: easeOut }}
+              transition={{
+                duration: !motionSafe.reduce ? MOTION.duration.enter : 0,
+                ease: easeOut,
+              }}
               r="8"
               fill="none"
               stroke="currentColor"
@@ -269,7 +276,10 @@ export function OptimizationWorkspace({
               x: mapXToSvg(currentMathX),
               y: mapYToSvg(currentMathY) - 12,
             }}
-            transition={{ duration: MOTION.duration.enter, ease: easeOut }}
+            transition={{
+              duration: !motionSafe.reduce ? MOTION.duration.enter : 0,
+              ease: easeOut,
+            }}
             textAnchor="middle"
             className="fill-foreground text-[11px] font-mono"
           >

@@ -190,6 +190,7 @@ export const activityLogs = pgTable(
       t.actionType,
     ),
     index("activity_user_date_idx").on(t.userId, t.loggedDate),
+    index("activity_logged_date_idx").on(t.loggedDate),
   ],
 );
 
@@ -201,7 +202,10 @@ export const resourceUsage = pgTable(
     count: integer("count").notNull().default(0),
     lastOpenedAt: timestamp("last_opened_at", { withTimezone: true }),
   },
-  (t) => [primaryKey({ columns: [t.userId, t.resourceId] })],
+  (t) => [
+    primaryKey({ columns: [t.userId, t.resourceId] }),
+    index("resource_usage_resource_idx").on(t.resourceId),
+  ],
 );
 
 export const resourceTotals = pgTable("resource_totals", {
@@ -298,6 +302,7 @@ export const qaVotes = pgTable(
   },
   (t) => [
     uniqueIndex("qa_votes_unique_idx").on(t.userId, t.targetType, t.targetId),
+    index("qa_votes_target_idx").on(t.targetType, t.targetId),
   ],
 );
 
@@ -381,7 +386,10 @@ export const plannerCollaborators = pgTable(
     role: varchar("role", { length: 16 }).notNull(),
     ownerId: text("owner_id").notNull(),
   },
-  (t) => [uniqueIndex("planner_collab_unique_idx").on(t.planId, t.userEmail)],
+  (t) => [
+    uniqueIndex("planner_collab_unique_idx").on(t.planId, t.userEmail),
+    index("planner_collab_email_idx").on(t.userEmail),
+  ],
 );
 
 export const plannerPresence = pgTable(
@@ -406,6 +414,21 @@ export const communityDecks = pgTable("community_decks", {
   upvotes: integer("upvotes").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+export const communityDeckUpvotes = pgTable(
+  "community_deck_upvotes",
+  {
+    id: text("id").primaryKey(),
+    deckId: text("deck_id")
+      .notNull()
+      .references(() => communityDecks.id, { onDelete: "cascade" }),
+    userId: text("user_id").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (t) => [
+    uniqueIndex("community_deck_upvotes_uid_deck_idx").on(t.userId, t.deckId),
+  ],
+);
 
 export const srsState = pgTable("srs_state", {
   userId: text("user_id").primaryKey(),

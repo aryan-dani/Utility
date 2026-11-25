@@ -1,8 +1,6 @@
 "use client";
 
 import { FormEvent, useEffect, useState, useSyncExternalStore } from "react";
-import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "@/lib/firebase/auth";
 import { useRouter } from "next/navigation";
 import {
   BookOpen,
@@ -36,6 +34,7 @@ const EMPTY_SNAP = JSON.stringify({
   recentId: "",
   recentPage: 0,
   scope: "",
+  todayKey: "",
 });
 
 function cockpitSnapshot(): string {
@@ -54,6 +53,7 @@ function cockpitSnapshot(): string {
         ? `${scope.subject} · ${scope.unit}`
         : scope.subject
       : "",
+    todayKey: localDateKey(),
   });
 }
 
@@ -75,52 +75,63 @@ export function HomeCockpit() {
   const [code, setCode] = useState("");
   const snap = JSON.parse(
     useSyncExternalStore(subscribeCockpit, cockpitSnapshot, () => EMPTY_SNAP),
-  ) as { recentTitle: string; recentId: string; recentPage: number; scope: string };
+  ) as {
+    recentTitle: string;
+    recentId: string;
+    recentPage: number;
+    scope: string;
+    todayKey: string;
+  };
   const scopeLabel = snap.scope;
-  const todayKey = localDateKey();
-  const [year, month] = todayKey.split("-").map(Number);
+  const todayKey = snap.todayKey;
+  const [year, month] = (todayKey || "2026-01-01").split("-").map(Number);
   const [plan, setPlan] = useState<LivePlan | null>(null);
   const [exam, setExam] = useState<UpcomingExam | null>(null);
   const [syncStale, setSyncStale] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!todayKey) return;
     let cancelled = false;
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        const local = readPlannerMonth(year, month);
-        if (!cancelled) {
-          setPlan(
-            local
-              ? {
-                  id: local.meta.id,
-                  title: local.meta.title,
-                  isPublic: Boolean(local.meta.is_public),
-                  data: local.data,
-                  source: "local",
-                }
-              : {
-                  title: "Study Plan",
-                  isPublic: false,
-                  data: {},
-                  source: "local",
-                },
-          );
-          setExam(getSoonestUpcomingExam());
+    let unsub = () => {};
+    void import("@/lib/firebase/auth").then(({ auth }) => {
+      if (cancelled) return;
+      unsub = auth.onAuthStateChanged((user) => {
+        if (!user) {
+          const local = readPlannerMonth(year, month);
+          if (!cancelled) {
+            setPlan(
+              local
+                ? {
+                    id: local.meta.id,
+                    title: local.meta.title,
+                    isPublic: Boolean(local.meta.is_public),
+                    data: local.data,
+                    source: "local",
+                  }
+                : {
+                    title: "Study Plan",
+                    isPublic: false,
+                    data: {},
+                    source: "local",
+                  },
+            );
+            setExam(getSoonestUpcomingExam());
+          }
+          return;
         }
-        return;
-      }
-      void (async () => {
-        const now = new Date();
-        const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        const [current] = await Promise.all([
-          loadPlannerMonth(year, month),
-          loadPlannerMonth(next.getFullYear(), next.getMonth() + 1),
-        ]);
-        if (cancelled) return;
-        setPlan(current);
-        setExam(getSoonestUpcomingExam());
-      })();
+        void (async () => {
+          const now = new Date();
+          const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          const [current] = await Promise.all([
+            loadPlannerMonth(year, month),
+            loadPlannerMonth(next.getFullYear(), next.getMonth() + 1),
+          ]);
+          if (cancelled) return;
+          setPlan(current);
+          setExam(getSoonestUpcomingExam());
+        })();
+      });
     });
     void utilityFetch("/health/ready", { public: true, timeoutMs: 4_000 }).then(
       async (res) => {
@@ -135,7 +146,7 @@ export function HomeCockpit() {
       cancelled = true;
       unsub();
     };
-  }, [year, month]);
+  }, [month, todayKey, year]);
 
   const openTasks = (plan?.data[todayKey] || []).filter((task) => !task.done).slice(0, 5);
 

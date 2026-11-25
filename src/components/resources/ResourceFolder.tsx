@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { ChevronDown, Folder, FolderOpen } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import { ResourceItem } from "@/lib/dataFetcher";
 import {
   ResourceFolderNode,

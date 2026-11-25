@@ -30,6 +30,14 @@ const strip = [
   "FIREBASE_SERVICE_ACCOUNT_KEY",
   "GCLOUD_PROJECT",
   "CLOUDSDK_AUTH_CREDENTIAL_FILE_OVERRIDE",
+  "UTILITY_API_URL",
+  "UTILITY_API_SECRET",
+  "ISHANI_API_URL",
+  "GOOGLE_DRIVE_FOLDER_ID",
+  "GROQ_API_KEY",
+  "GEMINI_API_KEY",
+  "UPSTASH_REDIS_REST_URL",
+  "UPSTASH_REDIS_REST_TOKEN",
 ];
 
 const env = { ...process.env, ...publicPlaceholders, ...adminPlaceholders };
@@ -37,10 +45,14 @@ for (const key of strip) {
   delete env[key];
 }
 
-const result = spawnSync("npm", ["run", "build"], {
-  env,
-  stdio: "inherit",
-  shell: true,
-});
+const isWin = process.platform === "win32";
+const result = spawnSync(
+  isWin ? process.env.ComSpec || "cmd.exe" : "npm",
+  isWin ? ["/c", "npm", "run", "build"] : ["run", "build"],
+  {
+    env,
+    stdio: "inherit",
+  },
+);
 
 process.exit(result.status === null ? 1 : result.status);

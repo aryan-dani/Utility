@@ -4,7 +4,11 @@ import { adminDb } from "@/lib/firebaseAdmin";
 import { isAuthFailure, requireUser } from "@/lib/apiAuth";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
-import { ANSWER_BODY_MAX, ATTACHMENT_MAX } from "@/lib/qa/types";
+import {
+  ANSWER_BODY_MAX,
+  ATTACHMENT_MAX,
+  isSafeAttachmentUrl,
+} from "@/lib/qa/types";
 import { resolveAuthorProfile } from "@/lib/qa/authorProfile";
 
 export const dynamic = "force-dynamic";
@@ -16,13 +20,9 @@ const answerSchema = z.object({
       z
         .string()
         .max(500_000)
-        .refine(
-          (val) =>
-            val.startsWith("http://") ||
-            val.startsWith("https://") ||
-            val.startsWith("data:image/"),
-          { message: "Attachment must be a valid URL or image data" },
-        ),
+        .refine(isSafeAttachmentUrl, {
+          message: "Attachment must be a valid HTTP(S) URL or raster image",
+        }),
     )
     .max(ATTACHMENT_MAX)
     .optional(),

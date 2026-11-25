@@ -6,7 +6,7 @@ import AppLink from "@/components/ui/AppLink";
 import { ResourceItem } from "@/lib/dataFetcher";
 import { useAcademicStore } from "@/store/academicStore";
 import { isSubjectMatch } from "@/lib/subjectMatcher";
-import { motion } from "framer-motion";
+import { AnimatePresence, m as motion } from "framer-motion";
 import { MOTION } from "@/lib/motion";
 import {
   HardDrive,
@@ -1478,22 +1478,28 @@ export default function ResourcesClient() {
         </div>
       )}
 
-      {viewerResource && (
-        <ResourceViewer
-          resource={viewerResource}
-          onClose={closeViewer}
-          assignmentSiblings={viewerSiblings}
-          onOpenRelated={openResource}
-          initialPage={viewerPage}
-        />
-      )}
-      {summarizingResource && (
-        <SummaryModal
-          resourceId={summarizingResource.id}
-          resourceTitle={cleanResourceTitle(summarizingResource.title)}
-          onClose={() => setSummarizingResource(null)}
-        />
-      )}
+      <AnimatePresence>
+        {viewerResource && (
+          <ResourceViewer
+            key={viewerResource.id}
+            resource={viewerResource}
+            onClose={closeViewer}
+            assignmentSiblings={viewerSiblings}
+            onOpenRelated={openResource}
+            initialPage={viewerPage}
+          />
+        )}
+      </AnimatePresence>
+      <AnimatePresence>
+        {summarizingResource && (
+          <SummaryModal
+            key={summarizingResource.id}
+            resourceId={summarizingResource.id}
+            resourceTitle={cleanResourceTitle(summarizingResource.title)}
+            onClose={() => setSummarizingResource(null)}
+          />
+        )}
+      </AnimatePresence>
     </PageShell>
   );
 }

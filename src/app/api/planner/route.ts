@@ -51,7 +51,7 @@ export async function GET(request: Request) {
     }
 
     const userId = auth.uid;
-    const email = auth.email?.toLowerCase() || "";
+    const email = auth.emailVerified ? auth.email?.toLowerCase() || "" : "";
     const db = adminDb();
 
     const planQuery = db
@@ -148,7 +148,7 @@ export async function POST(request: Request) {
     }
 
     const userId = auth.uid;
-    const email = auth.email?.toLowerCase() || "";
+    const email = auth.emailVerified ? auth.email?.toLowerCase() || "" : "";
     let raw: unknown;
     try {
       raw = await request.json();

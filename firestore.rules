@@ -54,25 +54,26 @@ service cloud.firestore {
 
     // Spaced-repetition decks (doc id = uid)
     match /srs_data/{uid} {
-      allow read, write: if isOwner(uid);
+      allow read: if isOwner(uid);
+      allow write: if isOwner(uid) &&
+        request.resource.data.keys().hasOnly(['user_id', 'data', 'updated_at']) &&
+        request.resource.data.user_id == uid;
     }
 
-    // Planner
+    // Planner (reads only for owner/public; writes flow through /api/planner Admin SDK)
     match /planner_plans/{planId} {
       allow read: if signedIn() && (
         resource.data.owner_id == request.auth.uid ||
         resource.data.is_public == true
       );
-      allow create: if isOwnerFieldOnCreate();
-      allow update: if isOwnerField() &&
-        request.resource.data.owner_id == resource.data.owner_id;
-      allow delete: if isOwnerField();
+      allow write: if false;
     }
 
     match /planner_collaborators/{id} {
       allow read: if signedIn() && (
         resource.data.owner_id == request.auth.uid ||
-        resource.data.user_email == request.auth.token.email
+        (request.auth.token.email_verified == true &&
+          resource.data.user_email == request.auth.token.email)
       );
       allow write: if false; // managed via Admin API
     }

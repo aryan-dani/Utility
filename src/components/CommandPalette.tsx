@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import {
   Search,
   BookOpen,
@@ -38,7 +38,6 @@ import { workspaceQuery } from '@/lib/workspace';
 import { parseCommandPrefix } from '@/lib/commandPrefixes';
 import { parseTaskWhen } from '@/lib/taskDate';
 import { loadCampusLookup, type CampusLookup } from '@/lib/campusLookup';
-import { searchSyllabusTopics } from '@/lib/syllabusData';
 import { appendTodayTask } from '@/lib/appendPlannerTask';
 import { startFocusMinutes } from '@/lib/focusTimer';
 import { notify } from '@/lib/toast';
@@ -236,6 +235,9 @@ export default function CommandPalette() {
   const [query, setQuery] = useState('');
   const [catalog, setCatalog] = useState<Array<{ id: string; title: string; subject_name?: string }>>([]);
   const [campus, setCampus] = useState<CampusLookup | null>(null);
+  const [searchSyllabus, setSearchSyllabus] = useState<
+    ((b: string, s: number, q: string) => Array<{ subject: string; title: string }>) | null
+  >(null);
   const [clip, setClip] = useState<{
     code: string;
     status: "loading" | "ready" | "error";
@@ -321,6 +323,11 @@ export default function CommandPalette() {
         void loadCampusLookup().then((lookup) => {
           if (!cancelled) setCampus(lookup);
         });
+        if (!searchSyllabus) {
+          void import('@/lib/syllabusData').then((mod) => {
+            if (!cancelled) setSearchSyllabus(() => mod.searchSyllabusTopics);
+          });
+        }
       })
       .catch((error) => {
         if (!cancelled) {
@@ -331,7 +338,7 @@ export default function CommandPalette() {
     return () => {
       cancelled = true;
     };
-  }, [academicYear, branch, semester, isCommandPaletteOpen]);
+  }, [academicYear, branch, semester, isCommandPaletteOpen, searchSyllabus]);
 
   const [prevPaletteOpen, setPrevPaletteOpen] = useState(isCommandPaletteOpen);
     if (isCommandPaletteOpen && !prevPaletteOpen) {
@@ -706,7 +713,7 @@ export default function CommandPalette() {
           setCommandPaletteOpen(false);
         },
       }));
-    const topicHits = searchSyllabusTopics(branch, semester, q).map((topic) => ({
+    const topicHits = (searchSyllabus ? searchSyllabus(branch, semester, q) : []).map((topic) => ({
       id: `topic-${topic.subject}-${topic.title}`,
       title: topic.title,
       category: 'Search' as const,
@@ -744,7 +751,7 @@ export default function CommandPalette() {
       },
     }));
     return [...fileHits, ...topicHits, ...deckHits, ...campusHits, ...base];
-  }, [items, query, catalog, campus, academicYear, branch, semester, navigate, setCommandPaletteOpen]);
+  }, [items, query, catalog, campus, academicYear, branch, semester, navigate, setCommandPaletteOpen, searchSyllabus]);
 
   // Group filtered items by category
   const groupedItems = useMemo(() => {
@@ -754,6 +761,11 @@ export default function CommandPalette() {
       return acc;
     }, {} as Record<string, CommandItem[]>);
   }, [filteredItems]);
+
+  const indexById = useMemo(
+    () => new Map(filteredItems.map((it, idx) => [it.id, idx])),
+    [filteredItems],
+  );
 
   const [prevQuery, setPrevQuery] = useState(query);
   if (prevQuery !== query) {
@@ -919,7 +931,7 @@ export default function CommandPalette() {
                       <div className="h-px flex-1 bg-border/50" />
                     </div>
                     {catItems.map((item) => {
-                      const globalIdx = filteredItems.findIndex((i) => i.id === item.id);
+                      const globalIdx = indexById.get(item.id) ?? -1;
                       const isSelected = globalIdx === selectedIndex;
                       const Icon = item.icon;
 

@@ -14,7 +14,7 @@ export const maxDuration = 30;
 const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 const studySchema = z.object({
-  type: z.enum(['flashcards', 'quiz']),
+  type: z.enum(['flashcards', 'quiz', 'pyq']),
   topic: z.string().min(2).max(500),
   context: z.object({
     academicYear: z.string().max(16).optional(),
@@ -169,7 +169,7 @@ CRITICAL INSTRUCTION: You MUST output ONLY a block of valid JSON matching the ex
   "quiz": [
     {
       "id": "1",
-      "question": "Clear academic question here?",
+      "question": "Clear ${type === 'pyq' ? 'university exam PYQ ' : 'academic '}question here?",
       "options": ["Option A", "Option B", "Option C", "Option D"],
       "correctIndex": 0,
       "explanation": "Explanation of why Option A is correct.",

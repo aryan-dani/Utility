@@ -23,7 +23,7 @@ async function sleep(ms) {
  */
 export async function embedTexts(texts, taskType = "RETRIEVAL_DOCUMENT") {
   const key = getApiKey();
-  const url = `${API_BASE}/${EMBED_MODEL}:batchEmbedContents?key=${key}`;
+  const url = `${API_BASE}/${EMBED_MODEL}:batchEmbedContents`;
 
   const requests = texts.map((text) => ({
     model: `models/${EMBED_MODEL}`,
@@ -37,7 +37,7 @@ export async function embedTexts(texts, taskType = "RETRIEVAL_DOCUMENT") {
     try {
       const res = await fetch(url, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", "x-goog-api-key": key },
         body: JSON.stringify({ requests }),
       });
 

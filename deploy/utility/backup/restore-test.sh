@@ -9,10 +9,14 @@ set -euo pipefail
 
 export PGPASSWORD="$POSTGRES_PASSWORD"
 TMP=$(mktemp -d)
-trap 'rm -rf "$TMP"' EXIT
+cleanup() {
+  psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS utility_restore;" >/dev/null 2>&1 || true
+  rm -rf "$TMP"
+}
+trap cleanup EXIT
 
 echo "[restore-test] fetching latest dump from restic"
-restic restore latest --target "$TMP" --include '*.dump' || {
+restic restore latest --tag utility --target "$TMP" --include '*.dump' || {
   echo "[restore-test] no dump found yet; skip"
   exit 0
 }
@@ -26,10 +30,13 @@ fi
 # Restore into a throwaway database on the same Postgres
 psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS utility_restore;"
 psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d postgres -c "CREATE DATABASE utility_restore;"
-pg_restore -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d utility_restore --clean --if-exists "$DUMP" || true
+pg_restore -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d utility_restore --no-owner --exit-on-error "$DUMP"
 
 ROWS=$(psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d utility_restore -Atc \
   "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema='public';")
 echo "[restore-test] public tables=${ROWS}"
-psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d postgres -c "DROP DATABASE IF EXISTS utility_restore;"
+if [[ "${ROWS:-0}" -le 0 ]]; then
+  echo "[restore-test] restore produced 0 tables" >&2
+  exit 1
+fi
 echo "[restore-test] ok"

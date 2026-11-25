@@ -268,7 +268,9 @@ const config = isDev
               if (
                 host === "drive.usercontent.google.com" ||
                 host === "drive.google.com" ||
-                host.endsWith(".googleusercontent.com")
+                host.endsWith(".googleusercontent.com") ||
+                host === "fonts.googleapis.com" ||
+                host === "fonts.gstatic.com"
               ) {
                 return false;
               }

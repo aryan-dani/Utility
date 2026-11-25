@@ -9,6 +9,7 @@ const MAX_TOTAL_BYTES = 300 * 1024 * 1024; // 300 MB
 const CLIENT_SOFT_CAP_BYTES = 120 * 1024 * 1024; // 120 MB
 
 const CACHED_AT_HEADER = "x-cached-at";
+const CACHED_BYTES_HEADER = "x-cached-bytes";
 
 export type DriveFetchProgress = {
   loaded: number;
@@ -47,8 +48,10 @@ async function evictIfNeeded(cache: Cache): Promise<void> {
     const res = await cache.match(request);
     if (!res) continue;
     const cachedAt = Number(res.headers.get(CACHED_AT_HEADER) || "0");
-    const buf = await res.clone().arrayBuffer();
-    const size = buf.byteLength;
+    const sizeHeader = Number(res.headers.get(CACHED_BYTES_HEADER) || "NaN");
+    const size = Number.isFinite(sizeHeader)
+      ? sizeHeader
+      : (await res.clone().arrayBuffer()).byteLength;
     totalBytes += size;
     entries.push({ request, cachedAt, size });
   }
@@ -142,6 +145,7 @@ export async function fetchCachedDriveFile(
           headers: {
             "Content-Type": contentType || "application/octet-stream",
             [CACHED_AT_HEADER]: String(Date.now()),
+            [CACHED_BYTES_HEADER]: String(blob.size),
           },
         }),
       );

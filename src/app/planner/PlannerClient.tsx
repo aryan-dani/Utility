@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useRef, useCallback, useMemo, useLayoutEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion, AnimatePresence } from 'framer-motion';
 import {
   Plus, X, Check, Trash2, Download, Upload, Cloud, CloudOff, LogIn, ChevronLeft, ChevronRight,
   Share2, Copy, Users, Link2, Globe, Lock, UserPlus, CheckCircle2, Circle,
@@ -24,6 +24,12 @@ import { useIsClient } from '@/lib/clientHooks';
 import { toggleTaskRecurring as applyRecurringToggle } from '@/lib/planner/recurrence';
 import { normalizeImportedPlan } from '@/lib/planner/importPlan';
 import { generateId } from '@/lib/id';
+import {
+  DAY_LABELS,
+  getCalendarDays,
+  MONTH_NAMES,
+  todayISO,
+} from '@/lib/planner/calendar';
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -73,67 +79,6 @@ const CATEGORY_COLORS: Record<string, { bg: string, text: string, border: string
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-function getCalendarDays(month: number, year: number) {
-  // month is 1-indexed
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
-  const daysInMonth = lastDay.getDate();
-
-  // Monday = 0, Sunday = 6
-  let startDow = firstDay.getDay() - 1;
-  if (startDow < 0) startDow = 6;
-
-  const days: { date: string; dayNum: number; isCurrentMonth: boolean }[] = [];
-
-  // Previous month fill
-  const prevMonthLastDay = new Date(year, month - 1, 0).getDate();
-  for (let i = startDow - 1; i >= 0; i--) {
-    const d = prevMonthLastDay - i;
-    const pm = month === 1 ? 12 : month - 1;
-    const py = month === 1 ? year - 1 : year;
-    days.push({
-      date: `${py}-${String(pm).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
-      dayNum: d,
-      isCurrentMonth: false,
-    });
-  }
-
-  // Current month
-  for (let d = 1; d <= daysInMonth; d++) {
-    days.push({
-      date: `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
-      dayNum: d,
-      isCurrentMonth: true,
-    });
-  }
-
-  // Next month fill to complete 6 rows
-  const remaining = 42 - days.length;
-  for (let d = 1; d <= remaining; d++) {
-    const nm = month === 12 ? 1 : month + 1;
-    const ny = month === 12 ? year + 1 : year;
-    days.push({
-      date: `${ny}-${String(nm).padStart(2, '0')}-${String(d).padStart(2, '0')}`,
-      dayNum: d,
-      isCurrentMonth: false,
-    });
-  }
-
-  return days;
-}
-
-function todayISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
 
 function storageKey(month: number, year: number) {
   return plannerStorageKey(year, month);
@@ -564,6 +509,19 @@ function ShareModal({
   const [copied, setCopied] = useState(false);
   const sharePath = planId ? `/planner/shared/${planId}` : '';
 
+  useEffect(() => {
+    if (!isOpen) return;
+    const prev = document.activeElement as HTMLElement | null;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      prev?.focus?.();
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   const handleCopy = () => {
@@ -592,7 +550,12 @@ function ShareModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4 animate-fade-in">
+    <div
+      className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="planner-share-title"
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -606,7 +569,7 @@ function ShareModal({
               <Share2 className="w-4 h-4 text-foreground" />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-foreground">Share Plan</h2>
+              <h2 id="planner-share-title" className="text-sm font-bold text-foreground">Share Plan</h2>
               <p className="text-[11px] text-muted">Collaborate or share a read-only link</p>
             </div>
           </div>
@@ -778,8 +741,26 @@ function DayPanel({
   const isToday = date === todayISO();
   const done = tasks.filter(t => t.done).length;
 
+  useEffect(() => {
+    const prev = document.activeElement as HTMLElement | null;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => {
+      document.removeEventListener('keydown', handleKey);
+      prev?.focus?.();
+    };
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4 animate-fade-in" onClick={onClose}>
+    <div
+      className="fixed inset-0 z-50 bg-background/95 flex items-center justify-center p-4 animate-fade-in"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="planner-day-title"
+      onClick={onClose}
+    >
       <motion.div
         initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -799,7 +780,7 @@ function DayPanel({
               <span className="text-lg font-black leading-none">{dayNum}</span>
             </div>
             <div>
-              <h2 className="text-sm font-bold text-foreground">{dayName}, {monthName} {dayNum}</h2>
+              <h2 id="planner-day-title" className="text-sm font-bold text-foreground">{dayName}, {monthName} {dayNum}</h2>
               <p className="text-[11px] text-muted">
                 {tasks.length === 0 ? 'No tasks yet' : `${done} of ${tasks.length} complete`}
               </p>
@@ -886,9 +867,10 @@ export default function PlannerClient() {
   const [present, setPresent] = useState<string[]>([]);
   useEffect(() => {
     const planId = planMeta.id;
-    if (!planId) return;
+    if (!planId || collaborators.length === 0) return;
     let stop = false;
     const beat = async () => {
+      if (stop || (typeof document !== "undefined" && document.hidden)) return;
       await utilityFetch("/v1/planner/presence", {
         method: "POST",
         body: {
@@ -905,13 +887,20 @@ export default function PlannerClient() {
           .filter((name) => name !== auth.currentUser?.email?.split("@")[0]),
       );
     };
+    const onVisibility = () => {
+      if (typeof document !== "undefined" && !document.hidden) {
+        void beat();
+      }
+    };
     void beat();
     const timer = setInterval(() => void beat(), 20_000);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
       stop = true;
       clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [planMeta.id]);
+  }, [planMeta.id, collaborators.length]);
   const mounted = useIsClient();
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -932,6 +921,50 @@ export default function PlannerClient() {
 
   const today = todayISO();
   const calendarDays = useMemo(() => getCalendarDays(month, year), [month, year]);
+  const kanbanBuckets = useMemo(() => {
+    const todo: Array<{ date: string; dateLabel: string; tasks: Task[] }> = [];
+    const inProgress: Array<{ date: string; dateLabel: string; tasks: Task[] }> = [];
+    const done: Array<{ date: string; dateLabel: string; tasks: Task[] }> = [];
+    let todoCount = 0;
+    let inProgressCount = 0;
+    let doneCount = 0;
+
+    for (const day of calendarDays) {
+      if (!day.isCurrentMonth) continue;
+      const dayTasks = planData[day.date] || [];
+      if (dayTasks.length === 0) continue;
+      const dateLabel = new Date(`${day.date}T00:00:00`).toLocaleDateString('en-US', {
+        month: 'short',
+        day: 'numeric',
+      });
+      const todoTasks: Task[] = [];
+      const inProgressTasks: Task[] = [];
+      const doneTasksList: Task[] = [];
+
+      for (const t of dayTasks) {
+        if (t.done || t.status === 'done') {
+          doneTasksList.push(t);
+        } else if (t.status === 'in-progress') {
+          inProgressTasks.push(t);
+        } else {
+          todoTasks.push(t);
+        }
+      }
+      if (todoTasks.length > 0) {
+        todoCount += todoTasks.length;
+        todo.push({ date: day.date, dateLabel, tasks: todoTasks });
+      }
+      if (inProgressTasks.length > 0) {
+        inProgressCount += inProgressTasks.length;
+        inProgress.push({ date: day.date, dateLabel, tasks: inProgressTasks });
+      }
+      if (doneTasksList.length > 0) {
+        doneCount += doneTasksList.length;
+        done.push({ date: day.date, dateLabel, tasks: doneTasksList });
+      }
+    }
+    return { todo, inProgress, done, todoCount, inProgressCount, doneCount };
+  }, [calendarDays, planData]);
   const upcomingExam = useMemo(() => {
     void planData;
     return getSoonestUpcomingExam();
@@ -2006,19 +2039,13 @@ export default function PlannerClient() {
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">To Do</h3>
               </div>
               <span className="text-[10px] font-bold bg-surface border border-border text-muted px-2 py-0.5 rounded-full">
-                {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => !t.done && (t.status === 'todo' || !t.status)).length, 0)}
+                {kanbanBuckets.todoCount}
               </span>
             </div>
             
             <div className="overflow-y-auto space-y-4 flex-1 max-h-[60vh] pr-1">
-              {calendarDays.filter(d => d.isCurrentMonth).map((day) => {
-                const tasks = (planData[day.date] || []).filter(t => !t.done && (t.status === 'todo' || !t.status));
-                if (tasks.length === 0) return null;
-                const dateObj = new Date(day.date + 'T00:00:00');
-                const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-                return (
-                  <div key={day.date} className="space-y-2">
+              {kanbanBuckets.todo.map(({ date, dateLabel, tasks }) => (
+                  <div key={date} className="space-y-2">
                     <span className="text-[9px] font-bold bg-surface border border-border text-muted px-1.5 py-0.5 rounded-md">
                       {dateLabel}
                     </span>
@@ -2026,22 +2053,21 @@ export default function PlannerClient() {
                       <TaskItem
                         key={task.id}
                         task={task}
-                        onToggle={() => toggleTask(day.date, task.id)}
-                        onDelete={() => deleteTask(day.date, task.id)}
-                        onUpdate={(text) => updateTask(day.date, task.id, text)}
-                        onToggleSubtask={(subId) => toggleSubtask(day.date, task.id, subId)}
-                        onAddSubtask={() => addSubtask(day.date, task.id)}
-                        onDeleteSubtask={(subId) => deleteSubtask(day.date, task.id, subId)}
-                        onUpdateCategory={(cat) => updateTaskCategory(day.date, task.id, cat)}
-                        onToggleRecurring={() => toggleTaskRecurring(day.date, task.id)}
-                        onUpdateStatus={(stat) => updateTaskStatus(day.date, task.id, stat)}
+                        onToggle={() => toggleTask(date, task.id)}
+                        onDelete={() => deleteTask(date, task.id)}
+                        onUpdate={(text) => updateTask(date, task.id, text)}
+                        onToggleSubtask={(subId) => toggleSubtask(date, task.id, subId)}
+                        onAddSubtask={() => addSubtask(date, task.id)}
+                        onDeleteSubtask={(subId) => deleteSubtask(date, task.id, subId)}
+                        onUpdateCategory={(cat) => updateTaskCategory(date, task.id, cat)}
+                        onToggleRecurring={() => toggleTaskRecurring(date, task.id)}
+                        onUpdateStatus={(stat) => updateTaskStatus(date, task.id, stat)}
                       />
                     ))}
                   </div>
-                );
-              })}
+              ))}
               
-              {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => !t.done && (t.status === 'todo' || !t.status)).length, 0) === 0 && (
+              {kanbanBuckets.todoCount === 0 && (
                 <div className="text-center py-8 text-muted text-xs">
                   No tasks to do
                 </div>
@@ -2057,19 +2083,13 @@ export default function PlannerClient() {
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">In Progress</h3>
               </div>
               <span className="text-[10px] font-bold bg-surface border border-border text-muted px-2 py-0.5 rounded-full">
-                {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => !t.done && t.status === 'in-progress').length, 0)}
+                {kanbanBuckets.inProgressCount}
               </span>
             </div>
 
             <div className="overflow-y-auto space-y-4 flex-1 max-h-[60vh] pr-1">
-              {calendarDays.filter(d => d.isCurrentMonth).map((day) => {
-                const tasks = (planData[day.date] || []).filter(t => !t.done && t.status === 'in-progress');
-                if (tasks.length === 0) return null;
-                const dateObj = new Date(day.date + 'T00:00:00');
-                const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-                return (
-                  <div key={day.date} className="space-y-2">
+              {kanbanBuckets.inProgress.map(({ date, dateLabel, tasks }) => (
+                  <div key={date} className="space-y-2">
                     <span className="text-[9px] font-bold bg-surface border border-border text-muted px-1.5 py-0.5 rounded-md">
                       {dateLabel}
                     </span>
@@ -2077,22 +2097,21 @@ export default function PlannerClient() {
                       <TaskItem
                         key={task.id}
                         task={task}
-                        onToggle={() => toggleTask(day.date, task.id)}
-                        onDelete={() => deleteTask(day.date, task.id)}
-                        onUpdate={(text) => updateTask(day.date, task.id, text)}
-                        onToggleSubtask={(subId) => toggleSubtask(day.date, task.id, subId)}
-                        onAddSubtask={() => addSubtask(day.date, task.id)}
-                        onDeleteSubtask={(subId) => deleteSubtask(day.date, task.id, subId)}
-                        onUpdateCategory={(cat) => updateTaskCategory(day.date, task.id, cat)}
-                        onToggleRecurring={() => toggleTaskRecurring(day.date, task.id)}
-                        onUpdateStatus={(stat) => updateTaskStatus(day.date, task.id, stat)}
+                        onToggle={() => toggleTask(date, task.id)}
+                        onDelete={() => deleteTask(date, task.id)}
+                        onUpdate={(text) => updateTask(date, task.id, text)}
+                        onToggleSubtask={(subId) => toggleSubtask(date, task.id, subId)}
+                        onAddSubtask={() => addSubtask(date, task.id)}
+                        onDeleteSubtask={(subId) => deleteSubtask(date, task.id, subId)}
+                        onUpdateCategory={(cat) => updateTaskCategory(date, task.id, cat)}
+                        onToggleRecurring={() => toggleTaskRecurring(date, task.id)}
+                        onUpdateStatus={(stat) => updateTaskStatus(date, task.id, stat)}
                       />
                     ))}
                   </div>
-                );
-              })}
+              ))}
 
-              {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => !t.done && t.status === 'in-progress').length, 0) === 0 && (
+              {kanbanBuckets.inProgressCount === 0 && (
                 <div className="text-center py-8 text-muted text-xs">
                   No tasks in progress
                 </div>
@@ -2108,19 +2127,13 @@ export default function PlannerClient() {
                 <h3 className="text-xs font-bold text-foreground uppercase tracking-wider">Completed</h3>
               </div>
               <span className="text-[10px] font-bold bg-surface border border-border text-muted px-2 py-0.5 rounded-full">
-                {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => t.done || t.status === 'done').length, 0)}
+                {kanbanBuckets.doneCount}
               </span>
             </div>
 
             <div className="overflow-y-auto space-y-4 flex-1 max-h-[60vh] pr-1">
-              {calendarDays.filter(d => d.isCurrentMonth).map((day) => {
-                const tasks = (planData[day.date] || []).filter(t => t.done || t.status === 'done');
-                if (tasks.length === 0) return null;
-                const dateObj = new Date(day.date + 'T00:00:00');
-                const dateLabel = dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-
-                return (
-                  <div key={day.date} className="space-y-2">
+              {kanbanBuckets.done.map(({ date, dateLabel, tasks }) => (
+                  <div key={date} className="space-y-2">
                     <span className="text-[9px] font-bold bg-surface border border-border text-muted px-1.5 py-0.5 rounded-md">
                       {dateLabel}
                     </span>
@@ -2128,22 +2141,21 @@ export default function PlannerClient() {
                       <TaskItem
                         key={task.id}
                         task={task}
-                        onToggle={() => toggleTask(day.date, task.id)}
-                        onDelete={() => deleteTask(day.date, task.id)}
-                        onUpdate={(text) => updateTask(day.date, task.id, text)}
-                        onToggleSubtask={(subId) => toggleSubtask(day.date, task.id, subId)}
-                        onAddSubtask={() => addSubtask(day.date, task.id)}
-                        onDeleteSubtask={(subId) => deleteSubtask(day.date, task.id, subId)}
-                        onUpdateCategory={(cat) => updateTaskCategory(day.date, task.id, cat)}
-                        onToggleRecurring={() => toggleTaskRecurring(day.date, task.id)}
-                        onUpdateStatus={(stat) => updateTaskStatus(day.date, task.id, stat)}
+                        onToggle={() => toggleTask(date, task.id)}
+                        onDelete={() => deleteTask(date, task.id)}
+                        onUpdate={(text) => updateTask(date, task.id, text)}
+                        onToggleSubtask={(subId) => toggleSubtask(date, task.id, subId)}
+                        onAddSubtask={() => addSubtask(date, task.id)}
+                        onDeleteSubtask={(subId) => deleteSubtask(date, task.id, subId)}
+                        onUpdateCategory={(cat) => updateTaskCategory(date, task.id, cat)}
+                        onToggleRecurring={() => toggleTaskRecurring(date, task.id)}
+                        onUpdateStatus={(stat) => updateTaskStatus(date, task.id, stat)}
                       />
                     ))}
                   </div>
-                );
-              })}
+              ))}
 
-              {calendarDays.filter(d => d.isCurrentMonth).reduce((acc, d) => acc + (planData[d.date] || []).filter(t => t.done || t.status === 'done').length, 0) === 0 && (
+              {kanbanBuckets.doneCount === 0 && (
                 <div className="text-center py-8 text-muted text-xs">
                   No completed tasks
                 </div>

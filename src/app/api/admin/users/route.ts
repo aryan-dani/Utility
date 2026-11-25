@@ -65,7 +65,13 @@ export async function DELETE(request: Request) {
     const email = String(authUser?.email || userSnap.data()?.email || "")
       .trim()
       .toLowerCase();
-    if (isAdminUser({ uid, email: email || null })) {
+    if (
+      isAdminUser({
+        uid,
+        email: email || null,
+        emailVerified: authUser?.emailVerified === true,
+      })
+    ) {
       return NextResponse.json(
         { error: "Cannot remove an allowlisted admin account" },
         { status: 403 },

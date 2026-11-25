@@ -9,7 +9,10 @@ import { writeFileSync } from "fs";
 import { db } from "../lib/firebase.mjs";
 import { getEnv } from "../lib/env.mjs";
 import { getDrive } from "../lib/drive.mjs";
-import { ACADEMIC_YEAR_PATH_RE } from "../lib/academicYear.mjs";
+import {
+  LEGACY_ACADEMIC_YEAR,
+  parseAcademicYearFromPath,
+} from "../lib/academicYear.mjs";
 
 const args = process.argv.slice(2);
 const branchFilter = (
@@ -83,8 +86,7 @@ function titleCaseSubject(name) {
 
 function parseDriveFile(file) {
   const parts = file.path.split("/");
-  const academicYear =
-    parts.length > 0 && ACADEMIC_YEAR_PATH_RE.test(parts[0]) ? parts[0] : null;
+  const academicYear = parseAcademicYearFromPath(parts);
   const semIndex = parts.findIndex((p) => /Sem_(\d+)_(\w+)/i.test(p));
   if (semIndex === -1) {
     return { ok: false, reason: "no_sem_folder", path: file.path };
@@ -141,8 +143,8 @@ function parseDriveFile(file) {
   };
 }
 
-function key(branch, semester, subject) {
-  return `${branch}|${semester}|${subject.toUpperCase()}`;
+function key(academicYear, branch, semester, subject) {
+  return `${academicYear || LEGACY_ACADEMIC_YEAR}|${branch}|${semester}|${subject.toUpperCase()}`;
 }
 
 async function loadFirestoreViaSubjects() {
@@ -151,6 +153,7 @@ async function loadFirestoreViaSubjects() {
   for (const doc of subjectsSnap.docs) {
     const d = doc.data();
     subjectMeta.set(doc.id, {
+      academicYear: String(d.academic_year || LEGACY_ACADEMIC_YEAR),
       branch: String(d.branch || "").toUpperCase(),
       semester: Number(d.semester || 0),
       subject: String(d.name || "General"),
@@ -164,11 +167,12 @@ async function loadFirestoreViaSubjects() {
     const d = doc.data();
     const meta = subjectMeta.get(d.subject_id);
     if (!meta) continue;
-    const { branch, semester, subject } = meta;
+    const { academicYear, branch, semester, subject } = meta;
     const category = String(d.category || "other");
-    const k = key(branch, semester, subject);
+    const k = key(academicYear, branch, semester, subject);
     if (!byKey.has(k)) {
       byKey.set(k, {
+        academicYear,
         branch,
         semester,
         subject,
@@ -217,9 +221,10 @@ async function main() {
       misnestedPaths.push(f.path);
     }
 
-    const k = key(f.branch, f.semester, f.subject);
+    const k = key(f.academicYear, f.branch, f.semester, f.subject);
     if (!driveByKey.has(k)) {
       driveByKey.set(k, {
+        academicYear: f.academicYear,
         branch: f.branch,
         semester: f.semester,
         subject: f.subject,
@@ -262,6 +267,7 @@ async function main() {
     }
     if (site.count < drive.count) {
       countMismatches.push({
+        academicYear: drive.academicYear,
         branch: drive.branch,
         semester: drive.semester,
         subject: drive.subject,
@@ -307,6 +313,7 @@ async function main() {
       titleExclusionMatches: titleExcluded.length,
     },
     missingOnSite: missingOnSite.map((d) => ({
+      academicYear: d.academicYear,
       branch: d.branch,
       semester: d.semester,
       subject: d.subject,
@@ -316,6 +323,7 @@ async function main() {
     })),
     countMismatches,
     orphanOnSite: orphanOnSite.map((s) => ({
+      academicYear: s.academicYear,
       branch: s.branch,
       semester: s.semester,
       subject: s.subject,

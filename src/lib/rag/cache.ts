@@ -22,12 +22,23 @@ function normalizeQuery(query: string): string {
   return query.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+function normalizeSubjectsKey(subjects?: string[]): string {
+  if (!subjects || subjects.length === 0) return "";
+  return [...subjects]
+    .map((s) => s.trim().toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join(",");
+}
+
 export function semanticCacheDocId(params: {
   query: string;
   academicYear?: string;
   branch: string;
   semester: number;
   resourceId?: string | null;
+  answerMode?: string | null;
+  subjects?: string[];
 }): string {
   const key = [
     normalizeQuery(params.query),
@@ -35,6 +46,8 @@ export function semanticCacheDocId(params: {
     params.branch,
     String(params.semester),
     params.resourceId || "",
+    params.answerMode || "",
+    normalizeSubjectsKey(params.subjects),
   ].join("|");
   return createHash("sha256").update(key).digest("hex");
 }
@@ -72,18 +85,16 @@ export async function lookupSemanticCache(params: {
   branch: string;
   semester: number;
   resourceId?: string;
+  answerMode?: string;
+  subjects?: string[];
   queryEmbedding?: number[];
 }): Promise<SemanticCacheHit | null> {
   if (!process.env.GEMINI_API_KEY) return null;
 
   try {
-    const queryVector =
-      params.queryEmbedding?.length === EMBED_DIMS
-        ? params.queryEmbedding
-        : await embedQuery(params.query);
     const db = adminDb();
 
-    // Exact deterministic hit first
+    // Exact deterministic hit first — avoids a redundant query embedding call.
     const docId = semanticCacheDocId(params);
     const exact = await db.collection("semantic_cache").doc(docId).get();
     if (exact.exists) {
@@ -100,6 +111,11 @@ export async function lookupSemanticCache(params: {
         };
       }
     }
+
+    const queryVector =
+      params.queryEmbedding?.length === EMBED_DIMS
+        ? params.queryEmbedding
+        : await embedQuery(params.query);
 
     let ref: Query = db
       .collection("semantic_cache")
@@ -121,9 +137,13 @@ export async function lookupSemanticCache(params: {
       distanceResultField: "_distance",
     });
 
+    const expectedMode = params.answerMode || null;
+    const expectedSubjects = normalizeSubjectsKey(params.subjects) || null;
     const snap = await vectorQuery.get();
     for (const docSnap of snap.docs) {
       const data = docSnap.data();
+      if ((data.answer_mode ?? null) !== expectedMode) continue;
+      if ((data.subjects_key ?? null) !== expectedSubjects) continue;
       const distance = docSnap.get("_distance") as number;
       const expiresAt = data.expires_at
         ? new Date(data.expires_at).getTime()
@@ -153,6 +173,8 @@ export async function storeSemanticCache(params: {
   branch: string;
   semester: number;
   resourceId?: string;
+  answerMode?: string;
+  subjects?: string[];
   response: string;
   sources?: unknown;
   queryEmbedding?: number[];
@@ -182,6 +204,8 @@ export async function storeSemanticCache(params: {
         branch: params.branch,
         semester: params.semester,
         resource_id: params.resourceId || null,
+        answer_mode: params.answerMode || null,
+        subjects_key: normalizeSubjectsKey(params.subjects) || null,
         response: params.response,
         sources: params.sources || null,
         created_at: new Date(now).toISOString(),

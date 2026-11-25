@@ -144,3 +144,28 @@ describe("rankQuestions", () => {
     expect(rankQuestions([qWithRef])).toHaveLength(1);
   });
 });
+
+import { isSafeAttachmentUrl, isSafeResourceUrl } from "@/lib/qa/types";
+
+describe("Q&A URL validation", () => {
+  it("accepts safe resource URLs and rejects script/data protocols", () => {
+    expect(isSafeResourceUrl("https://drive.google.com/file/d/123")).toBe(true);
+    expect(isSafeResourceUrl("http://localhost:3000/resources/abc")).toBe(true);
+    expect(isSafeResourceUrl("/resources/aids/sem-5/os")).toBe(true);
+
+    expect(isSafeResourceUrl("javascript:alert(1)")).toBe(false);
+    expect(isSafeResourceUrl("JavaScript:alert(1)")).toBe(false);
+    expect(isSafeResourceUrl("data:text/html,<script>alert(1)</script>")).toBe(false);
+    expect(isSafeResourceUrl("//evil.com/phish")).toBe(false);
+  });
+
+  it("permits safe raster images and HTTP(S) URLs while blocking SVG data URIs", () => {
+    expect(isSafeAttachmentUrl("https://cdn.example.com/diagram.png")).toBe(true);
+    expect(isSafeAttachmentUrl("data:image/png;base64,iVBORw0KGgo=")).toBe(true);
+    expect(isSafeAttachmentUrl("data:image/webp;base64,UklGRh4=")).toBe(true);
+
+    expect(isSafeAttachmentUrl("data:image/svg+xml;base64,PHN2Zy8+")).toBe(false);
+    expect(isSafeAttachmentUrl("data:image/svg+xml,<svg onload=alert(1)>")).toBe(false);
+    expect(isSafeAttachmentUrl("javascript:alert(1)")).toBe(false);
+  });
+});

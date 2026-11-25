@@ -17,6 +17,13 @@ on:
           - incremental
           - full
 
+concurrency:
+  group: storage-sync
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
 jobs:
   sync:
     runs-on: ubuntu-latest
@@ -88,6 +95,9 @@ jobs:
             exit 0
           fi
           TARGET_URL="https://utilityos.tech/api/webhooks/revalidate-content"
+          if [ -n "${VERCEL_REVALIDATE_URL:-}" ]; then
+            TARGET_URL="$VERCEL_REVALIDATE_URL"
+          fi
           HTTP_STATUS="$(curl -sS --post301 --post302 --post303 -o /tmp/revalidate-response.json -w "%{http_code}" -X POST "$TARGET_URL" \
             -H "Authorization: Bearer $CRON_SECRET" \
             -H "Content-Type: application/json")"

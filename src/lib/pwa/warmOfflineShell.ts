@@ -40,8 +40,7 @@ export async function warmOfflineLocalToolPages(): Promise<void> {
           credentials: "same-origin",
         });
         if (!res.ok) return;
-        await cache.put(url, res.clone());
-        await cache.put(path, res.clone());
+        await cache.put(url, res);
       }),
     );
     try {

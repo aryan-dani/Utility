@@ -23,13 +23,13 @@ import {
   Upload,
   Search,
 } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { MOTION } from '@/lib/motion';
 import { auth } from '@/lib/firebase/auth';
 import { onAuthStateChanged } from 'firebase/auth';
 import { notify } from '@/lib/toast';
 import { localDateKey } from '@/lib/dateLocal';
-import { PageHeader, PageShell } from '@/components/ui';
+import { Modal, PageHeader, PageShell } from '@/components/ui';
 import { StudyPackPanel } from '@/components/srs/StudyPackPanel';
 
 function getTodayString() {
@@ -633,19 +633,24 @@ export default function SrsClient() {
                       onClick={() => speakText(reviewQueue[currentIndex].question)}
                       className="tap-target text-muted hover:text-foreground rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
                       title="Speak Question"
+                      aria-label="Speak question"
                     >
                       <Volume2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => {
                         toggleStarCard(reviewQueue[currentIndex].id);
-                        // Also update item in reviewQueue so star state updates in active review state
-                        const updated = [...reviewQueue];
-                        updated[currentIndex].starred = !updated[currentIndex].starred;
-                        setReviewQueue(updated);
+                        setReviewQueue((prev) =>
+                          prev.map((item, idx) =>
+                            idx === currentIndex
+                              ? { ...item, starred: !item.starred }
+                              : item,
+                          ),
+                        );
                       }}
                       className="tap-target text-muted hover:text-foreground rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
                       title="Star Card"
+                      aria-label="Star card"
                     >
                       <Star className={`w-3.5 h-3.5 ${reviewQueue[currentIndex].starred ? 'fill-foreground text-foreground' : ''}`} />
                     </button>
@@ -674,18 +679,24 @@ export default function SrsClient() {
                       onClick={() => speakText(reviewQueue[currentIndex].answer)}
                       className="tap-target text-muted hover:text-foreground rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
                       title="Speak Answer"
+                      aria-label="Speak answer"
                     >
                       <Volume2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => {
                         toggleStarCard(reviewQueue[currentIndex].id);
-                        const updated = [...reviewQueue];
-                        updated[currentIndex].starred = !updated[currentIndex].starred;
-                        setReviewQueue(updated);
+                        setReviewQueue((prev) =>
+                          prev.map((item, idx) =>
+                            idx === currentIndex
+                              ? { ...item, starred: !item.starred }
+                              : item,
+                          ),
+                        );
                       }}
                       className="tap-target text-muted hover:text-foreground rounded-lg bg-surface/50 border border-border hover:bg-surface transition-all"
                       title="Star Card"
+                      aria-label="Star card"
                     >
                       <Star className={`w-3.5 h-3.5 ${reviewQueue[currentIndex].starred ? 'fill-foreground text-foreground' : ''}`} />
                     </button>
@@ -869,6 +880,7 @@ export default function SrsClient() {
                             onClick={() => toggleStarCard(card.id)}
                             className="p-2 text-muted hover:text-foreground rounded-lg transition-all"
                             title="Star Card"
+                            aria-label="Star card"
                           >
                             <Star className={`w-3.5 h-3.5 ${card.starred ? 'fill-foreground text-foreground' : ''}`} />
                           </button>
@@ -876,6 +888,7 @@ export default function SrsClient() {
                             onClick={() => deleteCard(card.id)}
                             className="p-2 text-muted hover:text-destructive rounded-lg hover:bg-destructive/10 transition-all"
                             title="Delete Card"
+                            aria-label="Delete card"
                           >
                             <Trash2 className="w-3.5 h-3.5" />
                           </button>
@@ -892,59 +905,48 @@ export default function SrsClient() {
       )}
 
       {/* ── 4. CREATE DECK MODAL ─────────────────────────────────────────── */}
-      {showCreateDeckModal && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-background/95">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="w-full max-w-sm bg-card border border-border shadow-popover rounded-2xl overflow-hidden"
-          >
-            <div className="px-6 py-4 border-b border-border flex justify-between items-center">
-              <h2 className="font-bold text-foreground text-sm">Create New Deck</h2>
-              <button 
-                onClick={() => setShowCreateDeckModal(false)} 
-                className="tap-target text-muted hover:text-foreground rounded-lg"
-                aria-label="Close create deck modal"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleCreateDeck}>
-              <div className="p-6 space-y-4">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold uppercase tracking-widest text-muted">Deck Name</label>
-                  <input 
-                    type="text" 
-                    required
-                    autoFocus
-                    placeholder="e.g., Database Systems (DBMS)" 
-                    value={newDeckName} 
-                    onChange={(e) => setNewDeckName(e.target.value)}
-                    className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-foreground font-medium"
-                  />
-                </div>
-              </div>
-              
-              <div className="p-4 bg-surface border-t border-border flex justify-end gap-2">
-                <button 
-                  type="button"
-                  onClick={() => setShowCreateDeckModal(false)}
-                  className="px-4 py-2 border border-border hover:bg-surface-hover text-xs font-semibold rounded-xl text-muted"
-                >
-                  Cancel
-                </button>
-                <button 
-                  type="submit"
-                  className="px-4 py-2 bg-foreground text-background hover:bg-foreground/90 text-xs font-bold rounded-xl shadow-md"
-                >
-                  Create Deck
-                </button>
-              </div>
-            </form>
-          </motion.div>
-        </div>
-      )}
+      <Modal
+        open={showCreateDeckModal}
+        onClose={() => setShowCreateDeckModal(false)}
+        title="Create New Deck"
+        size="sm"
+      >
+        <form onSubmit={handleCreateDeck} className="space-y-4">
+          <div className="space-y-2">
+            <label
+              htmlFor="new-deck-name"
+              className="text-[10px] font-bold uppercase tracking-widest text-muted"
+            >
+              Deck Name
+            </label>
+            <input
+              id="new-deck-name"
+              type="text"
+              required
+              autoFocus
+              placeholder="e.g., Database Systems (DBMS)"
+              value={newDeckName}
+              onChange={(e) => setNewDeckName(e.target.value)}
+              className="w-full bg-surface border border-border rounded-xl px-4 py-2.5 text-sm text-foreground outline-none focus:ring-1 focus:ring-foreground font-medium"
+            />
+          </div>
+          <div className="pt-2 flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setShowCreateDeckModal(false)}
+              className="px-4 py-2 border border-border hover:bg-surface-hover text-xs font-semibold rounded-xl text-muted"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-foreground text-background hover:bg-foreground/90 text-xs font-bold rounded-xl shadow-md"
+            >
+              Create Deck
+            </button>
+          </div>
+        </form>
+      </Modal>
 
       {/* ── 5. SESSION COMPLETE VIEW ──────────────────────────────────────── */}
       {view === 'session-complete' && reviewSummary && (

@@ -7,6 +7,7 @@ import { getDb } from "../../db/client.js";
 import {
   clipboardShares,
   clipboards,
+  communityDeckUpvotes,
   communityDecks,
   healthMeta,
   plannerCollaborators,
@@ -94,7 +95,7 @@ stateRoutes.put("/clipboard", async (c) => {
     return c.json({ error: "Invalid payload" }, 400);
   }
   const now = new Date();
-  await getDb()
+  const [saved] = await getDb()
     .insert(clipboards)
     .values({
       userId: uid,
@@ -111,8 +112,18 @@ stateRoutes.put("/clipboard", async (c) => {
         driveFileId: body.drive_file_id ?? null,
         driveFileName: body.drive_file_name ?? null,
       },
+    })
+    .returning({
+      shareId: clipboards.shareId,
+      shareExpiresAt: clipboards.shareExpiresAt,
     });
-  return c.json({ ok: true, updated_at: now.toISOString() });
+  const expired = saved?.shareExpiresAt ? saved.shareExpiresAt.getTime() < Date.now() : false;
+  return c.json({
+    ok: true,
+    updated_at: now.toISOString(),
+    share_id: expired ? null : (saved?.shareId ?? null),
+    share_expires_at: expired || !saved?.shareExpiresAt ? null : saved.shareExpiresAt.toISOString(),
+  });
 });
 
 stateRoutes.post("/clipboard/share", async (c) => {
@@ -147,8 +158,9 @@ stateRoutes.delete("/clipboard/share", async (c) => {
 });
 
 stateRoutes.get("/planner", async (c) => {
-  const uid = c.get("user").uid;
-  const email = c.get("user").email?.toLowerCase() || "";
+  const user = c.get("user");
+  const uid = user.uid;
+  const email = user.emailVerified ? user.email?.toLowerCase() || "" : "";
   const month = Number(c.req.query("month"));
   const year = Number(c.req.query("year"));
   if (!month || !year) return c.json({ error: "Month and Year are required" }, 400);
@@ -215,8 +227,10 @@ stateRoutes.get("/planner", async (c) => {
 stateRoutes.post("/planner", async (c) => {
   const hit = limited(c, "planner", 30);
   if (hit) return hit;
-  const uid = c.get("user").uid;
-  const email = c.get("user").email?.toLowerCase() || "";
+  const user = c.get("user");
+  const uid = user.uid;
+  const verifiedEmail = user.emailVerified ? user.email?.toLowerCase() || "" : "";
+  const rawEmail = user.email?.toLowerCase() || "";
   const body = (await c.req.json().catch(() => null)) as {
     month?: number;
     year?: number;
@@ -236,11 +250,11 @@ stateRoutes.post("/planner", async (c) => {
     if (!row) return c.json({ error: "Plan not found" }, 404);
     const owner = row.ownerId === uid;
     let editor = owner;
-    if (!owner && email) {
+    if (!owner && verifiedEmail) {
       const col = await getDb()
         .select()
         .from(plannerCollaborators)
-        .where(and(eq(plannerCollaborators.planId, id), eq(plannerCollaborators.userEmail, email)))
+        .where(and(eq(plannerCollaborators.planId, id), eq(plannerCollaborators.userEmail, verifiedEmail)))
         .limit(1);
       editor = col[0]?.role === "editor";
     }
@@ -249,41 +263,91 @@ stateRoutes.post("/planner", async (c) => {
       .update(plannerPlans)
       .set({
         title: body.title.slice(0, 200),
-        isPublic: Boolean(body.is_public),
+        isPublic: owner ? Boolean(body.is_public) : row.isPublic,
         data: body.data ?? {},
         updatedAt: now,
       })
       .where(eq(plannerPlans.id, id));
   } else {
-    id = randomUUID();
-    await getDb()
-      .insert(plannerPlans)
-      .values({
-        id,
-        ownerId: uid,
-        ownerEmail: email || null,
-        month: body.month,
-        year: body.year,
-        title: body.title.slice(0, 200),
-        isPublic: Boolean(body.is_public),
-        data: body.data ?? {},
-        updatedAt: now,
-      })
-      .onConflictDoUpdate({
-        target: [plannerPlans.ownerId, plannerPlans.year, plannerPlans.month],
-        set: {
+    const owned = await getDb()
+      .select({ id: plannerPlans.id })
+      .from(plannerPlans)
+      .where(and(eq(plannerPlans.ownerId, uid), eq(plannerPlans.month, body.month), eq(plannerPlans.year, body.year)))
+      .limit(1);
+
+    if (owned[0]) {
+      id = owned[0].id;
+      await getDb()
+        .update(plannerPlans)
+        .set({
           title: body.title.slice(0, 200),
           isPublic: Boolean(body.is_public),
           data: body.data ?? {},
           updatedAt: now,
-        },
-      });
-    const saved = await getDb()
-      .select()
-      .from(plannerPlans)
-      .where(and(eq(plannerPlans.ownerId, uid), eq(plannerPlans.month, body.month), eq(plannerPlans.year, body.year)))
-      .limit(1);
-    id = saved[0]?.id ?? id;
+        })
+        .where(eq(plannerPlans.id, id));
+    } else {
+      let updatedShared = false;
+      if (verifiedEmail) {
+        const collabs = await getDb()
+          .select({ planId: plannerCollaborators.planId, role: plannerCollaborators.role })
+          .from(plannerCollaborators)
+          .where(eq(plannerCollaborators.userEmail, verifiedEmail))
+          .limit(30);
+        for (const col of collabs) {
+          if (col.role !== "editor") continue;
+          const shared = await getDb()
+            .select({ id: plannerPlans.id })
+            .from(plannerPlans)
+            .where(and(eq(plannerPlans.id, col.planId), eq(plannerPlans.month, body.month), eq(plannerPlans.year, body.year)))
+            .limit(1);
+          if (shared[0]) {
+            id = shared[0].id;
+            await getDb()
+              .update(plannerPlans)
+              .set({
+                title: body.title.slice(0, 200),
+                data: body.data ?? {},
+                updatedAt: now,
+              })
+              .where(eq(plannerPlans.id, id));
+            updatedShared = true;
+            break;
+          }
+        }
+      }
+      if (!updatedShared) {
+        id = randomUUID();
+        await getDb()
+          .insert(plannerPlans)
+          .values({
+            id,
+            ownerId: uid,
+            ownerEmail: rawEmail || null,
+            month: body.month,
+            year: body.year,
+            title: body.title.slice(0, 200),
+            isPublic: Boolean(body.is_public),
+            data: body.data ?? {},
+            updatedAt: now,
+          })
+          .onConflictDoUpdate({
+            target: [plannerPlans.ownerId, plannerPlans.year, plannerPlans.month],
+            set: {
+              title: body.title.slice(0, 200),
+              isPublic: Boolean(body.is_public),
+              data: body.data ?? {},
+              updatedAt: now,
+            },
+          });
+        const saved = await getDb()
+          .select()
+          .from(plannerPlans)
+          .where(and(eq(plannerPlans.ownerId, uid), eq(plannerPlans.month, body.month), eq(plannerPlans.year, body.year)))
+          .limit(1);
+        id = saved[0]?.id ?? id;
+      }
+    }
   }
   return c.json({ id, updated_at: now.toISOString() });
 });
@@ -332,10 +396,33 @@ stateRoutes.delete("/planner/collaborators", async (c) => {
   return c.json({ ok: true });
 });
 
+async function canAccessPlan(planId: string, uid: string, email: string): Promise<boolean> {
+  const planRows = await getDb()
+    .select({ ownerId: plannerPlans.ownerId })
+    .from(plannerPlans)
+    .where(eq(plannerPlans.id, planId))
+    .limit(1);
+  const plan = planRows[0];
+  if (!plan) return false;
+  if (plan.ownerId === uid) return true;
+  if (!email) return false;
+  const col = await getDb()
+    .select({ id: plannerCollaborators.id })
+    .from(plannerCollaborators)
+    .where(and(eq(plannerCollaborators.planId, planId), eq(plannerCollaborators.userEmail, email)))
+    .limit(1);
+  return col.length > 0;
+}
+
 stateRoutes.post("/planner/presence", async (c) => {
-  const uid = c.get("user").uid;
+  const user = c.get("user");
+  const uid = user.uid;
+  const email = user.emailVerified ? user.email?.toLowerCase() || "" : "";
   const body = (await c.req.json().catch(() => null)) as { planId?: string; displayName?: string } | null;
   if (!body?.planId) return c.json({ error: "planId required" }, 400);
+  if (!(await canAccessPlan(body.planId, uid, email))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
   const now = new Date();
   await getDb()
     .insert(plannerPresence)
@@ -353,8 +440,14 @@ stateRoutes.post("/planner/presence", async (c) => {
 });
 
 stateRoutes.get("/planner/presence", async (c) => {
+  const user = c.get("user");
+  const uid = user.uid;
+  const email = user.emailVerified ? user.email?.toLowerCase() || "" : "";
   const planId = c.req.query("planId") || "";
   if (!planId) return c.json({ people: [] });
+  if (!(await canAccessPlan(planId, uid, email))) {
+    return c.json({ error: "Forbidden" }, 403);
+  }
   const since = new Date(Date.now() - 45_000);
   const rows = await getDb()
     .select()
@@ -429,16 +522,55 @@ stateRoutes.get("/community-decks/:id", async (c) => {
 });
 
 stateRoutes.post("/community-decks/:id", async (c) => {
+  const hit = limited(c, "deck-upvote", 30);
+  if (hit) return hit;
+  const uid = c.get("user").uid;
   const id = c.req.param("id");
   const body = (await c.req.json().catch(() => null)) as { action?: string } | null;
   if (body?.action !== "upvote") return c.json({ error: "Unknown action" }, 400);
-  await getDb()
-    .update(communityDecks)
-    .set({ upvotes: sql`${communityDecks.upvotes} + 1` })
-    .where(eq(communityDecks.id, id));
-  const rows = await getDb().select().from(communityDecks).where(eq(communityDecks.id, id)).limit(1);
-  if (!rows[0]) return c.json({ error: "Deck not found" }, 404);
-  return c.json({ upvotes: rows[0].upvotes });
+
+  const outcome = await getDb().transaction(async (tx) => {
+    const existing = await tx
+      .select({ upvotes: communityDecks.upvotes })
+      .from(communityDecks)
+      .where(eq(communityDecks.id, id))
+      .limit(1);
+    if (!existing[0]) return { missing: true as const };
+
+    const inserted = await tx
+      .insert(communityDeckUpvotes)
+      .values({ id: `${uid}_${id}`, deckId: id, userId: uid })
+      .onConflictDoNothing({
+        target: [communityDeckUpvotes.userId, communityDeckUpvotes.deckId],
+      })
+      .returning({ id: communityDeckUpvotes.id });
+
+    if (inserted.length === 0) {
+      return {
+        missing: false as const,
+        alreadyUpvoted: true,
+        upvotes: existing[0].upvotes,
+      };
+    }
+
+    const updated = await tx
+      .update(communityDecks)
+      .set({ upvotes: sql`${communityDecks.upvotes} + 1` })
+      .where(eq(communityDecks.id, id))
+      .returning({ upvotes: communityDecks.upvotes });
+    return {
+      missing: false as const,
+      alreadyUpvoted: false,
+      upvotes: updated[0]?.upvotes ?? existing[0].upvotes + 1,
+    };
+  });
+
+  if (outcome.missing) return c.json({ error: "Deck not found" }, 404);
+  return c.json({
+    success: true,
+    upvotes: outcome.upvotes,
+    ...(outcome.alreadyUpvoted ? { alreadyUpvoted: true } : {}),
+  });
 });
 
 stateRoutes.delete("/community-decks/:id", async (c) => {

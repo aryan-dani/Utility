@@ -4,7 +4,12 @@ import { isAuthFailure, requireUser } from "@/lib/apiAuth";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 import { z } from "zod";
 import type { QAQuestion } from "@/lib/qa/types";
-import { QUESTION_BODY_MAX, ATTACHMENT_MAX } from "@/lib/qa/types";
+import {
+  QUESTION_BODY_MAX,
+  ATTACHMENT_MAX,
+  isSafeAttachmentUrl,
+  isSafeResourceUrl,
+} from "@/lib/qa/types";
 import { attachQuestionViewerState } from "@/lib/qa/viewerState";
 
 export const dynamic = "force-dynamic";
@@ -93,7 +98,11 @@ const createSchema = z.object({
   subject_name: z.string().min(1).max(120),
   resource_id: z.string().max(128).optional(),
   resource_title: z.string().max(200).optional(),
-  resource_url: z.string().max(1000).optional(),
+  resource_url: z
+    .string()
+    .max(1000)
+    .refine(isSafeResourceUrl, { message: "Invalid resource URL" })
+    .optional(),
   topic_unit: z.string().max(80).optional(),
   category: z.enum(["doubt", "general"]),
   body: z.string().min(1).max(QUESTION_BODY_MAX),
@@ -102,13 +111,9 @@ const createSchema = z.object({
       z
         .string()
         .max(500_000)
-        .refine(
-          (val) =>
-            val.startsWith("http://") ||
-            val.startsWith("https://") ||
-            val.startsWith("data:image/"),
-          { message: "Attachment must be a valid URL or image data" },
-        ),
+        .refine(isSafeAttachmentUrl, {
+          message: "Attachment must be a valid HTTP(S) URL or raster image",
+        }),
     )
     .max(ATTACHMENT_MAX)
     .optional(),

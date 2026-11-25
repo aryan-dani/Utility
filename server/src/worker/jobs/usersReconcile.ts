@@ -23,11 +23,13 @@ export async function runUsersReconcile(): Promise<void> {
     .limit(2000);
   const auth = adminAuth();
   const gone: string[] = [];
-  for (const { userId } of rows) {
-    try {
-      await auth.getUser(userId);
-    } catch {
-      gone.push(userId);
+  for (let i = 0; i < rows.length; i += 100) {
+    const chunk = rows.slice(i, i + 100);
+    const res = await auth.getUsers(chunk.map((r) => ({ uid: r.userId })));
+    for (const missing of res.notFound) {
+      if ("uid" in missing && missing.uid) {
+        gone.push(missing.uid);
+      }
     }
   }
   for (const uid of gone) {

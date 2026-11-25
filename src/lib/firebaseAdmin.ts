@@ -5,7 +5,11 @@ import {
   type App,
 } from "firebase-admin/app";
 import { getAuth } from "firebase-admin/auth";
-import { getFirestore } from "firebase-admin/firestore";
+import {
+  getFirestore,
+  type DocumentReference,
+  type Firestore,
+} from "firebase-admin/firestore";
 import { getStorage } from "firebase-admin/storage";
 
 function cleanPrivateKey(key: string | undefined): string | undefined {
@@ -73,3 +77,19 @@ export function getFirebaseAdmin(): App {
 export const adminDb = () => getFirestore(getFirebaseAdmin());
 export const adminAuth = () => getAuth(getFirebaseAdmin());
 export const adminStorage = () => getStorage(getFirebaseAdmin());
+
+const FIRESTORE_BATCH_LIMIT = 450;
+
+/** Delete Firestore document references safely across multiple batches. */
+export async function commitChunkedDeletes(
+  db: Firestore,
+  refs: DocumentReference[],
+): Promise<void> {
+  for (let i = 0; i < refs.length; i += FIRESTORE_BATCH_LIMIT) {
+    const batch = db.batch();
+    for (const ref of refs.slice(i, i + FIRESTORE_BATCH_LIMIT)) {
+      batch.delete(ref);
+    }
+    await batch.commit();
+  }
+}

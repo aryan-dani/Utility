@@ -208,7 +208,9 @@ export function clearWorkspaceResourcesCache(
 export function useWorkspaceResources(): WorkspaceResourcesState & {
   retry: () => void;
 } {
-  const { academicYear, branch, semester } = useAcademicStore();
+  const academicYear = useAcademicStore((s) => s.academicYear);
+  const branch = useAcademicStore((s) => s.branch);
+  const semester = useAcademicStore((s) => s.semester);
   const key = cacheKey(academicYear, branch, semester);
 
   const [resources, setResources] = useState<ResourceItem[]>(

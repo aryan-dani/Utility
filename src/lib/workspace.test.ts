@@ -114,7 +114,10 @@ describe("sanitizeRedirectTo", () => {
     expect(sanitizeRedirectTo("//evil.com")).toBe("/planner");
     expect(sanitizeRedirectTo("https://evil.com")).toBe("/planner");
     expect(sanitizeRedirectTo("/path\\to")).toBe("/planner");
-    expect(sanitizeRedirectTo("/planner?x=1")).toBe("/planner?x=1");
+    expect(sanitizeRedirectTo("/\t/evil.com")).toBe("/planner");
+    expect(sanitizeRedirectTo("/\n/evil.com")).toBe("/planner");
+    expect(sanitizeRedirectTo("/\r/evil.com")).toBe("/planner");
+    expect(sanitizeRedirectTo("/planner?x=1#top")).toBe("/planner?x=1#top");
   });
 });
 

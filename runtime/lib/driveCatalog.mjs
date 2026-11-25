@@ -419,6 +419,7 @@ export async function upsertResources(files, options = {}) {
   }
 
   // Prune
+  const deletedCatalogKeys = new Set();
   if (prune) {
     console.log(`\n🧹 Cleaning up stale database records...`);
     let candidatesSnap;
@@ -429,7 +430,7 @@ export async function upsertResources(files, options = {}) {
         .collection("resources")
         .where("drive_path", ">=", prefix)
         .where("drive_path", "<=", `${prefix}\uf8ff`)
-        .select("drive_path", "subject_id")
+        .select("drive_path", "subject_id", "academic_year", "branch", "semester")
         .get();
       console.log(
         `  🔎 Scoped prune candidates under ${prefix}: ${candidatesSnap.size}`,
@@ -437,7 +438,7 @@ export async function upsertResources(files, options = {}) {
     } else {
       candidatesSnap = await db
         .collection("resources")
-        .select("drive_path", "subject_id")
+        .select("drive_path", "subject_id", "academic_year", "branch", "semester")
         .get();
     }
     const staleResourceIds = [];
@@ -465,6 +466,11 @@ export async function upsertResources(files, options = {}) {
       }
 
       staleResourceIds.push(doc.id);
+      if (data.academic_year && data.branch && data.semester != null) {
+        deletedCatalogKeys.add(
+          `${data.academic_year}__${data.branch}__${data.semester}`,
+        );
+      }
     });
 
     if (staleResourceIds.length > 0) {
@@ -484,15 +490,18 @@ export async function upsertResources(files, options = {}) {
           await delBatch.commit();
 
           for (const id of chunk) {
-            const chunkSnap = await db
-              .collection("resource_chunks")
-              .where("resource_id", "==", id)
-              .limit(500)
-              .get();
-            if (chunkSnap.empty) continue;
-            const chunkBatch = db.batch();
-            chunkSnap.docs.forEach((d) => chunkBatch.delete(d.ref));
-            await chunkBatch.commit();
+            while (true) {
+              const chunkSnap = await db
+                .collection("resource_chunks")
+                .where("resource_id", "==", id)
+                .limit(500)
+                .get();
+              if (chunkSnap.empty) break;
+              const chunkBatch = db.batch();
+              chunkSnap.docs.forEach((d) => chunkBatch.delete(d.ref));
+              await chunkBatch.commit();
+              if (chunkSnap.size < 500) break;
+            }
           }
         }
       }
@@ -561,7 +570,7 @@ export async function upsertResources(files, options = {}) {
 
   // Invalidate workspace list catalogs for touched scopes (next page load rebuilds 1 doc).
   if (!dryRun) {
-    const catalogKeys = new Set();
+    const catalogKeys = new Set(deletedCatalogKeys);
     for (const write of pendingWrites) {
       if (write.kind !== "resource") continue;
       const year = write.payload?.academic_year;
@@ -601,19 +610,106 @@ export async function deleteResourceById(resourceId, { dryRun = false } = {}) {
     console.log(`  [dry-run] would delete resource ${resourceId}`);
     return;
   }
+  const existingSnap = await db.collection("resources").doc(resourceId).get();
+  const existing = existingSnap.exists ? existingSnap.data() : null;
+
   await db.collection("resources").doc(resourceId).delete();
   await db.collection("resource_content").doc(resourceId).delete();
   await deleteResourcePreview(resourceId);
-  const chunkSnap = await db
-    .collection("resource_chunks")
-    .where("resource_id", "==", resourceId)
-    .limit(500)
-    .get();
-  if (!chunkSnap.empty) {
+  while (true) {
+    const chunkSnap = await db
+      .collection("resource_chunks")
+      .where("resource_id", "==", resourceId)
+      .limit(500)
+      .get();
+    if (chunkSnap.empty) break;
     const batch = db.batch();
     chunkSnap.docs.forEach((d) => batch.delete(d.ref));
     await batch.commit();
+    if (chunkSnap.size < 500) break;
   }
+
+  if (existing?.academic_year && existing?.branch && existing?.semester != null) {
+    const catalogKey = `${existing.academic_year}__${existing.branch}__${existing.semester}`;
+    try {
+      await db.collection("workspace_catalogs").doc(catalogKey).delete();
+    } catch (err) {
+      console.warn(`  ⚠️  catalog delete ${catalogKey}: ${err.message}`);
+    }
+  }
+}
+
+/**
+ * Delete resources (and their content/chunks/previews) matching Drive file IDs.
+ * Used by incremental sync when Drive Changes API reports removed or trashed files.
+ */
+export async function deleteResourcesByDriveFileIds(
+  driveFileIds,
+  { dryRun = false } = {},
+) {
+  const uniqueIds = [...new Set((driveFileIds || []).filter(Boolean))];
+  if (uniqueIds.length === 0) return { deleted: 0 };
+
+  const matched = [];
+  for (let i = 0; i < uniqueIds.length; i += 30) {
+    const chunk = uniqueIds.slice(i, i + 30);
+    const snap = await db
+      .collection("resources")
+      .where("drive_file_id", "in", chunk)
+      .select("academic_year", "branch", "semester")
+      .get();
+    for (const doc of snap.docs) {
+      matched.push({ id: doc.id, ...doc.data() });
+    }
+  }
+
+  if (matched.length === 0) return { deleted: 0 };
+  if (dryRun) {
+    console.log(
+      `  [dry-run] would delete ${matched.length} removed/trashed resource(s)`,
+    );
+    return { deleted: matched.length };
+  }
+
+  const catalogKeys = new Set();
+  for (let i = 0; i < matched.length; i += 40) {
+    const slice = matched.slice(i, i + 40);
+    const delBatch = db.batch();
+    for (const item of slice) {
+      delBatch.delete(db.collection("resources").doc(item.id));
+      delBatch.delete(db.collection("resource_content").doc(item.id));
+      delBatch.delete(db.collection(PREVIEW_COLLECTION).doc(item.id));
+      if (item.academic_year && item.branch && item.semester != null) {
+        catalogKeys.add(`${item.academic_year}__${item.branch}__${item.semester}`);
+      }
+    }
+    await delBatch.commit();
+
+    for (const item of slice) {
+      while (true) {
+        const chunkSnap = await db
+          .collection("resource_chunks")
+          .where("resource_id", "==", item.id)
+          .limit(500)
+          .get();
+        if (chunkSnap.empty) break;
+        const chunkBatch = db.batch();
+        chunkSnap.docs.forEach((d) => chunkBatch.delete(d.ref));
+        await chunkBatch.commit();
+        if (chunkSnap.size < 500) break;
+      }
+    }
+  }
+
+  for (const key of catalogKeys) {
+    try {
+      await db.collection("workspace_catalogs").doc(key).delete();
+    } catch (err) {
+      console.warn(`  ⚠️  catalog delete ${key}: ${err.message}`);
+    }
+  }
+
+  return { deleted: matched.length };
 }
 
 /**

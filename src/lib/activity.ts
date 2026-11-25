@@ -134,6 +134,7 @@ async function flushPending() {
 
     const res = await fetch("/api/activity", {
       method: "POST",
+      keepalive: true,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${idToken}`,

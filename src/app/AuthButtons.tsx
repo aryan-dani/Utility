@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import AppLink from "@/components/ui/AppLink";
 import { ArrowRight } from "lucide-react";
 import { useAcademicStore } from "@/store/academicStore";
@@ -10,11 +10,23 @@ import {
   workspaceQuery,
 } from "@/lib/workspace";
 
+const subscribeNoop = () => () => {};
+const getStoredJson = () => JSON.stringify(readStoredWorkspace());
+const getEmptyStoredJson = () => "null";
+
 export default function AuthButtons() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const storeAcademicYear = useAcademicStore((s) => s.academicYear);
   const storeBranch = useAcademicStore((s) => s.branch);
   const storeSemester = useAcademicStore((s) => s.semester);
+  const storedJson = useSyncExternalStore(
+    subscribeNoop,
+    getStoredJson,
+    getEmptyStoredJson,
+  );
+  const storedWorkspace = JSON.parse(storedJson) as ReturnType<
+    typeof readStoredWorkspace
+  >;
 
   useEffect(() => {
     let cancelled = false;
@@ -37,7 +49,7 @@ export default function AuthButtons() {
       branch: storeBranch,
       semester: String(storeSemester),
     },
-    readStoredWorkspace(),
+    storedWorkspace,
   );
   const qs = workspaceQuery(academicYear, branch, semester);
 

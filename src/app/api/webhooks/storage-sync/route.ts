@@ -41,6 +41,7 @@ async function isAuthorized(request: Request): Promise<boolean> {
         isAdminUser({
           uid: decoded.uid,
           email: decoded.email ?? null,
+          emailVerified: decoded.email_verified === true,
         })
       ) {
         return true;

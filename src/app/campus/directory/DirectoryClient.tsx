@@ -2,15 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import {
-  Search,
-  ChevronLeft,
-  Mail,
-  ExternalLink,
-  X,
-} from "lucide-react";
+import { Search, ChevronLeft, Mail, ExternalLink } from "lucide-react";
 import type { StaffMember } from "@/lib/ishani";
-import { PageHeader, PageShell } from "@/components/ui";
+import { Modal, PageHeader, PageShell } from "@/components/ui";
 
 const FACULTY_GROUP_ORDER = [
   "B.Tech Computer Science & Engineering",
@@ -205,77 +199,55 @@ export default function DirectoryClient({
         </>
       )}
 
-      {selected && (
-        <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center p-4">
-          <button
-            type="button"
-            aria-label="Close details"
-            className="absolute inset-0 bg-background/80"
-            onClick={() => setSelected(null)}
-          />
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="staff-detail-title"
-            className="relative w-full max-w-lg bg-card border border-border rounded-2xl shadow-popover overflow-hidden z-10 max-h-[85vh] flex flex-col"
-          >
-            <div className="px-5 py-4 border-b border-border flex items-start justify-between gap-3">
-              <div className="min-w-0">
-                <h3
-                  id="staff-detail-title"
-                  className="text-base font-bold text-foreground"
-                >
-                  {String(selected.name || "Staff")}
-                </h3>
-                <p className="text-xs text-muted mt-0.5">
-                  {String(selected.designation || "-")}
-                </p>
-              </div>
-              <button
-                type="button"
-                onClick={() => setSelected(null)}
-                className="tap-target rounded-xl text-muted hover:text-foreground hover:bg-surface transition-colors"
-                aria-label="Close"
+      <Modal
+        open={Boolean(selected)}
+        onClose={() => setSelected(null)}
+        title={
+          selected ? (
+            <div>
+              <span className="block">{String(selected.name || "Staff")}</span>
+              <span className="block text-xs font-normal text-muted mt-0.5">
+                {String(selected.designation || "-")}
+              </span>
+            </div>
+          ) : undefined
+        }
+        size="md"
+      >
+        {selected && (
+          <div className="space-y-3 text-sm">
+            {[
+              ["Program", selected.facultyGroup],
+              ["Qualification", selected.qualification],
+              ["Specialization", selected.specialization],
+              ["Experience", selected.experience],
+              ["Email", selected.email],
+              ["Mobile", selected.mobile],
+            ].map(([label, value]) =>
+              value ? (
+                <div key={String(label)}>
+                  <p className="text-xs font-bold uppercase tracking-widest text-muted mb-0.5">
+                    {label}
+                  </p>
+                  <p className="text-foreground break-words">{String(value)}</p>
+                </div>
+              ) : null,
+            )}
+            {typeof selected.profileLink === "string" &&
+            /^https?:\/\//i.test(selected.profileLink) ? (
+              <a
+                href={selected.profileLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground underline underline-offset-4 hover:text-muted"
               >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-5 overflow-y-auto space-y-3 text-sm">
-              {[
-                ["Program", selected.facultyGroup],
-                ["Qualification", selected.qualification],
-                ["Specialization", selected.specialization],
-                ["Experience", selected.experience],
-                ["Email", selected.email],
-                ["Mobile", selected.mobile],
-              ].map(([label, value]) =>
-                value ? (
-                  <div key={String(label)}>
-                    <p className="text-xs font-bold uppercase tracking-widest text-muted mb-0.5">
-                      {label}
-                    </p>
-                    <p className="text-foreground break-words">
-                      {String(value)}
-                    </p>
-                  </div>
-                ) : null,
-              )}
-              {typeof selected.profileLink === "string" &&
-              /^https?:\/\//i.test(selected.profileLink) ? (
-                <a
-                  href={selected.profileLink}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1.5 text-xs font-semibold text-foreground underline underline-offset-4 hover:text-muted"
-                >
-                  Open profile
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              ) : null}
-            </div>
+                Open profile
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : null}
           </div>
-        </div>
-      )}
+        )}
+      </Modal>
     </PageShell>
   );
 }

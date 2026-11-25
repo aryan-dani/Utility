@@ -79,11 +79,14 @@ function PdfPage({
   const wrapRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const textRef = useRef<HTMLDivElement>(null);
+  const textDivsRef = useRef<HTMLElement[]>([]);
+  const [textVersion, setTextVersion] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
     let layer: InstanceType<PdfModule["TextLayer"]> | null = null;
     let renderTask: { cancel: () => void } | null = null;
+    textDivsRef.current = [];
 
     async function paint() {
       const page = await pdf.getPage(pageNumber);
@@ -122,32 +125,8 @@ function PdfPage({
       });
       await layer.render();
       if (cancelled) return;
-
-      const q = findQuery.trim().toLowerCase();
-      if (!q) return;
-      const divs = layer.textDivs;
-      let occurrence = 0;
-      for (const el of divs) {
-        const t = (el.textContent || "").toLowerCase();
-        // A single text span may contain multiple hits - count each.
-        let from = 0;
-        let hitCountInDiv = 0;
-        while (from <= t.length) {
-          const at = t.indexOf(q, from);
-          if (at < 0) break;
-          hitCountInDiv += 1;
-          from = at + q.length;
-        }
-        if (hitCountInDiv === 0) continue;
-        el.classList.add("pdf-find-hit");
-        // Activate if any occurrence inside this div is the active one.
-        for (let i = 0; i < hitCountInDiv; i++) {
-          if (occurrence + i === activeOccurrence) {
-            el.classList.add("pdf-find-hit-active");
-          }
-        }
-        occurrence += hitCountInDiv;
-      }
+      textDivsRef.current = layer.textDivs;
+      setTextVersion((v) => v + 1);
     }
 
     void paint().catch(() => {});
@@ -160,7 +139,36 @@ function PdfPage({
       }
       layer?.cancel();
     };
-  }, [pdf, pdfjs, pageNumber, scale, findQuery, activeOccurrence, onHeight]);
+  }, [pdf, pdfjs, pageNumber, scale, onHeight]);
+
+  // Apply search hit classes without repainting the PDF canvas on keystrokes.
+  useEffect(() => {
+    const divs = textDivsRef.current;
+    if (divs.length === 0) return;
+    const q = findQuery.trim().toLowerCase();
+    let occurrence = 0;
+    for (const el of divs) {
+      el.classList.remove("pdf-find-hit", "pdf-find-hit-active");
+      if (!q) continue;
+      const t = (el.textContent || "").toLowerCase();
+      let from = 0;
+      let hitCountInDiv = 0;
+      while (from <= t.length) {
+        const at = t.indexOf(q, from);
+        if (at < 0) break;
+        hitCountInDiv += 1;
+        from = at + q.length;
+      }
+      if (hitCountInDiv === 0) continue;
+      el.classList.add("pdf-find-hit");
+      for (let i = 0; i < hitCountInDiv; i++) {
+        if (occurrence + i === activeOccurrence) {
+          el.classList.add("pdf-find-hit-active");
+        }
+      }
+      occurrence += hitCountInDiv;
+    }
+  }, [findQuery, activeOccurrence, textVersion]);
 
   return (
     <div

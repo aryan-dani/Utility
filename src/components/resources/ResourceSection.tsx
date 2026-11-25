@@ -12,7 +12,7 @@ import {
   collectSingletonFiles,
   folderScrollSelector,
 } from "@/lib/resourceGroups";
-import { motion, AnimatePresence } from "framer-motion";
+import { m as motion, AnimatePresence } from "framer-motion";
 import ResourceCard from "./ResourceCard";
 import ResourceFolder from "./ResourceFolder";
 import ResourceFileRow from "./ResourceFileRow";

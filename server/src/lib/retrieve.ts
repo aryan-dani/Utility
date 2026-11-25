@@ -162,7 +162,7 @@ export async function retrieve(
   const context = sources
     .map(
       (s, n) =>
-        `[${n + 1}] ${s.title}${s.sectionLabel ? ` · ${s.sectionLabel}` : ""}\n${s.text}`,
+        `[S${n + 1}] ${s.title}${s.sectionLabel ? ` · ${s.sectionLabel}` : ""}\n${s.text}`,
     )
     .join("\n\n");
 

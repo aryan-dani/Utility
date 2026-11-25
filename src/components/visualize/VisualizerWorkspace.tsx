@@ -8,7 +8,7 @@ import { StructureToggle } from "@/components/visualize/StructureToggle";
 import { structureFromParam } from "@/lib/visualize/structure";
 import { HowToUse } from "@/components/visualize/LessonChrome";
 import { useVizMotion } from "@/components/visualize/motion";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { AlgorithmMeta } from "@/lib/visualize/types";
 import { SearchTreeAlgorithmId } from "@/lib/visualize/engines/searchTree";
 import { fetchSavedGrid } from "@/lib/visualize/client";

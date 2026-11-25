@@ -90,12 +90,13 @@ async function writeSrsToCloud(): Promise<void> {
       updated_at: updatedAt,
     };
 
-    const { homeOrVercelJson } = await import('@/lib/homeApi');
-    const home = await homeOrVercelJson('/api/srs', {
+    const { utilityFetch } = await import('@/lib/utilityServer');
+    const home = await utilityFetch('/v1/srs', {
       method: 'PUT',
       body: payload,
+      timeoutMs: 20_000,
     });
-    if (!home.ok) {
+    if (!home?.ok) {
       const docRef = doc(db, 'srs_data', user.uid);
       await setDoc(docRef, {
         user_id: user.uid,
@@ -285,10 +286,10 @@ export const useSRSStore = create<SRSState>((set, get) => ({
     cloudHydrating = true;
     set({ syncing: true });
     try {
-      const { homeOrVercelJson } = await import('@/lib/homeApi');
-      const home = await homeOrVercelJson('/api/srs');
+      const { utilityFetch } = await import('@/lib/utilityServer');
+      const home = await utilityFetch('/v1/srs', { timeoutMs: 20_000 });
       let cloudData: { decks?: Deck[]; cards?: Flashcard[]; updated_at?: string } | null = null;
-      if (home.ok) {
+      if (home?.ok) {
         const body = (await home.json()) as {
           decks?: Deck[];
           cards?: Flashcard[];
@@ -305,29 +306,30 @@ export const useSRSStore = create<SRSState>((set, get) => ({
       }
 
       if (cloudData) {
-        if (cloudData) {
-          const cloudDecks = cloudData.decks || [];
-          const cloudCards = cloudData.cards || [];
-          const cloudUpdated = cloudData.updated_at
-            ? new Date(cloudData.updated_at).getTime()
-            : 0;
-          const localMeta = readLocalMeta();
-          const localUpdated = localMeta?.updated_at
-            ? new Date(localMeta.updated_at).getTime()
-            : 0;
+        const cloudDecks = cloudData.decks || [];
+        const cloudCards = cloudData.cards || [];
+        const cloudUpdated = cloudData.updated_at
+          ? new Date(cloudData.updated_at).getTime()
+          : 0;
+        const localMeta = readLocalMeta();
+        const localUpdated = localMeta?.updated_at
+          ? new Date(localMeta.updated_at).getTime()
+          : 0;
 
-          if (cloudUpdated >= localUpdated) {
-            set({ decks: cloudDecks, cards: cloudCards });
-            localStorage.setItem(DECKS_KEY, JSON.stringify(cloudDecks));
-            localStorage.setItem(CARDS_KEY, JSON.stringify(cloudCards));
-            if (cloudData.updated_at) {
-              writeLocalMeta(cloudData.updated_at);
-            }
-          } else if (localUpdated > 0) {
-            // Clear guard before push so syncToCloud / writeSrsToCloud can run.
-            cloudHydrating = false;
-            await flushSyncToCloud();
+        if (
+          cloudUpdated > localUpdated ||
+          (localUpdated === 0 && (cloudUpdated > 0 || cloudDecks.length > 0 || cloudCards.length > 0))
+        ) {
+          set({ decks: cloudDecks, cards: cloudCards });
+          localStorage.setItem(DECKS_KEY, JSON.stringify(cloudDecks));
+          localStorage.setItem(CARDS_KEY, JSON.stringify(cloudCards));
+          if (cloudData.updated_at) {
+            writeLocalMeta(cloudData.updated_at);
           }
+        } else if (localUpdated > cloudUpdated) {
+          // Clear guard before push so syncToCloud / writeSrsToCloud can run.
+          cloudHydrating = false;
+          await flushSyncToCloud();
         }
       }
     } catch (e) {

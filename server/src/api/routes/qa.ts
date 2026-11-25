@@ -34,13 +34,37 @@ function limitOr429(c: Context<AppVars>, bucket: string, limit: number) {
   return c.json({ error: "Rate limit exceeded" }, 429, { "Retry-After": String(r.retryAfterSec) });
 }
 
+const SAFE_RASTER_DATA_IMAGE_RE =
+  /^data:image\/(?:png|jpe?g|gif|webp|avif);base64,[A-Za-z0-9+/=]+$/i;
+
+function isSafeAttachment(val: string): boolean {
+  return (
+    val.startsWith("http://") ||
+    val.startsWith("https://") ||
+    SAFE_RASTER_DATA_IMAGE_RE.test(val)
+  );
+}
+
+function isSafeResourceUrl(val: string): boolean {
+  const trimmed = val.trim();
+  if (!trimmed) return true;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+    return !/[\x00-\x1f\x7f\\]/.test(trimmed) && !trimmed.includes("://");
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
 const attachment = z
   .string()
   .max(500_000)
-  .refine(
-    (v) => v.startsWith("http://") || v.startsWith("https://") || v.startsWith("data:image/"),
-    { message: "Attachment must be a valid URL or image data" },
-  );
+  .refine(isSafeAttachment, {
+    message: "Attachment must be a valid HTTP(S) URL or raster image",
+  });
 
 const listSchema = z.object({
   academic_year: z.string().min(1).max(16),
@@ -60,7 +84,11 @@ const createSchema = z.object({
   subject_name: z.string().min(1).max(120),
   resource_id: z.string().max(128).optional(),
   resource_title: z.string().max(200).optional(),
-  resource_url: z.string().max(1000).optional(),
+  resource_url: z
+    .string()
+    .max(1000)
+    .refine(isSafeResourceUrl, { message: "Invalid resource URL" })
+    .optional(),
   topic_unit: z.string().max(80).optional(),
   category: z.enum(["doubt", "general"]),
   body: z.string().min(1).max(QUESTION_BODY_MAX),

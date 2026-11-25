@@ -50,6 +50,7 @@ async function rename(fileId, newName, label) {
   await drive.files.update({
     fileId,
     requestBody: { name: newName },
+    supportsAllDrives: true,
   });
   console.log(`  ✅ Renamed: ${label} → ${newName}`);
 }

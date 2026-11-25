@@ -8,13 +8,21 @@ const { Pool } = pg;
 let pool: pg.Pool | null = null;
 let db: ReturnType<typeof drizzle<typeof schema>> | null = null;
 
-export function getPool(): pg.Pool {
+export function getPool(statementTimeoutMs?: number): pg.Pool {
   if (!pool) {
+    const raw = process.env.PG_STATEMENT_TIMEOUT_MS;
+    const parsed = raw !== undefined ? Number(raw) : NaN;
+    const timeout =
+      statementTimeoutMs !== undefined
+        ? statementTimeoutMs
+        : Number.isFinite(parsed) && parsed >= 0
+          ? parsed
+          : 5_000;
     pool = new Pool({
       connectionString: env().DATABASE_URL,
       max: 20,
       idleTimeoutMillis: 30_000,
-      statement_timeout: 5_000,
+      ...(timeout > 0 ? { statement_timeout: timeout } : {}),
     });
   }
   return pool;

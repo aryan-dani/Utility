@@ -25,7 +25,7 @@ import {
   isCsvExtension,
   isImageExtension,
 } from "@/lib/fileUtils";
-import { motion, useReducedMotion } from "framer-motion";
+import { m as motion, useReducedMotion } from "framer-motion";
 import { MOTION } from "@/lib/motion";
 import { cleanResourceTitle, shortCodeLabel } from "@/lib/titleUtils";
 import dynamic from "next/dynamic";

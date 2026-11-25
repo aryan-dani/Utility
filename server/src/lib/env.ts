@@ -71,8 +71,10 @@ export function adminUids(): string[] {
 export function isAdminAccount(user: {
   uid: string;
   email?: string | null;
+  emailVerified?: boolean;
 }): boolean {
   if (adminUids().includes(user.uid)) return true;
+  if (user.emailVerified !== true) return false;
   const email = user.email?.trim().toLowerCase();
   return !!email && adminEmails().includes(email);
 }

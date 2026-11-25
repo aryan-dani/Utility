@@ -181,7 +181,7 @@ export default function NotebookViewer({ content }: { content: string }) {
                 key={index}
                 className="rounded-xl border border-border bg-card px-4 py-4 sm:px-5"
               >
-                <div className="prose prose-invert prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground-subtle prose-strong:text-foreground prose-a:text-primary prose-code:text-foreground prose-pre:bg-surface">
+                <div className="prose dark:prose-invert prose-sm max-w-none prose-headings:text-foreground prose-p:text-foreground-subtle prose-strong:text-foreground prose-a:text-primary prose-code:text-foreground prose-pre:bg-surface">
                   <ReactMarkdown remarkPlugins={[remarkGfm]}>
                     {source}
                   </ReactMarkdown>

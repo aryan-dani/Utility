@@ -201,70 +201,77 @@ const MessageContent = memo(function MessageContent({
   sources?: RetrievalSource[];
 }) {
   const markdown = showCursor ? stabilizeStreamingMarkdown(content) : content;
+  const markdownComponents = useMemo(
+    () => ({
+      pre: ({ children }: { children?: ReactNode }) => (
+        <div className="relative group my-4">{children}</div>
+      ),
+      code: ({ inline, className, children, ...props }: MarkdownCodeProps) => {
+        const match = /language-(\w+)/.exec(className || '');
+        const lang = match ? match[1] : '';
+        const code = String(children).replace(/\n$/, '');
+
+        if (!inline && match) {
+          return (
+            <div className="rounded-xl overflow-hidden border border-border">
+              <div className="flex items-center justify-between px-3 py-1.5 bg-surface-hover border-b border-border text-[10px] font-mono text-muted uppercase tracking-wider">
+                {lang}
+                <CopyButton text={code} />
+              </div>
+              <pre className="p-3 bg-surface overflow-x-auto m-0">
+                <code className="text-xs font-mono text-foreground whitespace-pre">{code}</code>
+              </pre>
+            </div>
+          );
+        }
+        return (
+          <code className={className} {...props}>
+            {children}
+          </code>
+        );
+      },
+      p: ({ children }: { children?: ReactNode }) => (
+        <p>{injectCitationChips(children, onCitationClick, sources)}</p>
+      ),
+      li: ({ children }: { children?: ReactNode }) => (
+        <li>{injectCitationChips(children, onCitationClick, sources)}</li>
+      ),
+      td: ({ children }: { children?: ReactNode }) => (
+        <td className="px-4 py-3 text-xs text-foreground/75 border-b border-border/40 font-semibold leading-relaxed">
+          {injectCitationChips(children, onCitationClick, sources)}
+        </td>
+      ),
+      table: ({ children }: { children?: ReactNode }) => (
+        <div className="overflow-x-auto my-6 border border-border bg-card shadow-sm rounded-xl">
+          <table className="min-w-full divide-y divide-border/60 text-xs">
+            {children}
+          </table>
+        </div>
+      ),
+      thead: ({ children }: { children?: ReactNode }) => (
+        <thead className="bg-surface/50 font-bold uppercase tracking-wider text-muted">
+          {children}
+        </thead>
+      ),
+      th: ({ children }: { children?: ReactNode }) => (
+        <th className="px-4 py-3.5 text-left text-xs font-bold text-foreground/85 border-b border-border/60">
+          {children}
+        </th>
+      ),
+      tr: ({ children }: { children?: ReactNode }) => (
+        <tr className="hover:bg-surface/20 transition-colors">
+          {children}
+        </tr>
+      ),
+    }),
+    [onCitationClick, sources],
+  );
+
   return (
     <div className="prose prose-sm dark:prose-invert max-w-none prose-p:leading-relaxed prose-pre:bg-surface prose-pre:border prose-pre:border-border prose-pre:rounded-xl prose-code:text-primary prose-code:bg-primary/5 prose-code:px-1 prose-code:py-0.5 prose-code:rounded prose-code:before:content-none prose-code:after:content-none">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        components={{
-          pre: ({ children }) => <div className="relative group my-4">{children}</div>,
-          code: ({ inline, className, children, ...props }: MarkdownCodeProps) => {
-            const match = /language-(\w+)/.exec(className || '');
-            const lang = match ? match[1] : '';
-            const code = String(children).replace(/\n$/, '');
-            
-            if (!inline && match) {
-              return (
-                <div className="rounded-xl overflow-hidden border border-border">
-                  <div className="flex items-center justify-between px-3 py-1.5 bg-surface-hover border-b border-border text-[10px] font-mono text-muted uppercase tracking-wider">
-                    {lang}
-                    <CopyButton text={code} />
-                  </div>
-                  <pre className="p-3 bg-surface overflow-x-auto m-0">
-                    <code className="text-xs font-mono text-foreground whitespace-pre">{code}</code>
-                  </pre>
-                </div>
-              );
-            }
-            return (
-              <code className={className} {...props}>
-                {children}
-              </code>
-            );
-          },
-          p: ({ children }) => (
-            <p>{injectCitationChips(children, onCitationClick, sources)}</p>
-          ),
-          li: ({ children }) => (
-            <li>{injectCitationChips(children, onCitationClick, sources)}</li>
-          ),
-          td: ({ children }) => (
-            <td className="px-4 py-3 text-xs text-foreground/75 border-b border-border/40 font-semibold leading-relaxed">
-              {injectCitationChips(children, onCitationClick, sources)}
-            </td>
-          ),
-          table: ({ children }) => (
-            <div className="overflow-x-auto my-6 border border-border bg-card shadow-sm rounded-xl">
-              <table className="min-w-full divide-y divide-border/60 text-xs">
-                {children}
-              </table>
-            </div>
-          ),
-          thead: ({ children }) => (
-            <thead className="bg-surface/50 font-bold uppercase tracking-wider text-muted">
-              {children}
-            </thead>
-          ),
-          th: ({ children }) => (
-            <th className="px-4 py-3.5 text-left text-xs font-bold text-foreground/85 border-b border-border/60">
-              {children}
-            </th>
-          ),
-          tr: ({ children }) => (
-            <tr className="hover:bg-surface/20 transition-colors">
-              {children}
-            </tr>
-          ),
-        }}
+        components={markdownComponents}
       >
         {markdown}
       </ReactMarkdown>
@@ -582,8 +589,8 @@ export default function AskClient() {
   );
 
   const chatSessionKey = useMemo(() => {
-    return activeSessionId ? `${activeSessionId}-${selectedResourceId}-${academicYear}-${branch}-${semester}` : undefined;
-  }, [activeSessionId, selectedResourceId, academicYear, branch, semester]);
+    return activeSessionId || undefined;
+  }, [activeSessionId]);
 
   const initialMessages = useMemo(() => {
     if (!activeSessionId) return EMPTY_ARRAY;
@@ -717,6 +724,13 @@ export default function AskClient() {
     const merged = displaySessions;
     if (JSON.stringify(session.messages) === JSON.stringify(messages)) return;
     localStorage.setItem('utility_chat_sessions', JSON.stringify(merged));
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (!cancelled) setSessions(merged);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, [sessionsReady, activeSessionId, status, sessions, messages, displaySessions]);
 
   // Save sessions helper

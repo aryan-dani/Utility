@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { createPortal } from "react-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m as motion } from "framer-motion";
 import {
   X,
   ZoomIn,
@@ -134,13 +134,16 @@ export default function QAImageViewer({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [open, onClose, handleNext, handlePrev]);
 
-  if (!mounted || !open || images.length === 0) return null;
+  if (!mounted) return null;
 
+  const isVisible = open && images.length > 0;
   const currentImage = images[currentIndex];
 
   return createPortal(
     <AnimatePresence>
+      {isVisible && currentImage && (
       <div
+        key="qa-image-viewer"
         ref={containerRef}
         className="fixed inset-0 z-[10000] flex flex-col bg-black/95 backdrop-blur-2xl select-none"
         role="dialog"
@@ -301,6 +304,7 @@ export default function QAImageViewer({
           </div>
         )}
       </div>
+      )}
     </AnimatePresence>,
     document.body,
   );

@@ -15,7 +15,7 @@ import {
   Hash,
   Trash2,
 } from "lucide-react";
-import type { QAQuestion } from "@/lib/qa/types";
+import { timeAgo, type QAQuestion } from "@/lib/qa/types";
 import { Card } from "@/components/ui";
 import VoteButton from "./VoteButton";
 
@@ -28,18 +28,6 @@ interface QuestionCardProps {
   onSave: () => void;
   onDelete?: () => void;
   onClick: () => void;
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
 }
 
 export default function QuestionCard({

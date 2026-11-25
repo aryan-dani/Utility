@@ -112,3 +112,43 @@ export const QUESTION_CATEGORIES: { value: QuestionCategory; label: string; desc
 export const QUESTION_BODY_MAX = 5000;
 export const ANSWER_BODY_MAX = 5000;
 export const ATTACHMENT_MAX = 4;
+
+const SAFE_RASTER_DATA_IMAGE_RE =
+  /^data:image\/(?:png|jpe?g|gif|webp|avif);base64,[A-Za-z0-9+/=]+$/i;
+
+/**
+ * Only permit http(s) URLs or safe raster image data URLs (blocks SVG/XSS data URLs).
+ */
+export function isSafeAttachmentUrl(val: string): boolean {
+  if (val.startsWith("http://") || val.startsWith("https://")) return true;
+  return SAFE_RASTER_DATA_IMAGE_RE.test(val);
+}
+
+/**
+ * Only permit http(s) URLs or safe same-origin relative paths (blocks javascript:/data:/vbscript:).
+ */
+export function isSafeResourceUrl(val: string): boolean {
+  const trimmed = val.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
+    return !/[\x00-\x1f\x7f\\]/.test(trimmed) && !trimmed.includes("://");
+  }
+  try {
+    const parsed = new URL(trimmed);
+    return parsed.protocol === "https:" || parsed.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+export function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60_000);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}h ago`;
+  const days = Math.floor(hrs / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
+}

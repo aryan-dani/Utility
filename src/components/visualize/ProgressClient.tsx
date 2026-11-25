@@ -14,7 +14,7 @@ import {
 import { ALGORITHMS } from "@/lib/visualize/catalog";
 import { GhostAction } from "@/components/visualize/LessonChrome";
 import { useVizMotion } from "@/components/visualize/motion";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import {
   ButtonLink,
   EmptyState,

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, AnimatePresence } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { X, Brain, Copy, Check, Info, Layers } from 'lucide-react';
 import { auth } from '@/lib/firebase/auth';
@@ -60,15 +60,23 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
     };
   }, [resourceId]);
 
-  // Escape key handler to close the modal
+  // Escape key handler + focus restore for SummaryModal
+  const previouslyFocusedRef = useRef<HTMLElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
+    previouslyFocusedRef.current = document.activeElement as HTMLElement | null;
+    dialogRef.current?.focus();
     function handleKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
         onClose();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      previouslyFocusedRef.current?.focus?.();
+    };
   }, [onClose]);
 
   const handleCopy = () => {
@@ -80,7 +88,6 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
   };
 
   return (
-    <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6">
         {/* Backdrop */}
         <motion.div
@@ -92,12 +99,14 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
 
         {/* Modal */}
         <motion.div
+          ref={dialogRef}
+          tabIndex={-1}
           {...motionSafe.pop}
           transition={{ duration: motionSafe.duration, ease: motionSafe.ease }}
           role="dialog"
           aria-modal="true"
           aria-labelledby="summary-title"
-          className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-popover overflow-hidden flex flex-col max-h-[85vh] z-10"
+          className="relative w-full max-w-2xl bg-card border border-border rounded-2xl shadow-popover overflow-hidden flex flex-col max-h-[85vh] z-10 outline-none"
         >
           {/* Header */}
           <div className="px-6 py-4 border-b border-border flex items-center justify-between bg-surface/50">
@@ -205,6 +214,5 @@ export default function SummaryModal({ resourceId, resourceTitle, onClose }: Sum
           )}
         </motion.div>
       </div>
-    </AnimatePresence>
   );
 }

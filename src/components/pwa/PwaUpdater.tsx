@@ -8,14 +8,28 @@ import {
   decideWaitingWorkerAction,
   SW_UPDATE_SESSION,
 } from '@/lib/pwa/updatePolicy';
+import { OFFLINE_WARM_STORAGE_PREFIX } from '@/lib/pwa/offlineNavigation';
 import { warmOfflineLocalToolPages } from '@/lib/pwa/warmOfflineShell';
 const TOAST_ID = 'utility-sw-update';
 const CONTROLLER_FALLBACK_MS = 1500;
 /** Focus/visibility SW checks — keep mount + hourly interval uncapped. */
 const VISIBILITY_UPDATE_DEBOUNCE_MS = 20 * 60 * 1000;
 
+function clearOfflineWarmFlags() {
+  try {
+    for (const k of Object.keys(localStorage)) {
+      if (k.startsWith(OFFLINE_WARM_STORAGE_PREFIX)) {
+        localStorage.removeItem(k);
+      }
+    }
+  } catch {
+    /* ignore */
+  }
+}
+
 /** Drop only HTML page cache on update — hashed next-static / precache stay. */
 async function clearPagesCache() {
+  clearOfflineWarmFlags();
   if (!('caches' in window)) return;
   const keys = await caches.keys();
   await Promise.all(

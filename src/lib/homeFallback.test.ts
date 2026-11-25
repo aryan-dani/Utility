@@ -1,5 +1,19 @@
-import { describe, expect, it } from "vitest";
-import { homePayloadIsEmpty } from "./homeApi";
+import { describe, expect, it, vi, beforeEach } from "vitest";
+
+const { utilityFetchMock, authFetchMock } = vi.hoisted(() => ({
+  utilityFetchMock: vi.fn(),
+  authFetchMock: vi.fn(),
+}));
+
+vi.mock("@/lib/utilityServer", () => ({
+  utilityFetch: utilityFetchMock,
+}));
+
+vi.mock("@/lib/authFetch", () => ({
+  authFetch: authFetchMock,
+}));
+
+import { homeOrVercelJson, homePayloadIsEmpty } from "./homeApi";
 
 describe("homePayloadIsEmpty", () => {
   it("treats an empty doubt board as a miss so Firestore can answer", () => {
@@ -16,5 +30,23 @@ describe("homePayloadIsEmpty", () => {
     expect(
       homePayloadIsEmpty("/v1/clipboard", { text: "hi", updated_at: "2026-01-01" }),
     ).toBe(false);
+  });
+});
+
+describe("homeOrVercelJson", () => {
+  beforeEach(() => {
+    utilityFetchMock.mockReset();
+    authFetchMock.mockReset();
+  });
+
+  it("forwards 401 and 403 responses from home server without falling back to Vercel", async () => {
+    for (const status of [401, 403] as const) {
+      utilityFetchMock.mockResolvedValueOnce(
+        new Response(JSON.stringify({ error: "Denied" }), { status }),
+      );
+      const res = await homeOrVercelJson("/api/planner?month=1&year=2026");
+      expect(res.status).toBe(status);
+      expect(authFetchMock).not.toHaveBeenCalled();
+    }
   });
 });

@@ -30,7 +30,7 @@ function getExt(resource) {
   const title = (resource.title || "").toLowerCase();
   const url = (resource.file_url || "").toLowerCase().split("?")[0];
   for (const ext of SUPPORTED_EXTS) {
-    if (title.endsWith(ext.slice(1)) || url.endsWith(ext)) {
+    if (title.endsWith(ext) || url.endsWith(ext)) {
       return ext.slice(1);
     }
   }
@@ -510,7 +510,7 @@ export default async function indexContent(options = {}) {
         let addedTokens = 0;
         for (const chunk of allChunkTokens) {
           addedTokens += chunk.token_count || 0;
-          for (const t of chunk.chunk_tokens || []) {
+          for (const t of new Set(chunk.chunk_tokens || [])) {
             if (!t) continue;
             df[t] = (Number(df[t]) || 0) + 1;
           }

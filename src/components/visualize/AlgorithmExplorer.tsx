@@ -2,7 +2,7 @@
 
 import AppLink from "@/components/ui/AppLink";
 import { ArrowRight } from "lucide-react";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import {
   ALGORITHMS,
   START_HERE_IDS,

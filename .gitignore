@@ -45,6 +45,7 @@ next-env.d.ts
 
 # runtime cache
 runtime/.cache/
+runtime/eval/reports/
 
 # local Drive rename audit artifacts
 drive-rename-report.json

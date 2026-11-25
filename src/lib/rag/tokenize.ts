@@ -15,9 +15,6 @@ const STOP_WORDS = new Set([
 const SUFFIX_RULES: Array<[RegExp, string]> = [
   [/isation$/, "ize"],
   [/ization$/, "ize"],
-  [/isation$/, "ize"],
-  [/isation$/, "ize"],
-  [/isation$/, "ize"],
   [/ies$/, "y"],
   [/ied$/, "y"],
   [/ing$/, ""],

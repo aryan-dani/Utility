@@ -6,6 +6,7 @@ export type AuthedUser = {
   email: string | null;
   /** Firebase ID token `auth_time` (seconds since epoch). */
   authTime: number;
+  emailVerified?: boolean;
 };
 
 /** Play / sensitive actions: token must be from a sign-in in this window. */
@@ -28,12 +29,14 @@ export function getAdminUids(): string[] {
     .filter(Boolean);
 }
 
-/** True when email or uid is on the corresponding allowlist. */
+/** True when email (verified) or uid is on the corresponding allowlist. */
 export function isAdminUser(user: {
   uid: string;
   email?: string | null;
+  emailVerified?: boolean;
 }): boolean {
   if (getAdminUids().includes(user.uid)) return true;
+  if (user.emailVerified !== true) return false;
   const email = user.email?.trim().toLowerCase();
   return !!email && getAdminEmails().includes(email);
 }
@@ -59,6 +62,7 @@ async function verifyBearerToken(
       uid: decoded.uid,
       email: decoded.email ?? null,
       authTime: typeof decoded.auth_time === "number" ? decoded.auth_time : 0,
+      emailVerified: decoded.email_verified === true,
     };
   } catch {
     return null;

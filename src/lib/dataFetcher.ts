@@ -415,16 +415,11 @@ export async function fetchWorkspaceListRaw(
   if (!hasFirebaseCredentials()) {
     return { resources: [], syllabusUrl: null, updatedAt: null };
   }
-  try {
-    const [resources, syllabusUrl] = await Promise.all([
-      fetchResourcesFromDBRaw(academicYear, branch, semester),
-      fetchSyllabusFile(academicYear, branch, semester),
-    ]);
-    return { resources, syllabusUrl, updatedAt: new Date().toISOString() };
-  } catch (error) {
-    console.warn("workspace catalog fallback failed:", error);
-    return { resources: [], syllabusUrl: null, updatedAt: null };
-  }
+  const [resources, syllabusUrl] = await Promise.all([
+    fetchResourcesFromDBRaw(academicYear, branch, semester),
+    fetchSyllabusFile(academicYear, branch, semester),
+  ]);
+  return { resources, syllabusUrl, updatedAt: new Date().toISOString() };
 }
 
 // ─── Exported Cache-Wrapped API ───────────────────────────────────────────────

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { adminDb, commitChunkedDeletes } from "@/lib/firebaseAdmin";
+import type { DocumentReference } from "firebase-admin/firestore";
 import { isAuthFailure, requireUser, isAdminUser } from "@/lib/apiAuth";
 import { attachAnswerVotes } from "@/lib/qa/viewerState";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
@@ -175,28 +176,31 @@ export async function DELETE(
       return NextResponse.json({ error: "Forbidden: can only delete your own questions or as an admin" }, { status: 403 });
     }
 
-    // Delete answers, votes, and saved items for this question
-    const batch = db.batch();
-    batch.delete(qRef);
+    // Delete answers, votes, and saved items in chunked batches (< 500 ops each).
+    const refsToDelete: DocumentReference[] = [qRef];
 
     const answerSnap = await db.collection("qa_answers").where("question_id", "==", id).limit(500).get();
-    answerSnap.docs.forEach((d) => batch.delete(d.ref));
+    answerSnap.docs.forEach((d) => refsToDelete.push(d.ref));
 
     // Clean up votes referencing this question
     const qVotes = await db.collection("qa_votes").where("target_type", "==", "question").where("target_id", "==", id).limit(500).get();
-    qVotes.docs.forEach((d) => batch.delete(d.ref));
+    qVotes.docs.forEach((d) => refsToDelete.push(d.ref));
 
-    // Clean up answer votes
-    for (const aDoc of answerSnap.docs) {
-      const aVotes = await db.collection("qa_votes").where("target_type", "==", "answer").where("target_id", "==", aDoc.id).limit(500).get();
-      aVotes.docs.forEach((d) => batch.delete(d.ref));
+    // Clean up answer votes in parallel
+    const answerVoteSnaps = await Promise.all(
+      answerSnap.docs.map((aDoc) =>
+        db.collection("qa_votes").where("target_type", "==", "answer").where("target_id", "==", aDoc.id).limit(500).get(),
+      ),
+    );
+    for (const aVotes of answerVoteSnaps) {
+      aVotes.docs.forEach((d) => refsToDelete.push(d.ref));
     }
 
     // Clean up saved items
     const savedSnap = await db.collection("qa_saved").where("question_id", "==", id).limit(500).get();
-    savedSnap.docs.forEach((d) => batch.delete(d.ref));
+    savedSnap.docs.forEach((d) => refsToDelete.push(d.ref));
 
-    await batch.commit();
+    await commitChunkedDeletes(db, refsToDelete);
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("qa/questions/[id] DELETE", error);

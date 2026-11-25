@@ -161,8 +161,20 @@ export function sanitizeRedirectTo(
   if (!value) return fallback;
   const trimmed = value.trim();
   if (!trimmed.startsWith("/") || trimmed.startsWith("//")) return fallback;
-  if (trimmed.includes("://") || trimmed.includes("\\")) return fallback;
-  return trimmed;
+  if (/[\x00-\x1f\x7f\\]/.test(trimmed) || trimmed.includes("://")) return fallback;
+  try {
+    const parsed = new URL(trimmed, "https://utility.local");
+    if (
+      parsed.origin !== "https://utility.local" ||
+      !parsed.pathname.startsWith("/") ||
+      parsed.pathname.startsWith("//")
+    ) {
+      return fallback;
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return fallback;
+  }
 }
 
 export function workspaceQuery(

@@ -61,7 +61,7 @@ export function generateGreedyBfsSteps(
     const currentKey = `${current.row},${current.col}`;
     const bestKnownNode = workingGrid[current.row][current.col];
 
-    if (closedSetKey.has(currentKey)) {
+    if (closedSetKey.has(currentKey) || current.gCost > bestKnownNode.gCost) {
       continue;
     }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
+import { usePathname, useSearchParams } from "next/navigation";
 import { Plus, Loader2, MessageCircle, LogIn } from "lucide-react";
 import { auth } from "@/lib/firebase/auth";
 import { onAuthStateChanged } from "firebase/auth";
@@ -28,6 +29,8 @@ interface QASubjectTabProps {
 }
 
 export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabProps) {
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const academicYear = useAcademicStore((s) => s.academicYear);
   const branch = useAcademicStore((s) => s.branch);
   const semester = useAcademicStore((s) => s.semester);
@@ -172,22 +175,27 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
   const handleVote = async (questionId: string, value: VoteValue) => {
     const old = userVotes[questionId] ?? null;
     const isToggle = old === value;
+    const delta = isToggle ? -1 : old ? 0 : 1;
     setUserVotes((prev) => ({ ...prev, [questionId]: isToggle ? null : value }));
     setQuestions((prev) =>
       prev.map((q) =>
-        q.id === questionId
-          ? { ...q, upvotes: q.upvotes + (isToggle ? -1 : old ? 0 : 1) }
-          : q,
+        q.id === questionId ? { ...q, upvotes: q.upvotes + delta } : q,
       ),
     );
     try {
-      await authFetch("/api/qa/vote", {
+      const res = await authFetch("/api/qa/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target_type: "question", target_id: questionId, value }),
       });
+      if (!res.ok) throw new Error(`vote ${res.status}`);
     } catch {
       setUserVotes((prev) => ({ ...prev, [questionId]: old }));
+      setQuestions((prev) =>
+        prev.map((q) =>
+          q.id === questionId ? { ...q, upvotes: q.upvotes - delta } : q,
+        ),
+      );
       notify.error("Vote failed.");
     }
   };
@@ -204,11 +212,12 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
       return next;
     });
     try {
-      await authFetch("/api/qa/save", {
+      const res = await authFetch("/api/qa/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question_id: questionId }),
       });
+      if (!res.ok) throw new Error(`save ${res.status}`);
     } catch {
       setSavedIds((prev) => {
         const next = new Set(prev);
@@ -272,9 +281,9 @@ export default function QASubjectTab({ subjectName, resourceId }: QASubjectTabPr
         action={
           <ButtonLink
             href={`/login?redirectTo=${encodeURIComponent(
-              typeof window !== "undefined"
-                ? `${window.location.pathname}${window.location.search}`
-                : "/resources",
+              searchParams.toString()
+                ? `${pathname}?${searchParams.toString()}`
+                : pathname || "/resources",
             )}`}
             variant="primary"
             size="sm"

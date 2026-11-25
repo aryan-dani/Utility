@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { LazyMotion, domAnimation } from "framer-motion";
+import { LazyMotion, domMax } from "framer-motion";
 import { ThemeProvider, useTheme } from "next-themes";
 import dynamic from "next/dynamic";
 import { Toaster } from "sonner";
@@ -54,7 +54,7 @@ function ToasterProvider() {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   return (
-    <LazyMotion features={domAnimation}>
+    <LazyMotion features={domMax}>
       <ThemeProvider
         attribute="class"
         defaultTheme="system"

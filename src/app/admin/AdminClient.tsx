@@ -445,12 +445,16 @@ export default function AdminClient({
     }
   }, [branch, semester, isAdmin]);
 
-  const adminDataKey = `${branch}:${semester}:${isAdmin}`;
-  const [prevAdminDataKey, setPrevAdminDataKey] = useState(adminDataKey);
-  if (isAdmin && prevAdminDataKey !== adminDataKey) {
-    setPrevAdminDataKey(adminDataKey);
-    void fetchAdminData();
-  }
+  useEffect(() => {
+    if (!isAdmin) return;
+    let cancelled = false;
+    void Promise.resolve().then(() => {
+      if (!cancelled) void fetchAdminData();
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isAdmin, fetchAdminData]);
 
   const handleDelete = async (id: string) => {
     if (

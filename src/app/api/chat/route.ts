@@ -125,12 +125,16 @@ function cachedStreamResponse(text: string, sources?: RetrievalSource[]) {
 /** Scrub invalid [S#] markers in streamed text deltas (hold back incomplete tails). */
 function citationScrubTransform(validMarkers: Set<string>) {
   let hold = "";
+  let lastId = "0";
   return () =>
     new TransformStream({
       transform(chunk, controller) {
         if (chunk?.type !== "text-delta" || typeof chunk.text !== "string") {
           controller.enqueue(chunk);
           return;
+        }
+        if (typeof chunk.id === "string" && chunk.id) {
+          lastId = chunk.id;
         }
         const combined = hold + chunk.text;
         const incomplete = combined.match(/\[S\d*$/);
@@ -152,7 +156,7 @@ function citationScrubTransform(validMarkers: Set<string>) {
         const cleaned = stripInvalidCitations(hold, validMarkers);
         hold = "";
         if (cleaned) {
-          controller.enqueue({ type: "text-delta", id: "scrub-flush", text: cleaned });
+          controller.enqueue({ type: "text-delta", id: lastId, text: cleaned });
         }
       },
     });
@@ -225,6 +229,8 @@ export async function POST(req: Request) {
         branch,
         semester,
         resourceId,
+        answerMode: context?.answerMode,
+        subjects,
         queryEmbedding,
       });
       if (cached?.response) {
@@ -339,6 +345,8 @@ export async function POST(req: Request) {
           branch,
           semester,
           resourceId,
+          answerMode: context?.answerMode,
+          subjects,
           response: cleaned,
           sources,
           queryEmbedding,

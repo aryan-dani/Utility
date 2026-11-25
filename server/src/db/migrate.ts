@@ -6,7 +6,7 @@ import { getPool, closeDb } from "./client.js";
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
 async function main() {
-  const pool = getPool();
+  const pool = getPool(0);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS schema_migrations (
       id text PRIMARY KEY,

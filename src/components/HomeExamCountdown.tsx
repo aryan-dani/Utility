@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { onAuthStateChanged } from "firebase/auth";
 import AppLink from "@/components/ui/AppLink";
 import { CalendarCheck } from "lucide-react";
-import { auth } from "@/lib/firebase/auth";
 import { getSoonestUpcomingExam, type UpcomingExam } from "@/lib/examCountdown";
 import { loadPlannerMonth } from "@/lib/plannerLive";
 
@@ -13,20 +11,24 @@ export default function HomeExamCountdown() {
 
   useEffect(() => {
     let cancelled = false;
-    const unsub = onAuthStateChanged(auth, (user) => {
-      if (!user) {
-        if (!cancelled) setExam(getSoonestUpcomingExam());
-        return;
-      }
-      void (async () => {
-        const now = new Date();
-        const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
-        await Promise.all([
-          loadPlannerMonth(now.getFullYear(), now.getMonth() + 1),
-          loadPlannerMonth(next.getFullYear(), next.getMonth() + 1),
-        ]);
-        if (!cancelled) setExam(getSoonestUpcomingExam());
-      })();
+    let unsub = () => {};
+    void import("@/lib/firebase/auth").then(({ auth }) => {
+      if (cancelled) return;
+      unsub = auth.onAuthStateChanged((user) => {
+        if (!user) {
+          if (!cancelled) setExam(getSoonestUpcomingExam());
+          return;
+        }
+        void (async () => {
+          const now = new Date();
+          const next = new Date(now.getFullYear(), now.getMonth() + 1, 1);
+          await Promise.all([
+            loadPlannerMonth(now.getFullYear(), now.getMonth() + 1),
+            loadPlannerMonth(next.getFullYear(), next.getMonth() + 1),
+          ]);
+          if (!cancelled) setExam(getSoonestUpcomingExam());
+        })();
+      });
     });
     return () => {
       cancelled = true;

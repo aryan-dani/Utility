@@ -20,7 +20,6 @@ const compile = (ast, options = {}) => {
     }
 
     if (node.isClose === true) {
-      console.log('node.isClose', prefix, node.value);
       return prefix + node.value;
     }
 

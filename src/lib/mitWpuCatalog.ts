@@ -294,18 +294,18 @@ export function semesterHasIndexableSubjects(
 }
 
 export async function mitWpuSemesterPaths(): Promise<MitWpuSemesterPath[]> {
-  const params: MitWpuSemesterPath[] = [];
-  for (const branch of BRANCHES) {
-    for (const semester of SEMESTERS) {
+  const jobs = BRANCHES.flatMap((branch) =>
+    SEMESTERS.map(async (semester) => {
       const { subjects } = await loadSemesterCatalog(branch, semester);
-      if (!semesterHasIndexableSubjects(branch, semester, subjects)) continue;
-      params.push({
+      if (!semesterHasIndexableSubjects(branch, semester, subjects)) return null;
+      return {
         branch: branchSlug(branch),
         n: String(semester),
-      });
-    }
-  }
-  return params;
+      };
+    }),
+  );
+  const results = await Promise.all(jobs);
+  return results.filter((entry): entry is MitWpuSemesterPath => entry !== null);
 }
 
 export async function mitWpuSubjectPaths(): Promise<MitWpuSubjectPath[]> {
@@ -334,32 +334,39 @@ export async function mitWpuSubjectPaths(): Promise<MitWpuSubjectPath[]> {
     );
   }
 
-  for (const branch of BRANCHES) {
-    for (const semester of SEMESTERS) {
-      try {
-        const subjects = await getSubjectsFromDB(
-          MIT_WPU_YEAR,
-          branch,
-          semester,
-        );
-        const aliases =
-          branch === "AIDS"
-            ? officialAliasBySem.get(semester) ?? new Set<string>()
-            : new Set<string>();
-        for (const subject of subjects) {
-          const slug = slugifySubject(subject.name);
-          if (!slug || isJunkSubjectSlug(slug)) continue;
-          // AIDS Sem 3–5: skip code aliases already covered by official name URLs.
-          if (aliases.has(slug)) continue;
-          params.push({
-            branch: branchSlug(branch),
-            semester: String(semester),
-            subject: slug,
-          });
+  const scopedLists = await Promise.all(
+    BRANCHES.flatMap((branch) =>
+      SEMESTERS.map(async (semester) => {
+        try {
+          const subjects = await getSubjectsFromDB(
+            MIT_WPU_YEAR,
+            branch,
+            semester,
+          );
+          return { branch, semester, subjects };
+        } catch {
+          // Build environments without Firebase still get AIDS outline paths.
+          return { branch, semester, subjects: [] as SubjectItem[] };
         }
-      } catch {
-        // Build environments without Firebase still get AIDS outline paths.
-      }
+      }),
+    ),
+  );
+
+  for (const { branch, semester, subjects } of scopedLists) {
+    const aliases =
+      branch === "AIDS"
+        ? officialAliasBySem.get(semester) ?? new Set<string>()
+        : new Set<string>();
+    for (const subject of subjects) {
+      const slug = slugifySubject(subject.name);
+      if (!slug || isJunkSubjectSlug(slug)) continue;
+      // AIDS Sem 3–5: skip code aliases already covered by official name URLs.
+      if (aliases.has(slug)) continue;
+      params.push({
+        branch: branchSlug(branch),
+        semester: String(semester),
+        subject: slug,
+      });
     }
   }
 

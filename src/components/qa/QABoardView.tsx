@@ -225,22 +225,27 @@ export default function QABoardView() {
   const handleVote = async (questionId: string, value: VoteValue) => {
     const old = userVotes[questionId] ?? null;
     const isToggle = old === value;
+    const delta = isToggle ? -1 : old ? 0 : 1;
     setUserVotes((prev) => ({ ...prev, [questionId]: isToggle ? null : value }));
     setQuestions((prev) =>
       prev.map((q) =>
-        q.id === questionId
-          ? { ...q, upvotes: q.upvotes + (isToggle ? -1 : old ? 0 : 1) }
-          : q,
+        q.id === questionId ? { ...q, upvotes: q.upvotes + delta } : q,
       ),
     );
     try {
-      await authFetch("/api/qa/vote", {
+      const res = await authFetch("/api/qa/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target_type: "question", target_id: questionId, value }),
       });
+      if (!res.ok) throw new Error(`vote ${res.status}`);
     } catch {
       setUserVotes((prev) => ({ ...prev, [questionId]: old }));
+      setQuestions((prev) =>
+        prev.map((q) =>
+          q.id === questionId ? { ...q, upvotes: q.upvotes - delta } : q,
+        ),
+      );
     }
   };
 
@@ -256,11 +261,12 @@ export default function QABoardView() {
       return next;
     });
     try {
-      await authFetch("/api/qa/save", {
+      const res = await authFetch("/api/qa/save", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ question_id: questionId }),
       });
+      if (!res.ok) throw new Error(`save ${res.status}`);
     } catch {
       setSavedIds((prev) => {
         const next = new Set(prev);

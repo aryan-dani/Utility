@@ -76,6 +76,7 @@ describe("requireUser", () => {
     verifyIdToken.mockResolvedValueOnce({
       uid: "u1",
       email: "user@example.com",
+      email_verified: true,
     });
     const result = await requireUser(
       new Request("http://localhost/api", {
@@ -87,6 +88,7 @@ describe("requireUser", () => {
       uid: "u1",
       email: "user@example.com",
       authTime: 0,
+      emailVerified: true,
     });
   });
 });
@@ -133,6 +135,7 @@ describe("requireRecentUser", () => {
       uid: "u1",
       email: "user@example.com",
       authTime,
+      emailVerified: false,
     });
   });
 });
@@ -151,15 +154,26 @@ describe("getAdminUids / isAdminUser", () => {
     expect(getAdminUids()).toEqual(["uid-1", "uid-2"]);
   });
 
-  it("matches email or uid allowlist", () => {
+  it("matches verified email or uid allowlist", () => {
     process.env.ADMIN_EMAILS = "admin@example.com";
     process.env.ADMIN_UIDS = "VzI1v6Epg8hkiomx0CJ0mPl7ijR2";
     expect(
       isAdminUser({ uid: "VzI1v6Epg8hkiomx0CJ0mPl7ijR2", email: null }),
     ).toBe(true);
-    expect(isAdminUser({ uid: "other", email: "Admin@Example.com" })).toBe(
-      true,
-    );
+    expect(
+      isAdminUser({
+        uid: "other",
+        email: "Admin@Example.com",
+        emailVerified: true,
+      }),
+    ).toBe(true);
+    expect(
+      isAdminUser({
+        uid: "other",
+        email: "Admin@Example.com",
+        emailVerified: false,
+      }),
+    ).toBe(false);
     expect(isAdminUser({ uid: "other", email: null })).toBe(false);
   });
 });
@@ -183,6 +197,7 @@ describe("requireAdmin", () => {
     verifyIdToken.mockResolvedValueOnce({
       uid: "u1",
       email: "user@example.com",
+      email_verified: true,
     });
     const res = await requireAdmin(
       new Request("http://localhost/api", {
@@ -193,10 +208,26 @@ describe("requireAdmin", () => {
     if (isAuthFailure(res)) expect(res.status).toBe(403);
   });
 
-  it("returns user when email is admin", async () => {
+  it("returns 403 when admin email is unverified", async () => {
     verifyIdToken.mockResolvedValueOnce({
       uid: "a1",
       email: "Admin@Example.com",
+      email_verified: false,
+    });
+    const res = await requireAdmin(
+      new Request("http://localhost/api", {
+        headers: { Authorization: "Bearer good" },
+      }),
+    );
+    expect(isAuthFailure(res)).toBe(true);
+    if (isAuthFailure(res)) expect(res.status).toBe(403);
+  });
+
+  it("returns user when email is verified admin", async () => {
+    verifyIdToken.mockResolvedValueOnce({
+      uid: "a1",
+      email: "Admin@Example.com",
+      email_verified: true,
     });
     const result = await requireAdmin(
       new Request("http://localhost/api", {
@@ -208,6 +239,7 @@ describe("requireAdmin", () => {
       uid: "a1",
       email: "Admin@Example.com",
       authTime: 0,
+      emailVerified: true,
     });
   });
 
@@ -226,6 +258,7 @@ describe("requireAdmin", () => {
       uid: "VzI1v6Epg8hkiomx0CJ0mPl7ijR2",
       email: null,
       authTime: 0,
+      emailVerified: false,
     });
   });
 });

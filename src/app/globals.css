@@ -599,7 +599,11 @@ body.focus-mode-active [data-app-tabbar] {
   gap: 3px;
 }
 
-/* custom-scrollbar — used in Navigation and ResourcesClient */
+/* custom-scrollbar — used across navigation, lists, and viewers */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: rgb(var(--border-strong) / 0.5) transparent;
+}
 .custom-scrollbar::-webkit-scrollbar {
   width: 4px;
   height: 4px;
@@ -1089,26 +1093,6 @@ input[type="range"].accent-slider::-moz-range-thumb:hover {
     transition: none !important;
     transform: none !important;
   }
-}
-
-/* ── Floating Dock Custom Scrollbar ────────────────────────────────────────── */
-
-.custom-scrollbar::-webkit-scrollbar {
-  width: 4px;
-}
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: rgba(140, 140, 140, 0.2);
-  border-radius: 9999px;
-}
-.custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: rgba(140, 140, 140, 0.4);
-}
-.custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(140, 140, 140, 0.2) transparent;
 }
 
 

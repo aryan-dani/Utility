@@ -47,6 +47,7 @@ export type AuthedUser = {
   uid: string;
   email: string | null;
   authTime: number;
+  emailVerified: boolean;
 };
 
 export async function verifyIdToken(
@@ -58,6 +59,7 @@ export async function verifyIdToken(
       uid: decoded.uid,
       email: decoded.email ?? null,
       authTime: typeof decoded.auth_time === "number" ? decoded.auth_time : 0,
+      emailVerified: decoded.email_verified === true,
     };
   } catch {
     return null;

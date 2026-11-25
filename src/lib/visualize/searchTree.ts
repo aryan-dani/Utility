@@ -205,20 +205,24 @@ export function createRandomSearchTree(): SearchTreeGraph {
   }
 
   const rootId = makeNode("S", null, 0, targetDepth + 2);
+  const nonGoalLabels = "ABCDEFHIJKLMNOPQRTUVWXYZ";
+  let labelCursor = 0;
 
   function expand(parentId: string, depth: number) {
     if (depth >= targetDepth) return;
     const branchCount = randomInt(2, 3);
     for (let i = 0; i < branchCount; i++) {
-      const label =
-        depth === targetDepth - 1 && !goalId
-          ? "G"
-          : String.fromCharCode(65 + (counter % 26));
+      const isGoal = depth === targetDepth - 1 && !goalId;
+      const label = isGoal
+        ? "G"
+        : nonGoalLabels[labelCursor++ % nonGoalLabels.length];
       const edgeCost = randomInt(1, 4);
-      const hPrinted = Math.max(0, targetDepth - depth + randomInt(0, 2));
+      const hPrinted = isGoal
+        ? 0
+        : Math.max(1, targetDepth - depth + randomInt(0, 2));
       const childId = makeNode(label, parentId, edgeCost, hPrinted);
       nodes[parentId].children.push(childId);
-      if (label === "G") {
+      if (isGoal) {
         goalId = childId;
       } else {
         expand(childId, depth + 1);

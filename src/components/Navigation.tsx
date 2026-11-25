@@ -1009,14 +1009,12 @@ function NavigationInner() {
   const standalone = useIsStandalone();
   const motionSafe = useMotionSafe();
 
-  const {
-    setAcademicYear,
-    setBranch,
-    setSemester,
-    setWorkspace,
-    setSearchQuery,
-    setCommandPaletteOpen,
-  } = useAcademicStore();
+  const setAcademicYear = useAcademicStore((s) => s.setAcademicYear);
+  const setBranch = useAcademicStore((s) => s.setBranch);
+  const setSemester = useAcademicStore((s) => s.setSemester);
+  const setWorkspace = useAcademicStore((s) => s.setWorkspace);
+  const setSearchQuery = useAcademicStore((s) => s.setSearchQuery);
+  const setCommandPaletteOpen = useAcademicStore((s) => s.setCommandPaletteOpen);
 
   const [moreOpen, setMoreOpen] = useState(false);
   const collapsed = useLocalStorageBoolean("sidebar-collapsed", false);

@@ -19,6 +19,7 @@ import {
   type User,
   type UserCredential,
 } from "firebase/auth";
+import { sanitizeRedirectTo } from "@/lib/workspace";
 
 function firebaseErrorCode(err: unknown): string | undefined {
   if (err instanceof FirebaseError) return err.code;
@@ -286,22 +287,23 @@ function stashGithubFromResult(result: UserCredential) {
 }
 
 export function rememberRedirectTo(path: string) {
-  sessionStorage.setItem(REDIRECT_TO_KEY, path);
+  sessionStorage.setItem(REDIRECT_TO_KEY, sanitizeRedirectTo(path));
 }
 
 export function takeRememberedRedirectTo(): string | null {
   const value = sessionStorage.getItem(REDIRECT_TO_KEY);
   sessionStorage.removeItem(REDIRECT_TO_KEY);
-  return value;
+  return value ? sanitizeRedirectTo(value) : null;
 }
 
 /** Full navigation after Store OAuth — Next soft replace can stay on /login. */
 export function leaveAuthPage(path: string, softReplace: (url: string) => void) {
+  const safePath = sanitizeRedirectTo(path);
   if (preferRedirectAuth()) {
-    window.location.replace(path);
+    window.location.replace(safePath);
     return;
   }
-  softReplace(path);
+  softReplace(safePath);
 }
 
 export function getPendingMergeStep(): "github" | "google" | null {

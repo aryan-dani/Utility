@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { adminDb, commitChunkedDeletes } from "@/lib/firebaseAdmin";
 import { isAuthFailure, requireUser, isAdminUser } from "@/lib/apiAuth";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 
@@ -64,15 +64,19 @@ export async function DELETE(
       });
     }
 
-    // Clean up votes on this answer
+    // Clean up votes on this answer safely across batch limits.
     const votes = await db.collection("qa_votes")
       .where("target_type", "==", "answer")
       .where("target_id", "==", id)
       .limit(500)
       .get();
-    votes.docs.forEach((d) => batch.delete(d.ref));
-
-    await batch.commit();
+    if (votes.docs.length <= 490) {
+      votes.docs.forEach((d) => batch.delete(d.ref));
+      await batch.commit();
+    } else {
+      await batch.commit();
+      await commitChunkedDeletes(db, votes.docs.map((d) => d.ref));
+    }
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("qa/answers/[id] DELETE", error);

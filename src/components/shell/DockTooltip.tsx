@@ -75,48 +75,48 @@ export function DockTooltip({
       })}
 
       {mounted &&
-        open &&
-        coords &&
-        !disabled &&
         createPortal(
           <AnimatePresence>
-            <m.div
-              initial={
-                tip.initial === false
-                  ? false
-                  : { ...tip.initial, y: "-50%" }
-              }
-              animate={{ ...tip.animate, y: "-50%" }}
-              exit={
-                "exit" in tip && tip.exit
-                  ? { ...tip.exit, y: "-50%" }
-                  : { opacity: 0, y: "-50%" }
-              }
-              transition={{
-                duration: motionSafe.durations.fast,
-                ease: motionSafe.ease,
-              }}
-              style={{
-                position: "fixed",
-                top: coords.top,
-                left: coords.left,
-                zIndex: 9999,
-                pointerEvents: "none",
-              }}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-foreground text-background text-xs font-semibold shadow-2xl border border-background/20 backdrop-blur-md whitespace-nowrap"
-            >
-              <span>{label}</span>
-              {badge && (
-                <span className="px-1.5 py-0.5 rounded-md bg-background/20 text-background text-[9px] font-bold uppercase tracking-wider">
-                  {badge}
-                </span>
-              )}
-              {shortcut && (
-                <kbd className="px-1.5 py-0.5 rounded-md bg-background/20 text-background text-[10px] font-mono font-medium">
-                  {shortcut}
-                </kbd>
-              )}
-            </m.div>
+            {open && coords && !disabled && (
+              <m.div
+                key="dock-tooltip"
+                initial={
+                  tip.initial === false
+                    ? false
+                    : { ...tip.initial, y: "-50%" }
+                }
+                animate={{ ...tip.animate, y: "-50%" }}
+                exit={
+                  "exit" in tip && tip.exit
+                    ? { ...tip.exit, y: "-50%" }
+                    : { opacity: 0, y: "-50%" }
+                }
+                transition={{
+                  duration: motionSafe.durations.fast,
+                  ease: motionSafe.ease,
+                }}
+                style={{
+                  position: "fixed",
+                  top: coords.top,
+                  left: coords.left,
+                  zIndex: 9999,
+                  pointerEvents: "none",
+                }}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl bg-foreground text-background text-xs font-semibold shadow-2xl border border-background/20 backdrop-blur-md whitespace-nowrap"
+              >
+                <span>{label}</span>
+                {badge && (
+                  <span className="px-1.5 py-0.5 rounded-md bg-background/20 text-background text-[9px] font-bold uppercase tracking-wider">
+                    {badge}
+                  </span>
+                )}
+                {shortcut && (
+                  <kbd className="px-1.5 py-0.5 rounded-md bg-background/20 text-background text-[10px] font-mono font-medium">
+                    {shortcut}
+                  </kbd>
+                )}
+              </m.div>
+            )}
           </AnimatePresence>,
           document.body,
         )}

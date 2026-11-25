@@ -32,8 +32,6 @@ services:
       - postgres
       - -c
       - shared_buffers=512MB
-      - -c
-      - statement_timeout=5000
     volumes:
       - /srv/utility/data/postgres:/var/lib/postgresql/data
     healthcheck:
@@ -62,6 +60,7 @@ services:
       - utility_egress
     environment:
       DATABASE_URL: postgres://utility:${POSTGRES_PASSWORD}@postgres:5432/utility
+      PG_STATEMENT_TIMEOUT_MS: "0"
 
   api:
     <<: *app-image
@@ -106,6 +105,7 @@ services:
         condition: service_started
     environment:
       DATABASE_URL: postgres://utility:${POSTGRES_PASSWORD}@postgres:5432/utility
+      PG_STATEMENT_TIMEOUT_MS: "120000"
       FILES_ROOT: /data/files
       GOTENBERG_URL: http://gotenberg:3000
       TZ: Asia/Kolkata
@@ -125,6 +125,7 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgres://utility:${POSTGRES_PASSWORD}@postgres:5432/utility
+      PG_STATEMENT_TIMEOUT_MS: "0"
       TZ: Asia/Kolkata
     deploy:
       resources:

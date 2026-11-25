@@ -5,65 +5,116 @@
 
 import { db } from "./firebase.mjs";
 
+function normalizeWhere(table, where = []) {
+  const filters = [];
+  let chunkedIn = null;
+
+  for (const filter of where) {
+    let { column, op, value } = filter;
+    if (column === "id") column = "__name__"; // Document ID in Firestore query is '__name__'
+
+    let firestoreOp = op;
+    if (op === "eq") firestoreOp = "==";
+    else if (op === "neq") firestoreOp = "!=";
+    else if (op === "gt") firestoreOp = ">";
+    else if (op === "gte") firestoreOp = ">=";
+    else if (op === "lt") firestoreOp = "<";
+    else if (op === "lte") firestoreOp = "<=";
+    else if (op === "contains") firestoreOp = "array-contains";
+
+    if (firestoreOp === "in") {
+      if (!Array.isArray(value) || value.length === 0) {
+        return { empty: true, filters: [], chunkedIn: null };
+      }
+      const uniqueValues = [...new Set(value)];
+      if (uniqueValues.length > 30) {
+        if (chunkedIn) {
+          throw new Error(
+            `select("${table}"): multiple "in" filters with >30 elements are not supported.`,
+          );
+        }
+        chunkedIn = { column, values: uniqueValues };
+        continue;
+      }
+      value = uniqueValues;
+    }
+
+    filters.push({ column, op: firestoreOp, value });
+  }
+
+  return { empty: false, filters, chunkedIn };
+}
+
+function applyFilters(baseQuery, filters) {
+  let q = baseQuery;
+  for (const f of filters) {
+    q = q.where(f.column, f.op, f.value);
+  }
+  return q;
+}
+
+function compareDocs(a, b, order) {
+  const col = order.column;
+  const dir = (order.ascending ?? true) ? 1 : -1;
+  const av = a[col];
+  const bv = b[col];
+  if (av === bv) return 0;
+  if (av == null) return 1 * dir;
+  if (bv == null) return -1 * dir;
+  if (typeof av === "number" && typeof bv === "number") {
+    return (av - bv) * dir;
+  }
+  return String(av).localeCompare(String(bv)) * dir;
+}
+
 export async function select(table, options = {}) {
   // Default null = no limit (callers that need a cap must pass limit explicitly).
-  const { columns = "*", where = [], order = null, limit = null, offset = 0 } = options;
-  
+  const { where = [], order = null, limit = null, offset = 0 } = options;
+
   try {
-    let q = db.collection(table);
-    
-    // Apply filters
-    for (const filter of where) {
-      let { column, op, value } = filter;
-      if (column === 'id') column = '__name__'; // Document ID in Firestore query is '__name__'
-      
-      let firestoreOp = op;
-      if (op === 'eq') firestoreOp = '==';
-      else if (op === 'neq') firestoreOp = '!=';
-      else if (op === 'gt') firestoreOp = '>';
-      else if (op === 'gte') firestoreOp = '>=';
-      else if (op === 'lt') firestoreOp = '<';
-      else if (op === 'lte') firestoreOp = '<=';
-      else if (op === 'contains') firestoreOp = 'array-contains';
-      
-      if (firestoreOp === 'in') {
-        if (!Array.isArray(value) || value.length === 0) {
-          // Firestore throws an error if "in" list is empty. Return empty results.
-          return { data: [], count: 0 };
-        }
-        // Firestore limit for 'in' is 30 elements, but for background script tasks we chunk it if necessary, 
-        // or just apply directly. Let's assume it's small or handle up to 30.
-        // If it's larger, let's partition, but usually for standard deletes we can chunk.
-        // Let's implement chunking if value.length > 30.
-        if (value.length > 30) {
-          let results = [];
-          for (let i = 0; i < value.length; i += 30) {
-            const chunk = value.slice(i, i + 30);
-            let subQ = db.collection(table).where(column, 'in', chunk);
-            if (order) {
-              subQ = subQ.orderBy(order.column, order.ascending ?? true ? 'asc' : 'desc');
-            }
-            const snap = await subQ.get();
-            results.push(...snap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-          }
-          return { data: results, count: results.length };
+    const { empty, filters, chunkedIn } = normalizeWhere(table, where);
+    if (empty) {
+      return { data: [], count: 0 };
+    }
+
+    if (chunkedIn) {
+      const seenIds = new Set();
+      let results = [];
+      for (let i = 0; i < chunkedIn.values.length; i += 30) {
+        const chunk = chunkedIn.values.slice(i, i + 30);
+        const subQ = applyFilters(db.collection(table), filters).where(
+          chunkedIn.column,
+          "in",
+          chunk,
+        );
+        const snap = await subQ.get();
+        for (const doc of snap.docs) {
+          if (seenIds.has(doc.id)) continue;
+          seenIds.add(doc.id);
+          results.push({ id: doc.id, ...doc.data() });
         }
       }
-      
-      q = q.where(column, firestoreOp, value);
+      if (order) {
+        results.sort((a, b) => compareDocs(a, b, order));
+      }
+      if (offset > 0) results = results.slice(offset);
+      if (limit != null) results = results.slice(0, limit);
+      return { data: results, count: results.length };
     }
-    
+
+    let q = applyFilters(db.collection(table), filters);
+
     // Order
     if (order) {
-      q = q.orderBy(order.column, order.ascending ?? true ? 'asc' : 'desc');
+      q = q.orderBy(order.column, (order.ascending ?? true) ? "asc" : "desc");
     }
-    
+
     // Limit & Offset
     if (limit != null) q = q.limit(limit);
     if (offset > 0) q = q.offset(offset);
-    
+
     const snap = await q.get();
-    const data = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const data = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
     return { data, count: snap.size };
   } catch (err) {
     throw new Error(`select("${table}"): ${err.message}`);
@@ -167,8 +218,27 @@ export async function remove(table, filters) {
 
 export async function count(table, where = []) {
   try {
-    const { count: n } = await select(table, { columns: "id", where, limit: 10000 });
-    return n ?? 0;
+    const { empty, filters, chunkedIn } = normalizeWhere(table, where);
+    if (empty) return 0;
+
+    if (chunkedIn) {
+      let total = 0;
+      for (let i = 0; i < chunkedIn.values.length; i += 30) {
+        const chunk = chunkedIn.values.slice(i, i + 30);
+        const subQ = applyFilters(db.collection(table), filters).where(
+          chunkedIn.column,
+          "in",
+          chunk,
+        );
+        const snap = await subQ.count().get();
+        total += snap.data().count;
+      }
+      return total;
+    }
+
+    const q = applyFilters(db.collection(table), filters);
+    const snap = await q.count().get();
+    return snap.data().count;
   } catch (err) {
     throw new Error(`count("${table}"): ${err.message}`);
   }

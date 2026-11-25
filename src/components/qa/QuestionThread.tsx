@@ -23,9 +23,11 @@ import { qaFetch as authFetch } from "@/lib/homeApi";
 import { notify } from "@/lib/toast";
 import { auth } from "@/lib/firebase/auth";
 import { useAdminStatus } from "@/lib/adminStatus";
-import type {
-  QAQuestionWithAnswers,
-  VoteValue,
+import {
+  isSafeResourceUrl,
+  timeAgo,
+  type QAQuestionWithAnswers,
+  type VoteValue,
 } from "@/lib/qa/types";
 import VoteButton from "./VoteButton";
 import AnswerCard from "./AnswerCard";
@@ -59,18 +61,6 @@ function answerVoteMap(
     }
   }
   return votes;
-}
-
-function timeAgo(dateStr: string): string {
-  const diff = Date.now() - new Date(dateStr).getTime();
-  const mins = Math.floor(diff / 60_000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.floor(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.floor(hrs / 24);
-  if (days < 30) return `${days}d ago`;
-  return new Date(dateStr).toLocaleDateString("en-IN", { month: "short", day: "numeric" });
 }
 
 export default function QuestionThread({
@@ -135,6 +125,7 @@ export default function QuestionThread({
     if (!data) return;
     const oldVote = data.user_vote;
     const isToggleOff = oldVote === value;
+    const delta = isToggleOff ? -1 : oldVote ? 0 : 1;
 
     // Optimistic update
     setData((prev) =>
@@ -142,20 +133,23 @@ export default function QuestionThread({
         ? {
             ...prev,
             user_vote: isToggleOff ? null : value,
-            upvotes: prev.upvotes + (isToggleOff ? -1 : oldVote ? 0 : 1),
+            upvotes: prev.upvotes + delta,
           }
         : prev,
     );
 
     try {
-      await authFetch("/api/qa/vote", {
+      const res = await authFetch("/api/qa/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target_type: "question", target_id: questionId, value }),
       });
+      if (!res.ok) throw new Error(`vote ${res.status}`);
     } catch {
-      // Revert
-      setData((prev) => (prev ? { ...prev, user_vote: oldVote } : prev));
+      // Revert both vote and count
+      setData((prev) =>
+        prev ? { ...prev, user_vote: oldVote, upvotes: prev.upvotes - delta } : prev,
+      );
       notify.error("Vote failed.");
     }
   };
@@ -163,40 +157,51 @@ export default function QuestionThread({
   const handleAnswerVote = async (answerId: string, value: VoteValue) => {
     const oldVote = answerVotes[answerId] ?? null;
     const isToggleOff = oldVote === value;
+    const applyDelta = (
+      a: QAQuestionWithAnswers["answers"][number],
+      dir: 1 | -1,
+    ) => {
+      if (isToggleOff) {
+        return value === 1
+          ? { ...a, upvotes: a.upvotes - dir }
+          : { ...a, downvotes: a.downvotes - dir };
+      }
+      if (oldVote === null) {
+        return value === 1
+          ? { ...a, upvotes: a.upvotes + dir }
+          : { ...a, downvotes: a.downvotes + dir };
+      }
+      return value === 1
+        ? { ...a, upvotes: a.upvotes + dir, downvotes: a.downvotes - dir }
+        : { ...a, upvotes: a.upvotes - dir, downvotes: a.downvotes + dir };
+    };
 
     setAnswerVotes((prev) => ({ ...prev, [answerId]: isToggleOff ? null : value }));
     setData((prev) => {
       if (!prev) return prev;
       return {
         ...prev,
-        answers: prev.answers.map((a) => {
-          if (a.id !== answerId) return a;
-          if (isToggleOff) {
-            return value === 1
-              ? { ...a, upvotes: a.upvotes - 1 }
-              : { ...a, downvotes: a.downvotes - 1 };
-          }
-          if (oldVote === null) {
-            return value === 1
-              ? { ...a, upvotes: a.upvotes + 1 }
-              : { ...a, downvotes: a.downvotes + 1 };
-          }
-          // Switched direction
-          return value === 1
-            ? { ...a, upvotes: a.upvotes + 1, downvotes: a.downvotes - 1 }
-            : { ...a, upvotes: a.upvotes - 1, downvotes: a.downvotes + 1 };
-        }),
+        answers: prev.answers.map((a) => (a.id === answerId ? applyDelta(a, 1) : a)),
       };
     });
 
     try {
-      await authFetch("/api/qa/vote", {
+      const res = await authFetch("/api/qa/vote", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ target_type: "answer", target_id: answerId, value }),
       });
+      if (!res.ok) throw new Error(`vote ${res.status}`);
     } catch {
       setAnswerVotes((prev) => ({ ...prev, [answerId]: oldVote }));
+      setData((prev) =>
+        prev
+          ? {
+              ...prev,
+              answers: prev.answers.map((a) => (a.id === answerId ? applyDelta(a, -1) : a)),
+            }
+          : prev,
+      );
       notify.error("Vote failed.");
     }
   };
@@ -484,7 +489,7 @@ export default function QuestionThread({
               )}
 
               {data.resource_title && (
-                data.resource_url ? (
+                data.resource_url && isSafeResourceUrl(data.resource_url) ? (
                   <a
                     href={data.resource_url}
                     target="_blank"

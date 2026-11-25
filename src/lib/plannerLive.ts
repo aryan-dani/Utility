@@ -24,46 +24,59 @@ function fromLocal(year: number, month: number): LivePlan {
   };
 }
 
+const inflightLoads = new Map<string, Promise<LivePlan>>();
+
 /** Home planner for this month, or the local month when that request misses. */
-export async function loadPlannerMonth(
+export function loadPlannerMonth(
   year: number,
   month: number,
 ): Promise<LivePlan> {
-  try {
-    const res = await homeOrVercelJson(
-      `/api/planner?month=${month}&year=${year}`,
-    );
-    if (!res.ok) return fromLocal(year, month);
-    const body = (await res.json()) as {
-      plan?: {
-        id?: string;
-        title?: string;
-        is_public?: boolean;
-        data?: Record<string, PlannerTask[]>;
-      } | null;
-    };
-    if (!body.plan?.data) return fromLocal(year, month);
-    const live: LivePlan = {
-      id: body.plan.id,
-      title: body.plan.title || "Study Plan",
-      isPublic: Boolean(body.plan.is_public),
-      data: body.plan.data,
-      source: "home",
-    };
-    writePlannerMonth(year, month, {
-      data: live.data,
-      meta: {
-        title: live.title,
-        month,
-        year,
-        is_public: live.isPublic,
-        id: live.id,
-      },
-    });
-    return live;
-  } catch {
-    return fromLocal(year, month);
-  }
+  const key = `${year}-${month}`;
+  const existing = inflightLoads.get(key);
+  if (existing) return existing;
+
+  const task = (async (): Promise<LivePlan> => {
+    try {
+      const res = await homeOrVercelJson(
+        `/api/planner?month=${month}&year=${year}`,
+      );
+      if (!res.ok) return fromLocal(year, month);
+      const body = (await res.json()) as {
+        plan?: {
+          id?: string;
+          title?: string;
+          is_public?: boolean;
+          data?: Record<string, PlannerTask[]>;
+        } | null;
+      };
+      if (!body.plan?.data) return fromLocal(year, month);
+      const live: LivePlan = {
+        id: body.plan.id,
+        title: body.plan.title || "Study Plan",
+        isPublic: Boolean(body.plan.is_public),
+        data: body.plan.data,
+        source: "home",
+      };
+      writePlannerMonth(year, month, {
+        data: live.data,
+        meta: {
+          title: live.title,
+          month,
+          year,
+          is_public: live.isPublic,
+          id: live.id,
+        },
+      });
+      return live;
+    } catch {
+      return fromLocal(year, month);
+    }
+  })().finally(() => {
+    inflightLoads.delete(key);
+  });
+
+  inflightLoads.set(key, task);
+  return task;
 }
 
 /** Same payload the planner page saves. Also keeps the local month in step. */

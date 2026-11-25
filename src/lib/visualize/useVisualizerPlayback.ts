@@ -43,6 +43,7 @@ export function useVisualizerPlayback<TState>(
   const activeTimeMsRef = useRef(0);
   const isCompletedRef = useRef(false);
   const stepsRef = useRef(steps);
+  const currentIndexRef = useRef(0);
 
   // Reset playback when the steps array identity changes (React "adjust state while rendering").
   const [trackedSteps, setTrackedSteps] = useState(steps);
@@ -56,7 +57,12 @@ export function useVisualizerPlayback<TState>(
     stepsRef.current = steps;
     isCompletedRef.current = false;
     activeTimeMsRef.current = 0;
+    currentIndexRef.current = 0;
   }, [steps]);
+
+  useLayoutEffect(() => {
+    currentIndexRef.current = currentStepIndex;
+  }, [currentStepIndex]);
 
   const logAction = useCallback(
     (action: string) => {
@@ -83,13 +89,13 @@ export function useVisualizerPlayback<TState>(
 
   const stepForward = useCallback(() => {
     logAction("STEP_FORWARD");
-    setCurrentStepIndex((prevIndex) => {
-      if (prevIndex < stepsRef.current.length - 1) {
-        return prevIndex + 1;
-      }
+    if (currentIndexRef.current < stepsRef.current.length - 1) {
+      const next = currentIndexRef.current + 1;
+      currentIndexRef.current = next;
+      setCurrentStepIndex(next);
+    } else {
       setIsPlaying(false);
-      return prevIndex;
-    });
+    }
   }, [logAction]);
 
   const stepBackward = useCallback(() => {
@@ -142,20 +148,20 @@ export function useVisualizerPlayback<TState>(
 
     const timer = setInterval(() => {
       activeTimeMsRef.current += speedMs;
-
-      setCurrentStepIndex((prevIndex) => {
-        if (prevIndex >= stepsRef.current.length - 1) {
-          setIsPlaying(false);
-          maybeComplete();
-          return prevIndex;
-        }
-        const next = prevIndex + 1;
-        if (next >= stepsRef.current.length - 1) {
-          setIsPlaying(false);
-          maybeComplete();
-        }
-        return next;
-      });
+      const lastIdx = stepsRef.current.length - 1;
+      const cur = currentIndexRef.current;
+      if (cur >= lastIdx) {
+        setIsPlaying(false);
+        maybeComplete();
+        return;
+      }
+      const next = cur + 1;
+      currentIndexRef.current = next;
+      setCurrentStepIndex(next);
+      if (next >= lastIdx) {
+        setIsPlaying(false);
+        maybeComplete();
+      }
     }, speedMs);
 
     return () => clearInterval(timer);

@@ -7,22 +7,37 @@ import {
   type AdminUploadCategory,
   type AdminUploadDestination,
 } from "@/lib/adminDriveUpload";
+import {
+  CAMPUS_HOST,
+  CAMPUS_ORIGIN,
+  CANONICAL_HOST,
+  CANONICAL_ORIGIN,
+  CANONICAL_WWW_HOST,
+  CANONICAL_WWW_ORIGIN,
+} from "@/lib/siteOrigins";
 
 const ALLOWED_ORIGINS = new Set([
-  "https://utilityos.tech",
-  "https://www.utilityos.tech",
+  CANONICAL_ORIGIN,
+  CANONICAL_WWW_ORIGIN,
+  CAMPUS_ORIGIN,
   "http://localhost:3000",
   "http://127.0.0.1:3000",
 ]);
 
 export function resolveUploadOrigin(request: Request): string | null {
   const origin = request.headers.get("origin")?.trim() || "";
-  if (origin && ALLOWED_ORIGINS.has(origin)) return origin;
+  if (origin) {
+    return ALLOWED_ORIGINS.has(origin) ? origin : null;
+  }
   const host = request.headers.get("host")?.trim().toLowerCase() || "";
-  if (host === "utilityos.tech" || host === "www.utilityos.tech") {
+  if (
+    host === CANONICAL_HOST ||
+    host === CANONICAL_WWW_HOST ||
+    host === CAMPUS_HOST
+  ) {
     return `https://${host}`;
   }
-  if (host.startsWith("localhost:") || host.startsWith("127.0.0.1:")) {
+  if (/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) {
     return `http://${host}`;
   }
   return null;

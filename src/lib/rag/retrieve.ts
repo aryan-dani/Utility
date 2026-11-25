@@ -330,26 +330,30 @@ export async function retrieve(params: RetrieveParams): Promise<RetrievalResult>
   const cached = getRetrievalCache(cacheKey);
   if (cached) return cached;
 
-  const stats = await loadCorpusStats();
   let widened = false;
+  const suppliedEmbedding = queryEmbeddingIn?.length ? queryEmbeddingIn : null;
 
-  let lexical = await lexicalCandidates(
-    queryTerms,
-    academicYear,
-    branch,
-    semester,
-    resourceId,
-  );
-  let queryVector: number[] | null =
-    queryEmbeddingIn?.length ? queryEmbeddingIn : null;
+  const [stats, initialLexical, embedResult] = await Promise.all([
+    loadCorpusStats(),
+    lexicalCandidates(
+      queryTerms,
+      academicYear,
+      branch,
+      semester,
+      resourceId,
+    ),
+    suppliedEmbedding
+      ? Promise.resolve(suppliedEmbedding)
+      : process.env.GEMINI_API_KEY && cleaned.length > 2
+        ? embedQuery(cleaned).catch((err) => {
+            console.warn("Query embedding failed:", err);
+            return null;
+          })
+        : Promise.resolve(null),
+  ]);
 
-  if (!queryVector && process.env.GEMINI_API_KEY && cleaned.length > 2) {
-    try {
-      queryVector = await embedQuery(cleaned);
-    } catch (err) {
-      console.warn("Query embedding failed:", err);
-    }
-  }
+  let lexical = initialLexical;
+  const queryVector: number[] | null = embedResult;
 
   let vector: Array<ChunkRecord & { _distance?: number }> = [];
   if (queryVector?.length) {
@@ -365,22 +369,24 @@ export async function retrieve(params: RetrieveParams): Promise<RetrievalResult>
   // Skip widen when lexical already returned enough hits (>= 5).
   if (lexical.length === 0 && vector.length === 0 && branch && !resourceId) {
     widened = true;
-    lexical = await lexicalCandidates(
-      queryTerms,
-      academicYear,
-      branch,
-      undefined,
-      resourceId,
-    );
-    if (queryVector?.length) {
-      vector = await vectorCandidates(
-        queryVector,
+    [lexical, vector] = await Promise.all([
+      lexicalCandidates(
+        queryTerms,
         academicYear,
         branch,
         undefined,
         resourceId,
-      );
-    }
+      ),
+      queryVector?.length
+        ? vectorCandidates(
+            queryVector,
+            academicYear,
+            branch,
+            undefined,
+            resourceId,
+          )
+        : Promise.resolve([]),
+    ]);
   }
 
   const chunkMap = new Map<string, ChunkRecord>();
@@ -400,8 +406,9 @@ export async function retrieve(params: RetrieveParams): Promise<RetrievalResult>
     (c) => ({ id: c.id, score: c.score }),
   );
 
+  const allowedIds = new Set(allChunks.map((a) => a.id));
   const vectorRanked = vector
-    .filter((c) => allChunks.some((a) => a.id === c.id))
+    .filter((c) => allowedIds.has(c.id))
     .sort((a, b) => (a._distance ?? 1) - (b._distance ?? 1))
     .map((c) => ({ id: c.id, score: 1 - (c._distance ?? 1) }));
 

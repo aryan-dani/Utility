@@ -59,8 +59,10 @@ export async function extractFromStorage(bucket, path) {
  * Returns matches with context (surrounding text).
  */
 export async function searchInPdf(buffer, query) {
+  if (!query) return [];
   const { text } = await extractText(buffer);
-  const regex = new RegExp(query, "gi");
+  const escaped = String(query).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const regex = new RegExp(escaped, "gi");
   const matches = [];
   let match;
 

@@ -8,9 +8,9 @@ import { auth } from "@/lib/firebase/auth";
 import {
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { motion } from "framer-motion";
+import { m as motion } from "framer-motion";
 import { sanitizeRedirectTo } from "@/lib/workspace";
-import { MOTION } from "@/lib/motion";
+import { MOTION, useMotionSafe } from "@/lib/motion";
 import {
   signInWithPopupOrRedirect,
   rememberRedirectTo,
@@ -27,6 +27,7 @@ import { describeError } from "@/lib/errors";
 import { PageHeader } from "@/components/ui";
 
 function SignupContent() {
+  const motionSafe = useMotionSafe();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -148,18 +149,20 @@ function SignupContent() {
       {/* Ambient background animations */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none -z-20">
         <motion.div
-          animate={{
-            x: [0, 40, -20, 0],
-            y: [0, -30, 40, 0],
-          }}
+          animate={
+            !motionSafe.reduce
+              ? { x: [0, 40, -20, 0], y: [0, -30, 40, 0] }
+              : undefined
+          }
           transition={{ duration: 15, repeat: Infinity, ease: "linear" }}
           className="absolute top-[20%] left-[10%] w-[35vw] h-[35vw] rounded-full bg-accent/5 blur-[80px]"
         />
         <motion.div
-          animate={{
-            x: [0, -40, 20, 0],
-            y: [0, 30, -40, 0],
-          }}
+          animate={
+            !motionSafe.reduce
+              ? { x: [0, -40, 20, 0], y: [0, 30, -40, 0] }
+              : undefined
+          }
           transition={{ duration: 18, repeat: Infinity, ease: "linear", delay: 1 }}
           className="absolute bottom-[20%] right-[10%] w-[30vw] h-[30vw] rounded-full bg-foreground/[0.03] blur-[80px]"
         />

@@ -141,12 +141,23 @@ function SearchTreeCanvasInner({
               runtime.gCost !== Infinity &&
               (isVisited || isCurrent || isPath || isFrontier);
 
+            const canSelectGoal = Boolean(isInteractive && !isStart && onSelectGoal);
             return (
               <g
                 key={id}
-                className={isInteractive && !isStart ? "cursor-pointer" : ""}
+                role={canSelectGoal ? "button" : undefined}
+                tabIndex={canSelectGoal ? 0 : undefined}
+                aria-label={canSelectGoal ? `Set ${def.label} as goal node` : undefined}
+                className={canSelectGoal ? "cursor-pointer focus:outline-none" : ""}
                 onClick={() => {
-                  if (isInteractive && !isStart && onSelectGoal) {
+                  if (canSelectGoal && onSelectGoal) {
+                    onSelectGoal(id);
+                  }
+                }}
+                onKeyDown={(e) => {
+                  if (!canSelectGoal || !onSelectGoal) return;
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
                     onSelectGoal(id);
                   }
                 }}

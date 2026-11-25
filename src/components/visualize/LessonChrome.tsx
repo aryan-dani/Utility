@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, m as motion } from "framer-motion";
 import { useVizMotion } from "@/components/visualize/motion";
 import { Button } from "@/components/ui/Button";
 

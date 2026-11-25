@@ -213,7 +213,6 @@ v1Routes.post("/study", async (c) => {
       : mode === "quiz"
       ? `Create a 5-question multiple-choice quiz from the notes. Return ONLY JSON {quiz:[{id,question,options:[A,B,C,D],correctIndex,explanation,citations:[]}]}.\n${context}`
       : `Create 8 flashcards from the notes. Return ONLY JSON {flashcards:[{id,question,answer}]}.\n${context}`;
-  const { generateText } = await import("ai");
   const out = await generateText({
     model: groq("openai/gpt-oss-20b"),
     prompt,
@@ -245,11 +244,13 @@ v1Routes.get("/resources/:id/summarize", async (c) => {
   const row = rows[0];
   if (!row) return c.json({ error: "Not found" }, 404);
   if (row.aiSummary) return c.json({ summary: row.aiSummary });
+  if (!row.content?.trim()) {
+    return c.json({ error: "No extractable text available to summarize." }, 422);
+  }
   if (!env().GROQ_API_KEY) {
     return c.json({ summary: row.content.slice(0, 800) });
   }
   const groq = createGroq({ apiKey: env().GROQ_API_KEY });
-  const { generateText } = await import("ai");
   const out = await generateText({
     model: groq("openai/gpt-oss-20b"),
     prompt: `Summarize these course notes in 5 bullet points:\n${row.content.slice(0, 6000)}`,
@@ -406,50 +407,75 @@ v1Routes.post("/activity", async (c) => {
   if (!Array.isArray(events) || events.length === 0) {
     return c.json({ error: "events required" }, 400);
   }
-  const db = getDb();
+  const actionTotals = new Map<string, { actionType: string; loggedDate: string; count: number }>();
+  const resourceOpenTotals = new Map<string, number>();
+
   for (const ev of events.slice(0, 50)) {
-    if (!ev.actionType || !ev.loggedDate) continue;
-    const id = `${uid}_${ev.loggedDate}_${ev.actionType}`;
-    await db
-      .insert(activityLogs)
-      .values({
-        id,
-        userId: uid,
-        actionType: ev.actionType,
-        loggedDate: ev.loggedDate,
-        count: ev.count ?? 1,
-      })
-      .onConflictDoUpdate({
-        target: [activityLogs.userId, activityLogs.loggedDate, activityLogs.actionType],
-        set: {
-          count: sql`${activityLogs.count} + ${ev.count ?? 1}`,
-          updatedAt: new Date(),
-        },
-      });
-    if (ev.resourceId && ev.actionType === "resource_open") {
-      await db
+    const actionType = typeof ev.actionType === "string" ? ev.actionType.trim().slice(0, 64) : "";
+    const loggedDate = typeof ev.loggedDate === "string" ? ev.loggedDate.trim().slice(0, 32) : "";
+    if (!actionType || !loggedDate) continue;
+    const rawCount = Number(ev.count);
+    const delta = Number.isFinite(rawCount) ? Math.min(1000, Math.max(1, Math.trunc(rawCount))) : 1;
+
+    const actionKey = `${loggedDate}\0${actionType}`;
+    const existingAction = actionTotals.get(actionKey);
+    if (existingAction) {
+      existingAction.count += delta;
+    } else {
+      actionTotals.set(actionKey, { actionType, loggedDate, count: delta });
+    }
+
+    if (typeof ev.resourceId === "string" && ev.resourceId.trim() && actionType === "resource_open") {
+      const rid = ev.resourceId.trim();
+      resourceOpenTotals.set(rid, (resourceOpenTotals.get(rid) ?? 0) + delta);
+    }
+  }
+
+  const db = getDb();
+  const now = new Date();
+  await Promise.all([
+    ...[...actionTotals.values()].map(({ actionType, loggedDate, count }) =>
+      db
+        .insert(activityLogs)
+        .values({
+          id: `${uid}_${loggedDate}_${actionType}`,
+          userId: uid,
+          actionType,
+          loggedDate,
+          count,
+        })
+        .onConflictDoUpdate({
+          target: [activityLogs.userId, activityLogs.loggedDate, activityLogs.actionType],
+          set: {
+            count: sql`${activityLogs.count} + ${count}`,
+            updatedAt: now,
+          },
+        }),
+    ),
+    ...[...resourceOpenTotals.entries()].flatMap(([resourceId, count]) => [
+      db
         .insert(resourceUsage)
         .values({
           userId: uid,
-          resourceId: ev.resourceId,
-          count: 1,
-          lastOpenedAt: new Date(),
+          resourceId,
+          count,
+          lastOpenedAt: now,
         })
         .onConflictDoUpdate({
           target: [resourceUsage.userId, resourceUsage.resourceId],
           set: {
-            count: sql`${resourceUsage.count} + 1`,
-            lastOpenedAt: new Date(),
+            count: sql`${resourceUsage.count} + ${count}`,
+            lastOpenedAt: now,
           },
-        });
-      await db
+        }),
+      db
         .insert(resourceTotals)
-        .values({ resourceId: ev.resourceId, openCount: 1 })
+        .values({ resourceId, openCount: count })
         .onConflictDoUpdate({
           target: resourceTotals.resourceId,
-          set: { openCount: sql`${resourceTotals.openCount} + 1` },
-        });
-    }
-  }
+          set: { openCount: sql`${resourceTotals.openCount} + ${count}` },
+        }),
+    ]),
+  ]);
   return c.json({ ok: true });
 });

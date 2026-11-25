@@ -2,5 +2,9 @@ server
 deploy
 DEPLOYMENT.md
 runtime/eval
+runtime/.cache
+*.traineddata
+*-log.txt
+drive-*.json
 **/*.test.ts
 **/*.test.tsx

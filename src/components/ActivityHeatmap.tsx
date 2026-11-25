@@ -73,12 +73,17 @@ export default function ActivityHeatmap() {
 
   useEffect(() => {
     let cancelled = false;
-    void (async () => {
-      await Promise.resolve();
-      if (cancelled) return;
+    const sync = async () => {
       await fetchActivity();
       if (!cancelled) setLoading(false);
-    })();
+    };
+
+    const unsub = auth.onAuthStateChanged(() => {
+      if (!cancelled) void sync();
+    });
+    if (auth.currentUser) {
+      void sync();
+    }
 
     const handleLocalLog = () => {
       try {
@@ -92,6 +97,7 @@ export default function ActivityHeatmap() {
     window.addEventListener('activity_logged', handleLocalLog);
     return () => {
       cancelled = true;
+      unsub();
       window.removeEventListener('activity_logged', handleLocalLog);
     };
   }, []);

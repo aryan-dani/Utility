@@ -4,6 +4,12 @@ import { useMemo } from 'react';
 import { Check, User, MoreHorizontal, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { PageShell } from '@/components/ui';
+import {
+  DAY_LABELS,
+  getCalendarDays,
+  MONTH_NAMES,
+  todayISO,
+} from '@/lib/planner/calendar';
 
 type SubTask = { id: string; text: string; done: boolean };
 type Task = { id: string; text: string; done: boolean; subtasks: SubTask[] };
@@ -17,50 +23,6 @@ interface Plan {
   year: number;
   data: PlanData;
   is_public: boolean;
-}
-
-const MONTH_NAMES = [
-  'January', 'February', 'March', 'April', 'May', 'June',
-  'July', 'August', 'September', 'October', 'November', 'December',
-];
-
-const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-
-function getCalendarDays(month: number, year: number) {
-  const firstDay = new Date(year, month - 1, 1);
-  const lastDay = new Date(year, month, 0);
-  const daysInMonth = lastDay.getDate();
-
-  let startDow = firstDay.getDay() - 1;
-  if (startDow < 0) startDow = 6;
-
-  const days: { date: string; dayNum: number; isCurrentMonth: boolean }[] = [];
-
-  const prevMonthLastDay = new Date(year, month - 1, 0).getDate();
-  for (let i = startDow - 1; i >= 0; i--) {
-    const d = prevMonthLastDay - i;
-    const pm = month === 1 ? 12 : month - 1;
-    const py = month === 1 ? year - 1 : year;
-    days.push({ date: `${py}-${String(pm).padStart(2, '0')}-${String(d).padStart(2, '0')}`, dayNum: d, isCurrentMonth: false });
-  }
-
-  for (let d = 1; d <= daysInMonth; d++) {
-    days.push({ date: `${year}-${String(month).padStart(2, '0')}-${String(d).padStart(2, '0')}`, dayNum: d, isCurrentMonth: true });
-  }
-
-  const remaining = 42 - days.length;
-  for (let d = 1; d <= remaining; d++) {
-    const nm = month === 12 ? 1 : month + 1;
-    const ny = month === 12 ? year + 1 : year;
-    days.push({ date: `${ny}-${String(nm).padStart(2, '0')}-${String(d).padStart(2, '0')}`, dayNum: d, isCurrentMonth: false });
-  }
-
-  return days;
-}
-
-function todayISO() {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 export default function SharedPlanView({ plan }: { plan: Plan }) {

@@ -8,6 +8,15 @@ function memoryLimit(
   windowMs: number,
 ): { allowed: boolean; retryAfterSec: number } {
   const now = Date.now();
+  if (memoryBuckets.size >= 5000) {
+    for (const [k, b] of memoryBuckets) {
+      if (now >= b.resetAt) memoryBuckets.delete(k);
+    }
+    if (memoryBuckets.size >= 5000) {
+      const oldest = memoryBuckets.keys().next().value;
+      if (oldest) memoryBuckets.delete(oldest);
+    }
+  }
   const bucket = memoryBuckets.get(key);
 
   if (!bucket || now >= bucket.resetAt) {
@@ -56,6 +65,7 @@ async function upstashLimit(
         ["TTL", redisKey],
       ]),
       cache: "no-store",
+      signal: AbortSignal.timeout(2500),
     });
 
     if (!res.ok) return null;
@@ -109,6 +119,11 @@ export async function enforceAiRateLimit(
     if (!url || !token) {
       return { allowed: false, retryAfterSec: 60, unavailable: true };
     }
+    const remote = await upstashLimit(`${route}:${uid}`, limit, windowMs);
+    if (!remote) {
+      return { allowed: false, retryAfterSec: 60, unavailable: true };
+    }
+    return remote;
   }
   return checkRateLimit(`${route}:${uid}`, limit, windowMs);
 }

@@ -20,6 +20,7 @@ import {
 } from "../lib/driveTree.mjs";
 import {
   upsertResources,
+  deleteResourcesByDriveFileIds,
   buildDestSegments,
   parseDrivePath,
   getDriveSyncState,
@@ -165,7 +166,9 @@ async function syncIncremental(opts) {
     }
 
     console.log(`  Using saved page token.\n`);
-    const changedFiles = [];
+    const changedById = new Map();
+    const removedIds = new Set();
+    const folderCache = new Map();
     let newToken = pageToken;
 
     try {
@@ -181,7 +184,12 @@ async function syncIncremental(opts) {
         });
 
         for (const change of res.data.changes || []) {
+          const changeFileId = change.fileId || change.file?.id;
           if (change.removed || change.file?.trashed) {
+            if (changeFileId) {
+              removedIds.add(changeFileId);
+              changedById.delete(changeFileId);
+            }
             continue;
           }
           const file = change.file;
@@ -193,20 +201,29 @@ async function syncIncremental(opts) {
             let parentId = file.parents?.[0];
             let guard = 0;
             while (parentId && parentId !== rootId && guard++ < 20) {
-              const parent = await drive.files.get({
-                fileId: parentId,
-                fields: "id, name, parents",
-                supportsAllDrives: true,
-              });
-              pathParts.unshift(parent.data.name);
-              parentId = parent.data.parents?.[0];
+              let cachedParent = folderCache.get(parentId);
+              if (!cachedParent) {
+                const parent = await drive.files.get({
+                  fileId: parentId,
+                  fields: "id, name, parents",
+                  supportsAllDrives: true,
+                });
+                cachedParent = {
+                  name: parent.data.name,
+                  parentId: parent.data.parents?.[0] ?? null,
+                };
+                folderCache.set(parentId, cachedParent);
+              }
+              pathParts.unshift(cachedParent.name);
+              parentId = cachedParent.parentId;
               if (parentId === rootId) break;
             }
             if (parentId !== rootId && guard >= 20) continue;
             const relativePath = pathParts.join("/");
             const parsed = parseDrivePath(relativePath);
             if (!parsed?.ok) continue;
-            changedFiles.push({
+            removedIds.delete(file.id);
+            changedById.set(file.id, {
               id: file.id,
               name: file.name,
               path: relativePath,
@@ -229,7 +246,9 @@ async function syncIncremental(opts) {
       const invalidToken =
         /pageToken|invalid|expired|Invalid Value/i.test(msg) ||
         err?.code === 400 ||
-        err?.response?.status === 400;
+        err?.code === 410 ||
+        err?.response?.status === 400 ||
+        err?.response?.status === 410;
       if (invalidToken) {
         console.warn(`  ⚠️  Drive page token invalid (${msg}). Resetting…`);
         const start = await drive.changes.getStartPageToken({
@@ -250,11 +269,14 @@ async function syncIncremental(opts) {
       throw err;
     }
 
-    if (changedFiles.length === 0) {
+    const changedFiles = [...changedById.values()];
+    const removedFileIds = [...removedIds];
+
+    if (changedFiles.length === 0 && removedFileIds.length === 0) {
       console.log(`📦 No Drive changes since last sync.\n`);
     } else {
       console.log(
-        `📦 ${changedFiles.length} changed file(s) under catalog paths.\n`,
+        `📦 ${changedFiles.length} changed file(s), ${removedFileIds.length} removed/trashed file(s).\n`,
       );
     }
 
@@ -265,11 +287,20 @@ async function syncIncremental(opts) {
       updateStats: changedFiles.length ? "bump" : "none",
     });
 
+    if (removedFileIds.length > 0) {
+      const delRes = await deleteResourcesByDriveFileIds(removedFileIds, {
+        dryRun: opts.dryRun,
+      });
+      result.stats.deletedResources =
+        (result.stats.deletedResources || 0) + delRes.deleted;
+    }
+
     if (!opts.dryRun) {
       await setDriveSyncState({
         page_token: newToken,
         mode: "incremental",
         last_change_count: changedFiles.length,
+        last_removed_count: removedFileIds.length,
       });
     }
 

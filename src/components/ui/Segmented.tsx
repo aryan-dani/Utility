@@ -1,6 +1,6 @@
 "use client";
 
-import type { KeyboardEvent, ReactNode } from "react";
+import { useRef, type KeyboardEvent, type ReactNode } from "react";
 import { cn } from "@/lib/cn";
 
 export type SegmentedOption<T extends string | number> = {
@@ -32,15 +32,22 @@ export function Segmented<T extends string | number>({
   className,
   "aria-label": ariaLabel,
 }: SegmentedProps<T>) {
+  const buttonRefs = useRef<Array<HTMLButtonElement | null>>([]);
   const selectedIndex = Math.max(
     0,
     options.findIndex((o) => o.value === value),
   );
 
+  const selectIndex = (index: number) => {
+    if (disabled || options.length === 0) return;
+    onChange(options[index].value);
+    buttonRefs.current[index]?.focus();
+  };
+
   const move = (delta: number) => {
     if (disabled || options.length === 0) return;
     const next = (selectedIndex + delta + options.length) % options.length;
-    onChange(options[next].value);
+    selectIndex(next);
   };
 
   const onKeyDown = (e: KeyboardEvent<HTMLDivElement>) => {
@@ -52,10 +59,10 @@ export function Segmented<T extends string | number>({
       move(-1);
     } else if (e.key === "Home") {
       e.preventDefault();
-      onChange(options[0].value);
+      selectIndex(0);
     } else if (e.key === "End") {
       e.preventDefault();
-      onChange(options[options.length - 1].value);
+      selectIndex(options.length - 1);
     }
   };
 
@@ -73,6 +80,9 @@ export function Segmented<T extends string | number>({
         const active = opt.value === value;
         return (
           <button
+            ref={(el) => {
+              buttonRefs.current[index] = el;
+            }}
             key={String(opt.value)}
             type="button"
             role="radio"

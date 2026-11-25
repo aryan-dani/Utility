@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { FieldValue } from "firebase-admin/firestore";
-import { adminDb } from "@/lib/firebaseAdmin";
+import { adminDb, commitChunkedDeletes } from "@/lib/firebaseAdmin";
 import { isAuthFailure, requireUser } from "@/lib/apiAuth";
 import { enforceUserRateLimit } from "@/lib/rateLimit";
 
@@ -177,20 +177,16 @@ export async function DELETE(
       );
     }
 
-    // Delete deck and orphan upvote docs
+    // Delete deck and orphan upvote docs safely across batch limits.
     const upvoteSnap = await db
       .collection("community_deck_upvotes")
       .where("deck_id", "==", id)
       .limit(500)
       .get();
-    const batch = db.batch();
-    batch.delete(deckDoc.ref);
-    upvoteSnap.docs.forEach((d) => batch.delete(d.ref));
-    // Also try doc-id convention `{uid}_{deckId}` if field query returns empty
-    if (upvoteSnap.empty) {
-      // Best-effort: no secondary index - skip bulk scan
-    }
-    await batch.commit();
+    await commitChunkedDeletes(db, [
+      deckDoc.ref,
+      ...upvoteSnap.docs.map((d) => d.ref),
+    ]);
 
     return NextResponse.json({ success: true });
   } catch (error) {

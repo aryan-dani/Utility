@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { motion } from 'framer-motion';
+import { m as motion } from 'framer-motion';
 import { 
   RotateCcw, 
   Coffee, 
@@ -125,21 +125,17 @@ export default function TimerClient() {
       return;
     }
 
-    if (soundAudioRef.current) {
-      soundAudioRef.current.pause();
-    }
-
     const audio = new Audio(soundUrls[soundscape]);
     audio.loop = true;
-    audio.volume = soundVolume;
     soundAudioRef.current = audio;
 
-    if (isActive || soundPlaying) {
-      audio.play()
-        .then(() => setSoundPlaying(true))
-        .catch(err => console.error("Soundscape play failed", err));
-    }
-  }, [soundscape, soundUrls, isActive, soundPlaying, soundVolume]);
+    return () => {
+      audio.pause();
+      if (soundAudioRef.current === audio) {
+        soundAudioRef.current = null;
+      }
+    };
+  }, [soundscape, soundUrls]);
 
   useEffect(() => {
     if (soundAudioRef.current) {
@@ -148,12 +144,18 @@ export default function TimerClient() {
   }, [soundVolume]);
 
   useEffect(() => {
-    if (isActive && soundscape !== 'none' && soundAudioRef.current && !soundPlaying) {
-      soundAudioRef.current.play()
-        .then(() => setSoundPlaying(true))
-        .catch(() => {});
+    const audio = soundAudioRef.current;
+    if (!audio || soundscape === 'none') return;
+    if (soundPlaying || isActive) {
+      audio.play()
+        .then(() => {
+          if (!soundPlaying) setSoundPlaying(true);
+        })
+        .catch(err => console.error("Soundscape play failed", err));
+    } else {
+      audio.pause();
     }
-  }, [isActive, soundscape, soundPlaying]);
+  }, [soundscape, isActive, soundPlaying]);
 
   const modeParam = searchParams.get('mode') as TimerMode | null;
   const startParam = searchParams.get('start') === 'true';
@@ -375,9 +377,14 @@ export default function TimerClient() {
     }
   }, [mode, sessions, playSound, switchMode, logFocusSession, workTime]);
 
+  const initialTimeLeftRef = useRef(timeLeft);
+  useEffect(() => {
+    initialTimeLeftRef.current = timeLeft;
+  }, [timeLeft]);
+
   useEffect(() => {
     if (!isActive) return;
-    const endsAt = deadlineRef.current ?? Date.now() + timeLeft * 1000;
+    const endsAt = deadlineRef.current ?? Date.now() + initialTimeLeftRef.current * 1000;
     deadlineRef.current = endsAt;
     writeFocusRun({
       mode,
@@ -386,29 +393,28 @@ export default function TimerClient() {
       minutes: Math.max(1, Math.round((endsAt - Date.now()) / 60000)),
       logged: false,
     });
-  }, [isActive, mode, taskText, timeLeft]);
+  }, [isActive, mode, taskText]);
 
   useEffect(() => {
-    if (isActive) {
-      if (deadlineRef.current == null) {
-        deadlineRef.current = Date.now() + timeLeft * 1000;
-      }
-      timerRef.current = setInterval(() => {
-        const end = deadlineRef.current;
-        if (end == null) return;
-        const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
-        setTimeLeft(remaining);
-        if (remaining === 0) {
-          if (timerRef.current) clearInterval(timerRef.current);
-          handleTimerComplete();
-        }
-      }, 250);
+    if (!isActive) return;
+    if (deadlineRef.current == null) {
+      deadlineRef.current = Date.now() + initialTimeLeftRef.current * 1000;
     }
+    timerRef.current = setInterval(() => {
+      const end = deadlineRef.current;
+      if (end == null) return;
+      const remaining = Math.max(0, Math.ceil((end - Date.now()) / 1000));
+      setTimeLeft(remaining);
+      if (remaining === 0) {
+        if (timerRef.current) clearInterval(timerRef.current);
+        handleTimerComplete();
+      }
+    }, 250);
 
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [isActive, handleTimerComplete, timeLeft]);
+  }, [isActive, handleTimerComplete]);
 
   useEffect(() => {
     if (isActive) {
@@ -417,10 +423,13 @@ export default function TimerClient() {
     } else {
       document.title = 'Focus Timer | Utility';
     }
+  }, [timeLeft, isActive, mode]);
+
+  useEffect(() => {
     return () => {
       document.title = 'Utility';
     };
-  }, [timeLeft, isActive, mode]);
+  }, []);
 
   const toggleTimer = () => {
     if (isActive && deadlineRef.current != null) {

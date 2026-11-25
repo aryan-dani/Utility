@@ -2,6 +2,7 @@ import {
   AIDS_SEM_4_SUBJECTS,
   AIDS_SEM_5_SUBJECTS,
 } from "@/lib/syllabusData";
+import { stemWord } from "./tokenize";
 
 /** British ↔ American spelling pairs for query expansion. */
 export const SPELLING_PAIRS: Record<string, string[]> = {
@@ -78,20 +79,25 @@ const { codeToName } = buildSubjectMaps();
 /** Expand a query into additional search terms deterministically. */
 export function expandQueryTerms(terms: string[]): string[] {
   const expanded = new Set<string>(terms);
+  const addWithStem = (term: string) => {
+    expanded.add(term);
+    const stemmed = stemWord(term);
+    if (stemmed.length >= 2) expanded.add(stemmed);
+  };
 
   for (const term of terms) {
     const lower = term.toLowerCase();
 
     if (ABBREVIATIONS[lower]) {
-      for (const t of ABBREVIATIONS[lower]) expanded.add(t);
+      for (const t of ABBREVIATIONS[lower]) addWithStem(t);
     }
 
     if (SPELLING_PAIRS[lower]) {
-      for (const t of SPELLING_PAIRS[lower]) expanded.add(t);
+      for (const t of SPELLING_PAIRS[lower]) addWithStem(t);
     }
 
     if (codeToName[lower]) {
-      for (const t of tokenizeSubjectName(codeToName[lower])) expanded.add(t);
+      for (const t of tokenizeSubjectName(codeToName[lower])) addWithStem(t);
     }
   }
 

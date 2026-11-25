@@ -251,7 +251,14 @@ export async function homeOrVercelJson(
     if (home.ok && method === "GET") {
       const data = await home.clone().json().catch(() => null);
       if (!homePayloadIsEmpty(homePath.split("?")[0] || homePath, data)) return home;
-    } else if (home.ok || home.status === 400 || home.status === 413 || home.status === 429) {
+    } else if (
+      home.ok ||
+      home.status === 400 ||
+      home.status === 401 ||
+      home.status === 403 ||
+      home.status === 413 ||
+      home.status === 429
+    ) {
       return home;
     }
   }
